@@ -67,6 +67,8 @@ return [
 
     'timezone' => 'UTC',
 
+    'backup_timezone' => env('BACKUP_TIMEZONE', 'Asia/Makassar'),
+
     /*
     |--------------------------------------------------------------------------
     | Application Locale Configuration

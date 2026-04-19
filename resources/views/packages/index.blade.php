@@ -25,7 +25,7 @@
                 </dl>
                 <div class="mt-4 flex flex-wrap gap-3 text-sm font-medium">
                     <a href="{{ route('packages.edit', $package) }}" class="text-slate-700">Edit</a>
-                    <form method="POST" action="{{ route('packages.destroy', $package) }}" onsubmit="return confirm('Delete this package?');">
+                    <form method="POST" action="{{ route('packages.destroy', $package) }}" data-confirm="Delete this package?">
                         @csrf
                         @method('DELETE')
                         <button type="submit" class="text-rose-600">Delete</button>
@@ -56,7 +56,7 @@
                         <td class="px-6 py-4">
                             <div class="flex items-center justify-end gap-3">
                                 <a href="{{ route('packages.edit', $package) }}" class="text-sm font-medium text-slate-700">Edit</a>
-                                <form method="POST" action="{{ route('packages.destroy', $package) }}" onsubmit="return confirm('Delete this package?');">
+                                <form method="POST" action="{{ route('packages.destroy', $package) }}" data-confirm="Delete this package?">
                                     @csrf
                                     @method('DELETE')
                                     <button type="submit" class="text-sm font-medium text-rose-600">Delete</button>

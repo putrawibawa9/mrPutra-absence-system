@@ -42,11 +42,27 @@
                         Students
                     </a>
                     @if (auth()->user()->isAdmin())
+                        <a href="{{ route('teachers.index') }}" class="{{ request()->routeIs('teachers.*') ? 'bg-white/10 text-white' : 'text-slate-300 hover:bg-white/5 hover:text-white' }} rounded-xl px-4 py-3 text-sm font-medium">
+                            Teachers
+                        </a>
+                        <a href="{{ route('teacher-schedules.index') }}" class="{{ request()->routeIs('teacher-schedules.*') ? 'bg-white/10 text-white' : 'text-slate-300 hover:bg-white/5 hover:text-white' }} rounded-xl px-4 py-3 text-sm font-medium">
+                            Jadwal Guru
+                        </a>
+                        <a href="{{ route('teacher-availabilities.index') }}" class="{{ request()->routeIs('teacher-availabilities.*') ? 'bg-white/10 text-white' : 'text-slate-300 hover:bg-white/5 hover:text-white' }} rounded-xl px-4 py-3 text-sm font-medium">
+                            Ketersediaan Guru
+                        </a>
                         <a href="{{ route('packages.index') }}" class="{{ request()->routeIs('packages.*') ? 'bg-white/10 text-white' : 'text-slate-300 hover:bg-white/5 hover:text-white' }} rounded-xl px-4 py-3 text-sm font-medium">
                             Packages
                         </a>
                         <a href="{{ route('payments.index') }}" class="{{ request()->routeIs('payments.*') ? 'bg-white/10 text-white' : 'text-slate-300 hover:bg-white/5 hover:text-white' }} rounded-xl px-4 py-3 text-sm font-medium">
                             Payments
+                        </a>
+                    @else
+                        <a href="{{ route('my-schedule.index') }}" class="{{ request()->routeIs('my-schedule.*') ? 'bg-white/10 text-white' : 'text-slate-300 hover:bg-white/5 hover:text-white' }} rounded-xl px-4 py-3 text-sm font-medium">
+                            Jadwal Saya
+                        </a>
+                        <a href="{{ route('my-availability.index') }}" class="{{ request()->routeIs('my-availability.*') ? 'bg-white/10 text-white' : 'text-slate-300 hover:bg-white/5 hover:text-white' }} rounded-xl px-4 py-3 text-sm font-medium">
+                            Ketersediaan Saya
                         </a>
                     @endif
                     <a href="{{ route('attendances.index') }}" class="{{ request()->routeIs('attendances.*') ? 'bg-white/10 text-white' : 'text-slate-300 hover:bg-white/5 hover:text-white' }} rounded-xl px-4 py-3 text-sm font-medium">
@@ -60,7 +76,7 @@
                 <div class="border-t border-slate-800 px-5 py-5">
                     <p class="text-sm font-medium text-white">{{ auth()->user()->name }}</p>
                     <p class="mt-1 text-sm text-slate-400">{{ auth()->user()->email }}</p>
-                    <form method="POST" action="{{ route('logout') }}" class="mt-4">
+                    <form method="POST" action="{{ route('logout') }}" class="mt-4" data-confirm="Log out from this account?">
                         @csrf
                         <button type="submit" class="w-full rounded-xl border border-slate-700 px-4 py-2 text-sm font-medium text-slate-200 transition hover:border-slate-500 hover:text-white">
                             Log out
@@ -104,5 +120,23 @@
                 </div>
             </main>
         </div>
+
+        <script>
+            document.addEventListener('submit', function (event) {
+                const form = event.target;
+                const message = form.dataset.confirm;
+
+                if (! message || form.dataset.confirmed === 'true') {
+                    return;
+                }
+
+                event.preventDefault();
+
+                if (window.confirm(message)) {
+                    form.dataset.confirmed = 'true';
+                    form.submit();
+                }
+            });
+        </script>
     </body>
 </html>

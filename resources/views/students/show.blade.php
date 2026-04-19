@@ -12,6 +12,16 @@
                 <span class="rounded-full px-3 py-1 text-xs font-semibold {{ $student->getRemainingSessions() > 0 ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700' }}">
                     {{ $student->getRemainingSessions() }} sessions left
                 </span>
+                @if ($student->getOutstandingPaymentDebt() > 0)
+                    <span class="rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold text-amber-700">
+                        Total Debt: {{ $student->getOutstandingPaymentDebtLabel() }}
+                    </span>
+                @endif
+                @if ($student->getTokenDebtCount() > 0)
+                    <span class="rounded-full bg-slate-200 px-3 py-1 text-xs font-semibold text-slate-700">
+                        Token Debt: {{ $student->getTokenDebtLabel() }}
+                    </span>
+                @endif
             </div>
         </div>
     </x-slot>
@@ -32,9 +42,33 @@
                     <dt class="text-sm text-slate-500">Status</dt>
                     <dd class="mt-1 font-medium text-slate-900">{{ $student->statusLabel() }}</dd>
                 </div>
+                <div>
+                    <dt class="text-sm text-slate-500">Program</dt>
+                    <dd class="mt-1 font-medium text-slate-900">{{ $student->programLabel() }}</dd>
+                </div>
+                <div>
+                    <dt class="text-sm text-slate-500">Registration Date</dt>
+                    <dd class="mt-1 font-medium text-slate-900">{{ $student->formattedRegistrationDate() }}</dd>
+                </div>
+                <div>
+                    <dt class="text-sm text-slate-500">Deactivated At</dt>
+                    <dd class="mt-1 font-medium text-slate-900">{{ $student->formattedDeactivatedAt() }}</dd>
+                </div>
+                <div>
+                    <dt class="text-sm text-slate-500">Total Debt</dt>
+                    <dd class="mt-1 font-medium {{ $student->getOutstandingPaymentDebt() > 0 ? 'text-amber-700' : 'text-slate-900' }}">{{ $student->getOutstandingPaymentDebtLabel() }}</dd>
+                </div>
+                <div>
+                    <dt class="text-sm text-slate-500">Token Debt</dt>
+                    <dd class="mt-1 font-medium {{ $student->getTokenDebtCount() > 0 ? 'text-slate-700' : 'text-slate-900' }}">{{ $student->getTokenDebtLabel() }}</dd>
+                </div>
+                <div class="md:col-span-2">
+                    <dt class="text-sm text-slate-500">Book Info</dt>
+                    <dd class="mt-1 whitespace-pre-line font-medium text-slate-900">{{ $student->book_info ?: '-' }}</dd>
+                </div>
             </dl>
             @if (auth()->user()->isAdmin())
-                <form method="POST" action="{{ route('students.toggle-status', $student) }}" class="mt-6">
+                <form method="POST" action="{{ route('students.toggle-status', $student) }}" class="mt-6" data-confirm="Change this student's active status?">
                     @csrf
                     @method('PATCH')
                     <button type="submit" class="rounded-xl px-4 py-2 text-sm font-medium {{ $student->is_active ? 'bg-amber-100 text-amber-700' : 'bg-emerald-100 text-emerald-700' }}">
@@ -80,6 +114,14 @@
                                 <dt class="text-slate-500">Date</dt>
                                 <dd class="text-slate-900">{{ $payment->payment_date->format('d M Y') }}</dd>
                             </div>
+                            <div class="flex items-center justify-between gap-3">
+                                <dt class="text-slate-500">Paid</dt>
+                                <dd class="text-slate-900">Rp {{ number_format($payment->amount_paid, 0, ',', '.') }}</dd>
+                            </div>
+                            <div class="flex items-center justify-between gap-3">
+                                <dt class="text-slate-500">Outstanding</dt>
+                                <dd class="{{ $payment->outstandingAmount() > 0 ? 'font-medium text-amber-700' : 'text-emerald-700' }}">Rp {{ number_format($payment->outstandingAmount(), 0, ',', '.') }}</dd>
+                            </div>
                             @if ($payment->notes)
                                 <div>
                                     <dt class="text-slate-500">Notes</dt>
@@ -98,6 +140,8 @@
                         <th class="px-6 py-3 font-medium">Package</th>
                         <th class="px-6 py-3 font-medium">Total</th>
                         <th class="px-6 py-3 font-medium">Remaining</th>
+                        <th class="px-6 py-3 font-medium">Paid</th>
+                        <th class="px-6 py-3 font-medium">Outstanding</th>
                         <th class="px-6 py-3 font-medium">Date</th>
                     </tr>
                 </thead>
@@ -107,11 +151,13 @@
                             <td class="px-6 py-4 text-slate-900">{{ $payment->displayLabel() }}</td>
                             <td class="px-6 py-4 text-slate-600">{{ $payment->total_sessions }}</td>
                             <td class="px-6 py-4 text-slate-600">{{ $payment->remaining_sessions }}</td>
+                            <td class="px-6 py-4 text-slate-600">Rp {{ number_format($payment->amount_paid, 0, ',', '.') }}</td>
+                            <td class="px-6 py-4 {{ $payment->outstandingAmount() > 0 ? 'font-medium text-amber-700' : 'text-emerald-700' }}">Rp {{ number_format($payment->outstandingAmount(), 0, ',', '.') }}</td>
                             <td class="px-6 py-4 text-slate-600">{{ $payment->payment_date->format('d M Y') }}</td>
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="4" class="px-6 py-8 text-center text-slate-500">No payments recorded.</td>
+                            <td colspan="6" class="px-6 py-8 text-center text-slate-500">No payments recorded.</td>
                         </tr>
                     @endforelse
                 </tbody>
@@ -129,6 +175,9 @@
                             <p class="font-medium text-slate-900">{{ $attendance->teacher->name }}</p>
                             <p class="text-sm text-slate-500">{{ $attendance->date->format('d M Y') }}</p>
                         </div>
+                        <p class="mt-2 text-xs font-medium {{ $attendance->payment ? 'text-slate-500' : 'text-amber-700' }}">
+                            {{ $attendance->payment?->displayLabel() ?? 'Token Debt' }}
+                        </p>
                         <p class="mt-3 text-sm text-slate-600">{{ $attendance->notes ?: '-' }}</p>
                     </div>
                 @empty
@@ -140,6 +189,7 @@
                     <tr>
                         <th class="px-6 py-3 font-medium">Date</th>
                         <th class="px-6 py-3 font-medium">Teacher</th>
+                        <th class="px-6 py-3 font-medium">Payment</th>
                         <th class="px-6 py-3 font-medium">Notes</th>
                     </tr>
                 </thead>
@@ -148,11 +198,12 @@
                         <tr>
                             <td class="px-6 py-4 text-slate-600">{{ $attendance->date->format('d M Y') }}</td>
                             <td class="px-6 py-4 text-slate-900">{{ $attendance->teacher->name }}</td>
+                            <td class="px-6 py-4 {{ $attendance->payment ? 'text-slate-600' : 'font-medium text-amber-700' }}">{{ $attendance->payment?->displayLabel() ?? 'Token Debt' }}</td>
                             <td class="px-6 py-4 text-slate-600">{{ $attendance->notes ?: '-' }}</td>
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="3" class="px-6 py-8 text-center text-slate-500">No attendances recorded.</td>
+                            <td colspan="4" class="px-6 py-8 text-center text-slate-500">No attendances recorded.</td>
                         </tr>
                     @endforelse
                 </tbody>

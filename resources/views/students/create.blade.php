@@ -4,7 +4,7 @@
     </x-slot>
 
     <div class="rounded-3xl bg-white p-6 shadow-sm">
-        <form method="POST" action="{{ route('students.store') }}">
+        <form method="POST" action="{{ route('students.store') }}" data-confirm="Save this student? Please double check the data first.">
             @csrf
             @include('students._form')
         </form>

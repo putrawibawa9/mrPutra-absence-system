@@ -6,8 +6,9 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
-#[Fillable(['attendance_batch_id', 'student_id', 'teacher_id', 'payment_id', 'date', 'notes'])]
+#[Fillable(['attendance_batch_id', 'student_id', 'teacher_id', 'payment_id', 'date', 'teaching_minutes', 'notes', 'learning_journal'])]
 class Attendance extends Model
 {
     use HasFactory;
@@ -16,6 +17,7 @@ class Attendance extends Model
     {
         return [
             'date' => 'date',
+            'teaching_minutes' => 'integer',
         ];
     }
 
@@ -32,6 +34,13 @@ class Attendance extends Model
     public function teacher(): BelongsTo
     {
         return $this->belongsTo(User::class, 'teacher_id');
+    }
+
+    public function teachers(): BelongsToMany
+    {
+        return $this->belongsToMany(User::class, 'attendance_teacher', 'attendance_id', 'teacher_id')
+            ->withTimestamps()
+            ->orderBy('name');
     }
 
     public function payment(): BelongsTo

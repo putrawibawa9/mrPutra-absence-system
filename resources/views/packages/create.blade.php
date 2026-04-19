@@ -4,7 +4,7 @@
     </x-slot>
 
     <div class="rounded-3xl bg-white p-6 shadow-sm">
-        <form method="POST" action="{{ route('packages.store') }}">
+        <form method="POST" action="{{ route('packages.store') }}" data-confirm="Save this package? Please double check the session count and price first.">
             @csrf
             @include('packages._form')
         </form>

@@ -17,6 +17,7 @@ return new class extends Migration
             $table->foreignId('teacher_id')->constrained('users')->restrictOnDelete();
             $table->foreignId('payment_id')->constrained()->restrictOnDelete();
             $table->date('date');
+            $table->unsignedInteger('teaching_minutes')->default(60);
             $table->text('notes')->nullable();
             $table->timestamps();
         });

@@ -14,6 +14,7 @@ class AttendanceRequest extends FormRequest
     {
         $this->merge([
             'mode' => $this->input('mode', 'single'),
+            'teaching_minutes' => $this->input('teaching_minutes', 60),
         ]);
     }
 
@@ -28,10 +29,16 @@ class AttendanceRequest extends FormRequest
             'mode' => ['required', Rule::in(['single', 'group'])],
             'student_id' => ['nullable', Rule::exists('students', 'id')->where('is_active', true)],
             'payment_id' => ['nullable', 'exists:payments,id'],
+            'teacher_ids' => ['nullable', 'array', 'min:1'],
+            'teacher_ids.*' => ['integer', Rule::exists('users', 'id')->where('role', \App\Models\User::ROLE_TEACHER)],
             'group_title' => ['nullable', 'string', 'max:255'],
+            'group_teacher_ids' => ['nullable', 'array', 'min:1'],
+            'group_teacher_ids.*' => ['integer', Rule::exists('users', 'id')->where('role', \App\Models\User::ROLE_TEACHER)],
             'student_ids' => ['nullable', 'array', 'min:1'],
             'student_ids.*' => ['integer', Rule::exists('students', 'id')->where('is_active', true)],
             'date' => ['required', 'date'],
+            'teaching_minutes' => ['required', 'integer', 'min:1', 'max:600'],
+            'learning_journal' => ['required', 'string', 'min:3'],
             'notes' => ['nullable', 'string'],
         ];
     }
@@ -51,9 +58,17 @@ class AttendanceRequest extends FormRequest
                         return;
                     }
 
-                    if (! $this->filled('payment_id')) {
-                        $validator->errors()->add('payment_id', 'Please select an active payment.');
+                    $teacherIds = collect($this->input('teacher_ids', []))
+                        ->filter()
+                        ->map(fn ($id) => (int) $id)
+                        ->unique()
+                        ->values();
 
+                    if ($teacherIds->isEmpty()) {
+                        $validator->errors()->add('teacher_ids', 'Please select at least one teacher for this attendance.');
+                    }
+
+                    if (! $this->filled('payment_id')) {
                         return;
                     }
 
@@ -76,6 +91,16 @@ class AttendanceRequest extends FormRequest
                     $validator->errors()->add('group_title', 'Please fill the class or session name.');
                 }
 
+                $teacherIds = collect($this->input('group_teacher_ids', []))
+                    ->filter()
+                    ->map(fn ($id) => (int) $id)
+                    ->unique()
+                    ->values();
+
+                if ($teacherIds->isEmpty()) {
+                    $validator->errors()->add('group_teacher_ids', 'Please select at least one teacher for this class.');
+                }
+
                 $studentIds = collect($this->input('student_ids', []))
                     ->filter()
                     ->map(fn ($id) => (int) $id)
@@ -88,19 +113,13 @@ class AttendanceRequest extends FormRequest
                     return;
                 }
 
-                $students = Student::query()
-                    ->with('latestActivePayment')
+                $activeStudentCount = Student::query()
+                    ->active()
                     ->whereIn('id', $studentIds)
-                    ->get()
-                    ->keyBy('id');
+                    ->count();
 
-                foreach ($studentIds as $studentId) {
-                    $student = $students->get($studentId);
-
-                    if (! $student || ! $student->latestActivePayment || $student->latestActivePayment->remaining_sessions <= 0) {
-                        $validator->errors()->add('student_ids', 'Every selected student must have an active payment with remaining sessions.');
-                        break;
-                    }
+                if ($activeStudentCount !== $studentIds->count()) {
+                    $validator->errors()->add('student_ids', 'Every selected student must be active.');
                 }
             },
         ];

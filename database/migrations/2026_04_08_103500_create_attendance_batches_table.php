@@ -16,6 +16,7 @@ return new class extends Migration
             $table->string('title');
             $table->foreignId('teacher_id')->constrained('users')->restrictOnDelete();
             $table->date('date');
+            $table->unsignedInteger('teaching_minutes')->default(60);
             $table->text('notes')->nullable();
             $table->timestamps();
         });

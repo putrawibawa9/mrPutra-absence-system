@@ -4,7 +4,7 @@
     </x-slot>
 
     <div class="rounded-3xl bg-white p-6 shadow-sm">
-        <form method="POST" action="{{ route('students.update', $student) }}">
+        <form method="POST" action="{{ route('students.update', $student) }}" data-confirm="Update this student? Please double check the data first.">
             @csrf
             @method('PUT')
             @include('students._form')

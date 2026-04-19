@@ -13,7 +13,7 @@
         @csrf
     </form>
 
-    <form method="post" action="{{ route('profile.update') }}" class="mt-6 space-y-6">
+    <form method="post" action="{{ route('profile.update') }}" enctype="multipart/form-data" class="mt-6 space-y-6" data-confirm="Save profile changes?">
         @csrf
         @method('patch')
 
@@ -43,6 +43,20 @@
                             {{ __('A new verification link has been sent to your email address.') }}
                         </p>
                     @endif
+                </div>
+            @endif
+        </div>
+
+        <div>
+            <x-input-label for="signature" value="Signature for Receipts" />
+            <input id="signature" name="signature" type="file" accept=".png,.jpg,.jpeg" class="mt-1 block w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700">
+            <x-input-error class="mt-2" :messages="$errors->get('signature')" />
+            <p class="mt-2 text-sm text-gray-600">Upload sekali di sini. Tanda tangan ini akan dipakai otomatis di semua e-receipt.</p>
+
+            @if ($user->signatureUrl())
+                <div class="mt-4">
+                    <p class="mb-2 text-xs font-semibold uppercase tracking-[0.18em] text-gray-500">Current Signature</p>
+                    <img src="{{ $user->signatureUrl() }}" alt="Current signature" class="max-h-24 w-auto rounded-xl border border-gray-200 bg-white p-2">
                 </div>
             @endif
         </div>

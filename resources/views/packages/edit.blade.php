@@ -4,7 +4,7 @@
     </x-slot>
 
     <div class="rounded-3xl bg-white p-6 shadow-sm">
-        <form method="POST" action="{{ route('packages.update', $package) }}">
+        <form method="POST" action="{{ route('packages.update', $package) }}" data-confirm="Update this package? Please double check the session count and price first.">
             @csrf
             @method('PUT')
             @include('packages._form')
