@@ -2,6 +2,8 @@
 
 use App\Http\Controllers\AttendanceController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\ExpenseCategoryController;
+use App\Http\Controllers\ExpenseController;
 use App\Http\Controllers\JokiDashboardController;
 use App\Http\Controllers\PackageController;
 use App\Http\Controllers\PaymentController;
@@ -38,6 +40,8 @@ Route::middleware('auth')->group(function () {
 
         Route::resource('packages', PackageController::class)->except(['show']);
         Route::resource('teachers', TeacherController::class)->except(['show']);
+        Route::resource('expense-categories', ExpenseCategoryController::class)->except(['show']);
+        Route::resource('expenses', ExpenseController::class)->except(['show']);
         Route::resource('teacher-schedules', TeacherScheduleController::class)->except(['show']);
         Route::resource('teacher-availabilities', TeacherAvailabilityController::class)->except(['show']);
         Route::get('/payments', [PaymentController::class, 'index'])->name('payments.index');
