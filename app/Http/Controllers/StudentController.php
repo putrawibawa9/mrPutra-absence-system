@@ -17,7 +17,8 @@ class StudentController extends Controller
             'sort_tokens' => ['nullable', 'string', 'in:lowest,highest'],
         ]);
 
-        $students = Student::with('latestActivePayment')
+        $students = Student::active()
+            ->with(['latestActivePayment', 'latestSessionPayment'])
             ->withSum('payments', 'remaining_sessions')
             ->when($filters['search'] ?? null, function ($query, $search) {
                 $query->where(function ($query) use ($search) {
@@ -63,10 +64,12 @@ class StudentController extends Controller
     public function show(Student $student)
     {
         $student->load([
-            'payments.package',
+            'payments',
             'attendances.teacher',
-            'attendances.payment.package',
+            'attendances.batch',
+            'attendances.payment',
             'latestActivePayment',
+            'latestSessionPayment',
         ]);
 
         return view('students.show', compact('student'));

@@ -3,7 +3,6 @@
 namespace Tests\Feature;
 
 use App\Models\Attendance;
-use App\Models\Package;
 use App\Models\Payment;
 use App\Models\Student;
 use App\Models\User;
@@ -14,7 +13,7 @@ class PaymentPartialPaymentTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_admin_can_create_partial_package_payment(): void
+    public function test_admin_can_create_partial_token_payment(): void
     {
         $admin = User::factory()->create(['role' => User::ROLE_ADMIN]);
         $student = Student::query()->create([
@@ -23,16 +22,12 @@ class PaymentPartialPaymentTest extends TestCase
             'email' => 'partial@example.com',
             'is_active' => true,
         ]);
-        $package = Package::query()->create([
-            'name' => 'Private Intensive',
-            'total_sessions' => 8,
-            'price' => 800000,
-        ]);
 
         $response = $this->actingAs($admin)->post(route('payments.store'), [
             'student_id' => $student->id,
-            'source_type' => Payment::SOURCE_PACKAGE,
-            'package_id' => $package->id,
+            'source_type' => Payment::SOURCE_TOKEN,
+            'total_sessions' => 8,
+            'price_amount' => 800000,
             'initial_paid_amount' => 300000,
             'payment_date' => now()->toDateString(),
         ]);
@@ -42,6 +37,8 @@ class PaymentPartialPaymentTest extends TestCase
         $response->assertRedirect(route('payments.receipt', $payment, absolute: false));
         $this->assertDatabaseHas('payments', [
             'id' => $payment->id,
+            'total_sessions' => 8,
+            'remaining_sessions' => 8,
             'price_amount' => 800000,
             'amount_paid' => 300000,
         ]);
@@ -65,8 +62,7 @@ class PaymentPartialPaymentTest extends TestCase
         $payment = Payment::query()->create([
             'receipt_number' => 'KWT-PARTIAL-001',
             'student_id' => $student->id,
-            'package_id' => null,
-            'source_type' => Payment::SOURCE_MANUAL,
+            'source_type' => Payment::SOURCE_TOKEN,
             'total_sessions' => 8,
             'remaining_sessions' => 8,
             'price_amount' => 800000,
@@ -109,16 +105,10 @@ class PaymentPartialPaymentTest extends TestCase
             'email' => 'debtreconcile@example.com',
             'is_active' => true,
         ]);
-        $package = Package::query()->create([
-            'name' => '8 Sessions',
-            'total_sessions' => 8,
-            'price' => 800000,
-        ]);
         $payment = Payment::query()->create([
             'receipt_number' => 'KWT-PARTIAL-RECON',
             'student_id' => $student->id,
-            'package_id' => $package->id,
-            'source_type' => Payment::SOURCE_PACKAGE,
+            'source_type' => Payment::SOURCE_TOKEN,
             'total_sessions' => 8,
             'remaining_sessions' => 8,
             'price_amount' => 800000,
@@ -206,16 +196,10 @@ class PaymentPartialPaymentTest extends TestCase
             'email' => 'deletepayment@example.com',
             'is_active' => true,
         ]);
-        $package = Package::query()->create([
-            'name' => '10 Sessions',
-            'total_sessions' => 10,
-            'price' => 500000,
-        ]);
         $payment = Payment::query()->create([
             'receipt_number' => 'KWT-DELETE-001',
             'student_id' => $student->id,
-            'package_id' => $package->id,
-            'source_type' => Payment::SOURCE_PACKAGE,
+            'source_type' => Payment::SOURCE_TOKEN,
             'total_sessions' => 10,
             'remaining_sessions' => 8,
             'price_amount' => 500000,
@@ -262,16 +246,10 @@ class PaymentPartialPaymentTest extends TestCase
             'email' => 'manualreconcile@example.com',
             'is_active' => true,
         ]);
-        $package = Package::query()->create([
-            'name' => '6 Sessions',
-            'total_sessions' => 6,
-            'price' => 600000,
-        ]);
         $payment = Payment::query()->create([
             'receipt_number' => 'KWT-RECON-001',
             'student_id' => $student->id,
-            'package_id' => $package->id,
-            'source_type' => Payment::SOURCE_PACKAGE,
+            'source_type' => Payment::SOURCE_TOKEN,
             'total_sessions' => 6,
             'remaining_sessions' => 6,
             'price_amount' => 600000,
@@ -298,5 +276,61 @@ class PaymentPartialPaymentTest extends TestCase
             'id' => $payment->id,
             'remaining_sessions' => 5,
         ]);
+    }
+
+    public function test_payments_index_can_filter_by_student_search_type_status_and_date(): void
+    {
+        $admin = User::factory()->create(['role' => User::ROLE_ADMIN]);
+        $matchingStudent = Student::query()->create([
+            'name' => 'Filter Target Student',
+            'phone' => '0813000001',
+            'email' => 'filter-target@example.com',
+            'is_active' => true,
+        ]);
+        $otherStudent = Student::query()->create([
+            'name' => 'Other Student',
+            'phone' => '0813000002',
+            'email' => 'other-student@example.com',
+            'is_active' => true,
+        ]);
+
+        $matchingPayment = Payment::query()->create([
+            'receipt_number' => 'KWT-FILTER-001',
+            'student_id' => $matchingStudent->id,
+            'source_type' => Payment::SOURCE_TOKEN,
+            'total_sessions' => 8,
+            'remaining_sessions' => 8,
+            'price_amount' => 800000,
+            'amount_paid' => 300000,
+            'payment_date' => now()->toDateString(),
+            'signed_by_user_id' => $admin->id,
+        ]);
+        Payment::query()->create([
+            'receipt_number' => 'KWT-FILTER-002',
+            'student_id' => $otherStudent->id,
+            'source_type' => Payment::SOURCE_BOOK,
+            'book_title' => 'Module Payment',
+            'total_sessions' => 0,
+            'remaining_sessions' => 0,
+            'price_amount' => 150000,
+            'amount_paid' => 150000,
+            'payment_date' => now()->subMonth()->toDateString(),
+            'signed_by_user_id' => $admin->id,
+        ]);
+
+        $response = $this->actingAs($admin)->get(route('payments.index', [
+            'search' => 'Filter Target',
+            'source_type' => Payment::SOURCE_TOKEN,
+            'payment_status' => 'partial',
+            'date_from' => now()->startOfMonth()->toDateString(),
+            'date_to' => now()->endOfMonth()->toDateString(),
+        ]));
+
+        $response->assertOk();
+        $response->assertSee('Filter Target Student');
+        $response->assertSee('0813000001');
+        $response->assertSee($matchingPayment->displayReceiptNumber());
+        $response->assertDontSee('Other Student');
+        $response->assertDontSee('0813000002');
     }
 }

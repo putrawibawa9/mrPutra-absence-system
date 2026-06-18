@@ -13,7 +13,7 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Facades\Storage;
 
-#[Fillable(['name', 'email', 'password', 'role', 'signature_path'])]
+#[Fillable(['name', 'username', 'email', 'password', 'role', 'signature_path'])]
 #[Hidden(['password', 'remember_token'])]
 class User extends Authenticatable
 {
@@ -61,6 +61,11 @@ class User extends Authenticatable
     public function teacherAvailabilities(): HasMany
     {
         return $this->hasMany(TeacherAvailability::class, 'teacher_id');
+    }
+
+    public function expenses(): HasMany
+    {
+        return $this->hasMany(Expense::class, 'created_by_user_id');
     }
 
     public function isAdmin(): bool

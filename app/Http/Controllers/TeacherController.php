@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\TeacherRequest;
 use App\Models\User;
+use Illuminate\Support\Str;
 
 class TeacherController extends Controller
 {
@@ -26,8 +27,9 @@ class TeacherController extends Controller
     {
         User::create([
             'name' => $request->string('name')->toString(),
+            'username' => Str::lower($request->string('username')->toString()),
             'email' => $request->string('email')->toString(),
-            'password' => $request->string('password')->toString(),
+            'password' => Str::random(32),
             'role' => User::ROLE_TEACHER,
         ]);
 
@@ -47,12 +49,9 @@ class TeacherController extends Controller
 
         $data = [
             'name' => $request->string('name')->toString(),
+            'username' => Str::lower($request->string('username')->toString()),
             'email' => $request->string('email')->toString(),
         ];
-
-        if ($request->filled('password')) {
-            $data['password'] = $request->string('password')->toString();
-        }
 
         $teacher->update($data);
 

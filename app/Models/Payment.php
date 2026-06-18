@@ -11,10 +11,13 @@ use Illuminate\Support\Facades\Storage;
 
 #[Fillable([
     'student_id',
-    'package_id',
+    'learning_module_id',
     'book_title',
     'receipt_number',
     'source_type',
+    'division',
+    'format',
+    'learning_mode',
     'total_sessions',
     'remaining_sessions',
     'price_amount',
@@ -28,9 +31,17 @@ class Payment extends Model
 {
     use HasFactory;
 
+    public const SOURCE_TOKEN = 'token';
+    public const SOURCE_BOOK = 'book';
+
+    // Legacy source types kept only so historical records still render.
     public const SOURCE_PACKAGE = 'package';
     public const SOURCE_MANUAL = 'manual';
-    public const SOURCE_BOOK = 'book';
+
+    /**
+     * Source types that represent class token purchases (current + legacy).
+     */
+    public const TOKEN_SOURCES = [self::SOURCE_TOKEN, self::SOURCE_PACKAGE, self::SOURCE_MANUAL];
 
     protected function casts(): array
     {
@@ -53,14 +64,27 @@ class Payment extends Model
         return $this->belongsTo(User::class, 'signed_by_user_id');
     }
 
-    public function package(): BelongsTo
+    public function learningModule(): BelongsTo
     {
-        return $this->belongsTo(Package::class);
+        return $this->belongsTo(LearningModule::class);
     }
 
     public function attendances(): HasMany
     {
         return $this->hasMany(Attendance::class)->latest('date');
+    }
+
+    public function tokens(): HasMany
+    {
+        return $this->hasMany(Token::class);
+    }
+
+    /**
+     * Whether this payment carries class tokens (vs. a book/module purchase).
+     */
+    public function isTokenSource(): bool
+    {
+        return in_array($this->source_type, self::TOKEN_SOURCES, true) && $this->total_sessions > 0;
     }
 
     public function installments(): HasMany
@@ -76,10 +100,23 @@ class Payment extends Model
     public function displayLabel(): string
     {
         return match ($this->source_type) {
-            self::SOURCE_BOOK => $this->book_title ?: 'Book / Module Payment',
-            self::SOURCE_MANUAL => 'Manual Opening Balance',
-            default => $this->package?->name ?? 'Package Payment',
+            self::SOURCE_BOOK => $this->learningModule?->name ?: ($this->book_title ?: 'Pembayaran Buku'),
+            default => 'Pembelian Token',
         };
+    }
+
+    public function isBook(): bool
+    {
+        return $this->source_type === self::SOURCE_BOOK;
+    }
+
+    public function pricePerSession(): int
+    {
+        if ($this->total_sessions <= 0) {
+            return 0;
+        }
+
+        return intdiv($this->price_amount, $this->total_sessions);
     }
 
     public function displayReceiptNumber(): string

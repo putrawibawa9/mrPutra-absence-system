@@ -6,9 +6,13 @@ use App\Http\Requests\AttendanceRequest;
 use App\Http\Requests\AttendanceUpdateRequest;
 use App\Models\Attendance;
 use App\Models\AttendanceBatch;
+use App\Models\Classroom;
+use App\Models\MaterialLink;
 use App\Models\Payment;
 use App\Models\Student;
 use App\Models\User;
+use App\Services\AttendanceTeacherFeeService;
+use App\Services\TokenService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
@@ -18,23 +22,51 @@ use Illuminate\Validation\ValidationException;
 
 class AttendanceController extends Controller
 {
+    public function __construct(
+        protected AttendanceTeacherFeeService $teacherFeeService,
+        protected TokenService $tokenService,
+    ) {
+    }
+
     public function index(Request $request)
     {
         $filters = $request->validate([
             'date_from' => ['nullable', 'date'],
             'date_to' => ['nullable', 'date', 'after_or_equal:date_from'],
+            'search' => ['nullable', 'string', 'max:255'],
             'student_id' => ['nullable', 'exists:students,id'],
             'teacher_id' => ['nullable', 'exists:users,id'],
+            'teacher_fee_status' => ['nullable', 'in:with_fee,without_fee'],
         ]);
 
         if (! $request->filled('date_from') && ! $request->filled('date_to')) {
-            $filters['date_from'] = now()->toDateString();
-            $filters['date_to'] = now()->toDateString();
+            $filters['date_from'] = now()->startOfMonth()->toDateString();
+            $filters['date_to'] = now()->endOfMonth()->toDateString();
         }
 
-        $attendanceRows = Attendance::with(['teachers', 'batch.teachers', 'student', 'teacher', 'payment.package'])
+        $attendanceRows = Attendance::with(['teachers', 'expenses', 'batch.teachers', 'batch.expenses', 'batch.materialLinks', 'batch.materialLink', 'student', 'teacher', 'payment', 'materialLinks', 'materialLink'])
             ->when($filters['date_from'] ?? null, fn ($query, $date) => $query->whereDate('date', '>=', $date))
             ->when($filters['date_to'] ?? null, fn ($query, $date) => $query->whereDate('date', '<=', $date))
+            ->when($filters['search'] ?? null, function ($query, $search) {
+                $query->where(function ($query) use ($search) {
+                    $query->where('learning_journal', 'like', '%'.$search.'%')
+                        ->orWhere('notes', 'like', '%'.$search.'%')
+                        ->orWhereHas('student', fn ($studentQuery) => $studentQuery->where('name', 'like', '%'.$search.'%'))
+                        ->orWhereHas('teacher', fn ($teacherQuery) => $teacherQuery->where('name', 'like', '%'.$search.'%'))
+                        ->orWhereHas('teachers', fn ($teacherQuery) => $teacherQuery->where('name', 'like', '%'.$search.'%'))
+                        ->orWhereHas('materialLinks', function ($materialQuery) use ($search) {
+                            $materialQuery->where('title', 'like', '%'.$search.'%')
+                                ->orWhere('url', 'like', '%'.$search.'%');
+                        })
+                        ->orWhereHas('batch', function ($batchQuery) use ($search) {
+                            $batchQuery->where('title', 'like', '%'.$search.'%')
+                                ->orWhereHas('materialLinks', function ($materialQuery) use ($search) {
+                                    $materialQuery->where('title', 'like', '%'.$search.'%')
+                                        ->orWhere('url', 'like', '%'.$search.'%');
+                                });
+                        });
+                });
+            })
             ->when($filters['student_id'] ?? null, fn ($query, $studentId) => $query->where('student_id', $studentId))
             ->when($filters['teacher_id'] ?? null, function ($query, $teacherId) {
                 $query->where(function ($query) use ($teacherId) {
@@ -66,6 +98,8 @@ class AttendanceController extends Controller
                     $paymentLabels = $group->map(fn (Attendance $attendance) => $attendance->payment?->displayLabel() ?? 'Token Debt')
                         ->unique()
                         ->values();
+                    $batch = $first->batch;
+                    $hasTeacherFee = $batch ? $this->teacherFeeService->hasCompleteBatchFee($batch) : false;
 
                     return (object) [
                         'type' => 'batch',
@@ -79,10 +113,16 @@ class AttendanceController extends Controller
                         'teacher_name' => $teacherNames->join(', '),
                         'payment_label' => $paymentLabels->count() === 1 ? $paymentLabels->first() : 'Mixed Payments',
                         'payment_is_debt' => $paymentLabels->count() === 1 && $paymentLabels->first() === 'Token Debt',
+                        'material_links' => $batch?->materialLinks ?? collect(),
+                        'material_link_label' => $batch?->materialLinkLabels() ?? '-',
+                        'teacher_fee_status' => $hasTeacherFee ? 'with_fee' : 'without_fee',
+                        'teacher_fee_label' => $hasTeacherFee ? 'Sudah' : 'Belum',
+                        'teacher_fee_badge_class' => $hasTeacherFee ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700',
                         'learning_journal' => $first->learning_journal,
                         'notes' => $first->notes ?: '-',
-                        'editable' => false,
+                        'editable' => true,
                         'attendance' => null,
+                        'attendance_batch' => $first->batch,
                     ];
                 }
 
@@ -91,6 +131,7 @@ class AttendanceController extends Controller
                     ->filter()
                     ->unique()
                     ->values();
+                $hasTeacherFee = $this->teacherFeeService->hasCompleteAttendanceFee($first);
 
                 return (object) [
                     'type' => 'single',
@@ -104,12 +145,19 @@ class AttendanceController extends Controller
                     'teacher_name' => $teacherNames->join(', '),
                     'payment_label' => $first->payment?->displayLabel() ?? 'Token Debt',
                     'payment_is_debt' => $first->payment === null,
+                    'material_links' => $first->materialLinks,
+                    'material_link_label' => $first->materialLinkLabels(),
+                    'teacher_fee_status' => $hasTeacherFee ? 'with_fee' : 'without_fee',
+                    'teacher_fee_label' => $hasTeacherFee ? 'Sudah' : 'Belum',
+                    'teacher_fee_badge_class' => $hasTeacherFee ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700',
                     'learning_journal' => $first->learning_journal,
                     'notes' => $first->notes ?: '-',
                     'editable' => true,
                     'attendance' => $first,
+                    'attendance_batch' => null,
                 ];
             })
+            ->when($filters['teacher_fee_status'] ?? null, fn ($entries, $status) => $entries->where('teacher_fee_status', $status))
             ->values();
 
         $perPage = 10;
@@ -140,23 +188,14 @@ class AttendanceController extends Controller
 
     public function create(Request $request)
     {
-        $students = $this->attendanceFormData();
-        $teachers = User::teachers()->orderBy('name')->get();
-        $selectedStudent = $request->integer('student_id');
-        $selectedPreviousAttendance = null;
-        $activePayments = collect();
-        $activeSessions = 0;
+        // Absensi kini berbasis kelas: pilih kelas, lalu centang murid yang hadir.
+        $classrooms = Classroom::query()
+            ->active()
+            ->withCount('students')
+            ->orderBy('name')
+            ->get();
 
-        if ($selectedStudent) {
-            $selectedPreviousAttendance = $students
-                ->firstWhere('id', $selectedStudent)
-                ?->latestAttendance;
-
-            $activePayments = $this->activePaymentsForStudent($selectedStudent);
-            $activeSessions = (int) $activePayments->sum('remaining_sessions');
-        }
-
-        return view('attendances.create', compact('students', 'teachers', 'selectedStudent', 'selectedPreviousAttendance', 'activePayments', 'activeSessions'));
+        return view('attendances.create', compact('classrooms'));
     }
 
     public function edit(Request $request, Attendance $attendance)
@@ -169,8 +208,25 @@ class AttendanceController extends Controller
         $activeSessions = (int) $activePayments->sum('remaining_sessions');
 
         $teachers = User::teachers()->orderBy('name')->get();
+        $materialLinks = MaterialLink::query()->where('is_active', true)->orderBy('title')->get();
 
-        return view('attendances.edit', compact('attendance', 'students', 'teachers', 'activePayments', 'activeSessions', 'selectedStudent'));
+        return view('attendances.edit', compact('attendance', 'students', 'teachers', 'materialLinks', 'activePayments', 'activeSessions', 'selectedStudent'));
+    }
+
+    public function editBatch(AttendanceBatch $attendanceBatch)
+    {
+        $attendanceBatch->load([
+            'teachers',
+            'attendances.student.payments',
+            'attendances.student.latestAttendance.teacher',
+            'attendances.student.latestAttendance.batch',
+        ]);
+
+        $students = $this->attendanceFormData();
+        $teachers = User::teachers()->orderBy('name')->get();
+        $materialLinks = MaterialLink::query()->where('is_active', true)->orderBy('title')->get();
+
+        return view('attendances.edit-batch', compact('attendanceBatch', 'students', 'teachers', 'materialLinks'));
     }
 
     public function store(AttendanceRequest $request)
@@ -184,14 +240,25 @@ class AttendanceController extends Controller
                 studentId: $request->integer('student_id'),
                 requestedPaymentId: $request->integer('payment_id') ?: null,
             );
+            $materialLinkIds = $this->resolveMaterialLinkIds($request->input('material_link_ids', []), legacyMaterialLinkId: $request->integer('material_link_id'));
+            $teacherIds = $this->resolveTeacherIds(
+                requestedTeacherIds: $request->input('teacher_ids', []),
+                fallbackTeacherId: $request->user()->isTeacher() ? $request->user()->id : null,
+            );
+            $primaryTeacherId = $this->resolvePrimaryTeacherId(
+                teacherIds: $teacherIds,
+                fallbackTeacherId: $request->user()->isTeacher() ? $request->user()->id : null,
+            );
 
             $attendancePayload = [
                 'student_id' => $request->integer('student_id'),
-                'teacher_id' => $request->user()->id,
+                'teacher_id' => $primaryTeacherId,
                 'payment_id' => $payment?->id,
+                'material_link_id' => $materialLinkIds->first(),
                 'date' => $request->date('date'),
                 'notes' => $request->string('notes')->toString(),
                 'learning_journal' => $request->string('learning_journal')->toString(),
+                'homework_content' => $this->nullableRequestString($request->input('homework_content')),
             ];
 
             if ($this->attendanceTableHasTeachingMinutes()) {
@@ -200,12 +267,14 @@ class AttendanceController extends Controller
 
             $attendance = Attendance::create($attendancePayload);
 
-            $attendance->teachers()->sync($this->resolveTeacherIds(
-                requestedTeacherIds: $request->input('teacher_ids', []),
-                fallbackTeacherId: $request->user()->id,
-            ));
+            $attendance->teachers()->sync($teacherIds);
+            $attendance->materialLinks()->sync($materialLinkIds);
+            $attendance->load(['student', 'teachers']);
+            $this->teacherFeeService->syncAttendance($attendance, $teacherIds, $request->user()->id);
 
-            $payment?->decrement('remaining_sessions');
+            if ($payment) {
+                $this->tokenService->consume($payment, $attendance, $request->date('date'));
+            }
         });
 
         return redirect()->route('attendances.index')->with('status', 'Attendance saved and session deducted.');
@@ -223,19 +292,25 @@ class AttendanceController extends Controller
             $newPayment = $sameStudent
                 ? $oldPayment
                 : $this->resolvePaymentForAttendance($request->integer('student_id'));
-
-            if (($oldPayment?->id) !== ($newPayment?->id)) {
-                $oldPayment?->increment('remaining_sessions');
-                $newPayment?->decrement('remaining_sessions');
-            }
+            $materialLinkIds = $this->resolveMaterialLinkIds($request->input('material_link_ids', []), legacyMaterialLinkId: $request->integer('material_link_id'));
+            $teacherIds = $this->resolveTeacherIds(
+                requestedTeacherIds: $request->input('teacher_ids', []),
+                fallbackTeacherId: $request->user()->isTeacher() ? $request->user()->id : null,
+            );
+            $primaryTeacherId = $this->resolvePrimaryTeacherId(
+                teacherIds: $teacherIds,
+                fallbackTeacherId: $request->user()->isTeacher() ? $request->user()->id : null,
+            );
 
             $attendancePayload = [
                 'student_id' => $request->integer('student_id'),
-                'teacher_id' => $request->user()->id,
+                'teacher_id' => $primaryTeacherId,
                 'payment_id' => $newPayment?->id,
+                'material_link_id' => $materialLinkIds->first(),
                 'date' => $request->date('date'),
                 'notes' => $request->string('notes')->toString(),
                 'learning_journal' => $request->string('learning_journal')->toString(),
+                'homework_content' => $this->nullableRequestString($request->input('homework_content')),
             ];
 
             if ($this->attendanceTableHasTeachingMinutes()) {
@@ -244,10 +319,21 @@ class AttendanceController extends Controller
 
             $attendance->update($attendancePayload);
 
-            $attendance->teachers()->sync($this->resolveTeacherIds(
-                requestedTeacherIds: $request->input('teacher_ids', []),
-                fallbackTeacherId: $request->user()->id,
-            ));
+            $attendance->teachers()->sync($teacherIds);
+            $attendance->materialLinks()->sync($materialLinkIds);
+            $attendance->load(['student', 'teachers']);
+            $this->teacherFeeService->syncAttendance($attendance, $teacherIds, $request->user()->id);
+
+            // Rebalance the token ledger only when the linked payment changed.
+            if (($oldPayment?->id) !== ($newPayment?->id)) {
+                if ($oldPayment) {
+                    $this->tokenService->release($oldPayment, $attendance);
+                }
+
+                if ($newPayment) {
+                    $this->tokenService->consume($newPayment, $attendance, $request->date('date'));
+                }
+            }
         });
 
         return redirect()->route('attendances.index')->with('status', 'Attendance updated successfully.');
@@ -260,14 +346,32 @@ class AttendanceController extends Controller
             ->map(fn ($id) => (int) $id)
             ->unique()
             ->values();
+        $groupMaterialLinkIds = $this->resolveMaterialLinkIds($request->input('group_material_link_ids', []), legacyMaterialLinkId: $request->integer('group_material_link_id'));
+        $groupJournalMode = $request->input('group_journal_mode', 'group');
+        $groupLearningJournal = $request->string('learning_journal')->toString();
+        $studentLearningJournals = collect($request->input('student_learning_journals', []));
+        $groupHomeworkMode = $request->input('group_homework_mode', 'group');
+        $groupHomeworkContent = $this->nullableRequestString($request->input('group_homework_content'));
+        $studentHomeworkContents = collect($request->input('student_homework_contents', []));
 
-        DB::transaction(function () use ($request, $studentIds): void {
+        DB::transaction(function () use ($request, $studentIds, $groupMaterialLinkIds, $groupJournalMode, $groupLearningJournal, $studentLearningJournals, $groupHomeworkMode, $groupHomeworkContent, $studentHomeworkContents): void {
+            $teacherIds = $this->resolveTeacherIds(
+                requestedTeacherIds: $request->input('group_teacher_ids', []),
+                fallbackTeacherId: $request->user()->isTeacher() ? $request->user()->id : null,
+            );
+            $primaryTeacherId = $this->resolvePrimaryTeacherId(
+                teacherIds: $teacherIds,
+                fallbackTeacherId: $request->user()->isTeacher() ? $request->user()->id : null,
+            );
             $batchPayload = [
                 'title' => $request->string('group_title')->toString(),
-                'teacher_id' => $request->user()->id,
+                'teacher_id' => $primaryTeacherId,
+                'material_link_id' => $groupMaterialLinkIds->first(),
                 'date' => $request->date('date'),
                 'notes' => $request->string('notes')->toString(),
-                'learning_journal' => $request->string('learning_journal')->toString(),
+                'learning_journal' => $groupJournalMode === 'per_student'
+                    ? 'Individual learning journals recorded for each student.'
+                    : $groupLearningJournal,
             ];
 
             if ($this->attendanceBatchTableHasTeachingMinutes()) {
@@ -276,43 +380,177 @@ class AttendanceController extends Controller
 
             $batch = AttendanceBatch::create($batchPayload);
 
-            $teacherIds = $this->resolveTeacherIds(
-                requestedTeacherIds: $request->input('group_teacher_ids', []),
-                fallbackTeacherId: $request->user()->id,
-            );
-
             $batch->teachers()->sync($teacherIds);
+            $batch->materialLinks()->sync($groupMaterialLinkIds);
+            $batch->load('teachers');
 
             foreach ($studentIds as $studentId) {
                 $payment = $this->resolvePaymentForAttendance($studentId);
+                $studentLearningJournal = $groupJournalMode === 'per_student'
+                    ? trim((string) $studentLearningJournals->get((string) $studentId, $studentLearningJournals->get($studentId, '')))
+                    : $groupLearningJournal;
+                $studentHomeworkContent = $groupHomeworkMode === 'per_student'
+                    ? $this->nullableRequestString($studentHomeworkContents->get((string) $studentId, $studentHomeworkContents->get($studentId)))
+                    : $groupHomeworkContent;
 
                 $attendancePayload = [
                     'attendance_batch_id' => $batch->id,
                     'student_id' => $studentId,
-                    'teacher_id' => $request->user()->id,
+                    'teacher_id' => $primaryTeacherId,
                     'payment_id' => $payment?->id,
+                    'material_link_id' => $groupMaterialLinkIds->first(),
                     'date' => $request->date('date'),
                     'notes' => $request->string('notes')->toString(),
-                    'learning_journal' => $request->string('learning_journal')->toString(),
+                    'learning_journal' => $studentLearningJournal,
+                    'homework_content' => $studentHomeworkContent,
                 ];
 
                 if ($this->attendanceTableHasTeachingMinutes()) {
                     $attendancePayload['teaching_minutes'] = $request->integer('teaching_minutes');
                 }
 
-                Attendance::create($attendancePayload);
+                $attendance = Attendance::create($attendancePayload);
+                $attendance->materialLinks()->sync($groupMaterialLinkIds);
 
-                $payment?->decrement('remaining_sessions');
+                if ($payment) {
+                    $this->tokenService->consume($payment, $attendance, $request->date('date'));
+                }
             }
+
+            $this->teacherFeeService->syncBatch($batch, $teacherIds, $request->user()->id);
         });
 
         return redirect()->route('attendances.index')->with('status', 'Group attendance saved and sessions deducted for selected students.');
     }
 
+    public function updateBatch(AttendanceRequest $request, AttendanceBatch $attendanceBatch)
+    {
+        $studentIds = collect($request->input('student_ids', []))
+            ->filter()
+            ->map(fn ($id) => (int) $id)
+            ->unique()
+            ->values();
+        $groupMaterialLinkIds = $this->resolveMaterialLinkIds($request->input('group_material_link_ids', []), legacyMaterialLinkId: $request->integer('group_material_link_id'));
+        $groupJournalMode = $request->input('group_journal_mode', 'group');
+        $groupLearningJournal = $request->string('learning_journal')->toString();
+        $studentLearningJournals = collect($request->input('student_learning_journals', []));
+        $groupHomeworkMode = $request->input('group_homework_mode', 'group');
+        $groupHomeworkContent = $this->nullableRequestString($request->input('group_homework_content'));
+        $studentHomeworkContents = collect($request->input('student_homework_contents', []));
+
+        DB::transaction(function () use ($request, $attendanceBatch, $studentIds, $groupMaterialLinkIds, $groupJournalMode, $groupLearningJournal, $studentLearningJournals, $groupHomeworkMode, $groupHomeworkContent, $studentHomeworkContents): void {
+            $attendanceBatch->load(['attendances', 'teachers']);
+
+            $teacherIds = $this->resolveTeacherIds(
+                requestedTeacherIds: $request->input('group_teacher_ids', []),
+                fallbackTeacherId: $request->user()->isTeacher() ? $request->user()->id : null,
+            );
+            $primaryTeacherId = $this->resolvePrimaryTeacherId(
+                teacherIds: $teacherIds,
+                fallbackTeacherId: $request->user()->isTeacher() ? $request->user()->id : null,
+            );
+
+            $batchPayload = [
+                'title' => $request->string('group_title')->toString(),
+                'teacher_id' => $primaryTeacherId,
+                'material_link_id' => $groupMaterialLinkIds->first(),
+                'date' => $request->date('date'),
+                'notes' => $request->string('notes')->toString(),
+                'learning_journal' => $groupJournalMode === 'per_student'
+                    ? 'Individual learning journals recorded for each student.'
+                    : $groupLearningJournal,
+            ];
+
+            if ($this->attendanceBatchTableHasTeachingMinutes()) {
+                $batchPayload['teaching_minutes'] = $request->integer('teaching_minutes');
+            }
+
+            $attendanceBatch->update($batchPayload);
+            $attendanceBatch->teachers()->sync($teacherIds);
+            $attendanceBatch->materialLinks()->sync($groupMaterialLinkIds);
+            $attendanceBatch->load('teachers');
+
+            $existingAttendances = $attendanceBatch->attendances->keyBy('student_id');
+            $removedStudentIds = $existingAttendances->keys()->diff($studentIds);
+
+            foreach ($removedStudentIds as $removedStudentId) {
+                $attendance = $existingAttendances->get($removedStudentId);
+
+                if ($attendance) {
+                    if ($attendance->payment) {
+                        $this->tokenService->release($attendance->payment, $attendance);
+                    }
+                    $attendance->delete();
+                }
+            }
+
+            foreach ($studentIds as $studentId) {
+                $studentLearningJournal = $groupJournalMode === 'per_student'
+                    ? trim((string) $studentLearningJournals->get((string) $studentId, $studentLearningJournals->get($studentId, '')))
+                    : $groupLearningJournal;
+                $studentHomeworkContent = $groupHomeworkMode === 'per_student'
+                    ? $this->nullableRequestString($studentHomeworkContents->get((string) $studentId, $studentHomeworkContents->get($studentId)))
+                    : $groupHomeworkContent;
+
+                $attendancePayload = [
+                    'teacher_id' => $primaryTeacherId,
+                    'material_link_id' => $groupMaterialLinkIds->first(),
+                    'date' => $request->date('date'),
+                    'notes' => $request->string('notes')->toString(),
+                    'learning_journal' => $studentLearningJournal,
+                    'homework_content' => $studentHomeworkContent,
+                ];
+
+                if ($this->attendanceTableHasTeachingMinutes()) {
+                    $attendancePayload['teaching_minutes'] = $request->integer('teaching_minutes');
+                }
+
+                $existingAttendance = $existingAttendances->get($studentId);
+
+                if ($existingAttendance) {
+                    $existingAttendance->update($attendancePayload);
+                    $existingAttendance->materialLinks()->sync($groupMaterialLinkIds);
+
+                    continue;
+                }
+
+                $payment = $this->resolvePaymentForAttendance($studentId);
+
+                $attendance = Attendance::create(array_merge($attendancePayload, [
+                    'attendance_batch_id' => $attendanceBatch->id,
+                    'student_id' => $studentId,
+                    'payment_id' => $payment?->id,
+                ]));
+                $attendance->materialLinks()->sync($groupMaterialLinkIds);
+
+                if ($payment) {
+                    $this->tokenService->consume($payment, $attendance, $request->date('date'));
+                }
+            }
+
+            $this->teacherFeeService->syncBatch($attendanceBatch, $teacherIds, $request->user()->id);
+        });
+
+        return redirect()->route('attendances.index')->with('status', 'Group attendance updated successfully.');
+    }
+
     protected function attendanceFormData()
     {
         return Student::active()
-            ->with(['payments' => fn ($query) => $query->active(), 'latestAttendance.teacher', 'latestAttendance.batch'])
+            ->with([
+                'payments' => fn ($query) => $query->active(),
+                'latestAttendance.teacher',
+                'latestAttendance.batch',
+                'latestHomeworkAttendance.teacher',
+                'latestHomeworkAttendance.batch',
+                'attendances' => fn ($query) => $query
+                    ->where(function ($query) {
+                        $query->whereNotNull('material_link_id')
+                            ->orWhereHas('materialLinks');
+                    })
+                    ->with(['materialLinks:id,title,url', 'materialLink:id,title,url', 'teacher:id,name'])
+                    ->latest('date'),
+            ])
             ->orderBy('name')
             ->get();
     }
@@ -320,7 +558,6 @@ class AttendanceController extends Controller
     protected function activePaymentsForStudent(int $studentId, ?int $includePaymentId = null)
     {
         return Payment::query()
-            ->with('package')
             ->where('student_id', $studentId)
             ->when($includePaymentId, function ($query, $includePaymentId) {
                 $query->where(function ($query) use ($includePaymentId) {
@@ -360,14 +597,27 @@ class AttendanceController extends Controller
             ->first();
     }
 
-    protected function resolveTeacherIds(array $requestedTeacherIds, int $fallbackTeacherId)
+    protected function resolveTeacherIds(array $requestedTeacherIds, ?int $fallbackTeacherId = null)
     {
         return collect($requestedTeacherIds)
             ->filter()
             ->map(fn ($id) => (int) $id)
-            ->push($fallbackTeacherId)
+            ->when($fallbackTeacherId, fn ($teacherIds) => $teacherIds->push($fallbackTeacherId))
             ->unique()
             ->values();
+    }
+
+    protected function resolvePrimaryTeacherId(Collection $teacherIds, ?int $fallbackTeacherId = null): int
+    {
+        $primaryTeacherId = $teacherIds->first() ?: $fallbackTeacherId;
+
+        if (! $primaryTeacherId) {
+            throw ValidationException::withMessages([
+                'teacher_ids' => 'At least one teacher must be selected for this attendance.',
+            ]);
+        }
+
+        return (int) $primaryTeacherId;
     }
 
     protected function teacherRecap(array $filters): Collection
@@ -470,4 +720,22 @@ class AttendanceController extends Controller
 
         return $hasColumn ??= Schema::hasColumn('attendance_batches', 'teaching_minutes');
     }
+
+    protected function resolveMaterialLinkIds(array $requestedMaterialLinkIds, ?int $legacyMaterialLinkId = null): Collection
+    {
+        return collect($requestedMaterialLinkIds)
+            ->filter()
+            ->map(fn ($id) => (int) $id)
+            ->when($legacyMaterialLinkId, fn ($materialLinkIds) => $materialLinkIds->push($legacyMaterialLinkId))
+            ->unique()
+            ->values();
+    }
+
+    protected function nullableRequestString(mixed $value): ?string
+    {
+        $resolved = trim((string) $value);
+
+        return $resolved === '' ? null : $resolved;
+    }
+
 }

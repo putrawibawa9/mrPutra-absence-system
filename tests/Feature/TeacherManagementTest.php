@@ -16,14 +16,14 @@ class TeacherManagementTest extends TestCase
 
         $response = $this->actingAs($admin)->post(route('teachers.store'), [
             'name' => 'Teacher Baru',
+            'username' => 'teacherbaru',
             'email' => 'teacherbaru@example.com',
-            'password' => 'password123',
-            'password_confirmation' => 'password123',
         ]);
 
         $response->assertRedirect(route('teachers.index', absolute: false));
         $this->assertDatabaseHas('users', [
             'name' => 'Teacher Baru',
+            'username' => 'teacherbaru',
             'email' => 'teacherbaru@example.com',
             'role' => User::ROLE_TEACHER,
         ]);

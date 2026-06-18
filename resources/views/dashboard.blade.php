@@ -5,9 +5,9 @@
                 <h2 class="text-2xl font-semibold text-slate-900">Dashboard</h2>
                 <p class="text-sm text-slate-500">Quick overview of new registrations, students who left this month, and active students.</p>
             </div>
-            @if (auth()->user()->isTeacher())
+            @if (auth()->user()->isAdmin() || auth()->user()->isTeacher())
                 <a href="{{ route('attendances.create') }}" class="inline-flex items-center rounded-xl bg-slate-900 px-4 py-2 text-sm font-medium text-white transition hover:bg-slate-800">
-                    Add Attendance
+                    Catat Absensi
                 </a>
             @endif
         </div>

@@ -3,7 +3,6 @@
 namespace Tests\Feature;
 
 use App\Models\Attendance;
-use App\Models\Package;
 use App\Models\Payment;
 use App\Models\Student;
 use App\Models\User;
@@ -16,7 +15,7 @@ class ManualTokenBalanceTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_admin_can_create_manual_opening_balance_for_student(): void
+    public function test_admin_can_create_token_payment_for_student(): void
     {
         Storage::fake('public');
 
@@ -34,12 +33,11 @@ class ManualTokenBalanceTest extends TestCase
 
         $response = $this->actingAs($admin)->post(route('payments.store'), [
             'student_id' => $student->id,
-            'source_type' => Payment::SOURCE_MANUAL,
-            'manual_total_sessions' => 20,
-            'manual_remaining_sessions' => 7,
-            'manual_price' => 900000,
+            'source_type' => Payment::SOURCE_TOKEN,
+            'total_sessions' => 20,
+            'price_amount' => 900000,
             'payment_date' => now()->toDateString(),
-            'notes' => 'Imported from Excel opening balance',
+            'notes' => 'New token purchase',
         ]);
 
         $payment = Payment::query()->first();
@@ -50,13 +48,12 @@ class ManualTokenBalanceTest extends TestCase
         $this->assertSame($admin->id, $payment->signed_by_user_id);
         $this->assertDatabaseHas('payments', [
             'student_id' => $student->id,
-            'package_id' => null,
-            'source_type' => Payment::SOURCE_MANUAL,
+            'source_type' => Payment::SOURCE_TOKEN,
             'total_sessions' => 20,
-            'remaining_sessions' => 7,
+            'remaining_sessions' => 20,
             'price_amount' => 900000,
             'amount_paid' => 900000,
-            'notes' => 'Imported from Excel opening balance',
+            'notes' => 'New token purchase',
         ]);
         $this->assertNull($payment->signature_path);
     }
@@ -73,8 +70,7 @@ class ManualTokenBalanceTest extends TestCase
         $payment = Payment::query()->create([
             'receipt_number' => 'KWT-20260408-ABC123',
             'student_id' => $student->id,
-            'package_id' => null,
-            'source_type' => Payment::SOURCE_MANUAL,
+            'source_type' => Payment::SOURCE_TOKEN,
             'total_sessions' => 10,
             'remaining_sessions' => 4,
             'payment_date' => now()->toDateString(),
@@ -101,7 +97,7 @@ class ManualTokenBalanceTest extends TestCase
         $response = $this->actingAs($admin)->get(route('payments.create'));
 
         $response->assertOk();
-        $response->assertSee('Search by student name, phone, or email');
+        $response->assertSee('Cari nama, nomor HP, atau email');
         $response->assertDontSee('Select student');
     }
 
@@ -114,11 +110,6 @@ class ManualTokenBalanceTest extends TestCase
             'phone' => '0812222222',
             'email' => 'debtpayment@example.com',
             'is_active' => true,
-        ]);
-        $package = Package::query()->create([
-            'name' => '5 Sessions',
-            'total_sessions' => 5,
-            'price' => 300000,
         ]);
 
         Attendance::query()->create([
@@ -138,8 +129,9 @@ class ManualTokenBalanceTest extends TestCase
 
         $response = $this->actingAs($admin)->post(route('payments.store'), [
             'student_id' => $student->id,
-            'source_type' => Payment::SOURCE_PACKAGE,
-            'package_id' => $package->id,
+            'source_type' => Payment::SOURCE_TOKEN,
+            'total_sessions' => 5,
+            'price_amount' => 300000,
             'payment_date' => now()->toDateString(),
         ]);
 
@@ -174,8 +166,7 @@ class ManualTokenBalanceTest extends TestCase
         $payment = Payment::query()->create([
             'receipt_number' => 'KWT-20260414-SIGN01',
             'student_id' => $student->id,
-            'package_id' => null,
-            'source_type' => Payment::SOURCE_MANUAL,
+            'source_type' => Payment::SOURCE_TOKEN,
             'total_sessions' => 10,
             'remaining_sessions' => 4,
             'payment_date' => now()->toDateString(),
@@ -189,21 +180,20 @@ class ManualTokenBalanceTest extends TestCase
         $response->assertSee(Storage::disk('public')->url('signatures/users/admin-signature.png'));
     }
 
-    public function test_manual_opening_balance_price_is_shown_on_receipt(): void
+    public function test_payment_price_is_shown_on_receipt(): void
     {
         $admin = User::factory()->create(['role' => User::ROLE_ADMIN]);
         $student = Student::query()->create([
-            'name' => 'Manual Price Student',
+            'name' => 'Price Student',
             'phone' => '0810000002',
-            'email' => 'manual-price@example.com',
+            'email' => 'price@example.com',
             'is_active' => true,
         ]);
 
         $payment = Payment::query()->create([
-            'receipt_number' => 'KWT-20260414-MANUAL1',
+            'receipt_number' => 'KWT-20260414-PRICE1',
             'student_id' => $student->id,
-            'package_id' => null,
-            'source_type' => Payment::SOURCE_MANUAL,
+            'source_type' => Payment::SOURCE_TOKEN,
             'total_sessions' => 12,
             'remaining_sessions' => 5,
             'price_amount' => 850000,
@@ -230,8 +220,7 @@ class ManualTokenBalanceTest extends TestCase
         $payment = Payment::query()->create([
             'receipt_number' => 'KWT-20260414-WA001',
             'student_id' => $student->id,
-            'package_id' => null,
-            'source_type' => Payment::SOURCE_MANUAL,
+            'source_type' => Payment::SOURCE_TOKEN,
             'total_sessions' => 8,
             'remaining_sessions' => 4,
             'price_amount' => 400000,
@@ -259,8 +248,7 @@ class ManualTokenBalanceTest extends TestCase
         $payment = Payment::query()->create([
             'receipt_number' => 'KWT-20260414-PUBLIC',
             'student_id' => $student->id,
-            'package_id' => null,
-            'source_type' => Payment::SOURCE_MANUAL,
+            'source_type' => Payment::SOURCE_TOKEN,
             'total_sessions' => 6,
             'remaining_sessions' => 3,
             'price_amount' => 300000,

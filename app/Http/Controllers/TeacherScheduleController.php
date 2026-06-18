@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\TeacherScheduleRequest;
+use App\Models\MaterialLink;
 use App\Models\Student;
 use App\Models\TeacherSchedule;
 use App\Models\User;
@@ -14,7 +15,7 @@ class TeacherScheduleController extends Controller
     public function index()
     {
         $schedules = TeacherSchedule::query()
-            ->with(['teacher', 'student'])
+            ->with(['teacher', 'student', 'materialLink'])
             ->orderBy('teacher_id')
             ->orderByRaw($this->dayOrderSql())
             ->orderBy('start_time')
@@ -65,7 +66,7 @@ class TeacherScheduleController extends Controller
         $teacher = auth()->user();
         $groupedSchedules = $this->groupByDay(
             $teacher->teacherSchedules()
-                ->with('student')
+                ->with(['student', 'materialLink'])
                 ->where('is_active', true)
                 ->orderByRaw($this->dayOrderSql())
                 ->orderBy('start_time')
@@ -80,6 +81,7 @@ class TeacherScheduleController extends Controller
         return [
             'teachers' => User::teachers()->orderBy('name')->get(),
             'students' => Student::active()->orderBy('name')->get(),
+            'materialLinks' => MaterialLink::query()->where('is_active', true)->orderBy('title')->get(),
             'dayOptions' => WeeklyDay::options(),
         ];
     }

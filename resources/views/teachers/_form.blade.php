@@ -10,13 +10,9 @@
         <x-input-error :messages="$errors->get('email')" class="mt-2" />
     </div>
     <div>
-        <x-input-label for="password" value="{{ isset($teacher) ? 'New Password (optional)' : 'Password' }}" />
-        <x-text-input id="password" name="password" type="password" class="mt-1 block w-full rounded-xl border-slate-300" />
-        <x-input-error :messages="$errors->get('password')" class="mt-2" />
-    </div>
-    <div>
-        <x-input-label for="password_confirmation" value="Confirm Password" />
-        <x-text-input id="password_confirmation" name="password_confirmation" type="password" class="mt-1 block w-full rounded-xl border-slate-300" />
+        <x-input-label for="username" value="Username" />
+        <x-text-input id="username" name="username" type="text" class="mt-1 block w-full rounded-xl border-slate-300" :value="old('username', $teacher->username ?? '')" required />
+        <x-input-error :messages="$errors->get('username')" class="mt-2" />
     </div>
 </div>
 

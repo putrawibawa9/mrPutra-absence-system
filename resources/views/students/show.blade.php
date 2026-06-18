@@ -22,6 +22,16 @@
                         Token Debt: {{ $student->getTokenDebtLabel() }}
                     </span>
                 @endif
+                @if (auth()->user()->isAdmin() && $student->getRemainingSessions() < 2 && $student->lowSessionReminderWhatsAppUrl($student->getRemainingSessions()))
+                    <a
+                        href="{{ $student->lowSessionReminderWhatsAppUrl($student->getRemainingSessions()) }}"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        class="rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-700"
+                    >
+                        Kirim Pengingat Sisa Pertemuan
+                    </a>
+                @endif
             </div>
         </div>
     </x-slot>
@@ -137,7 +147,7 @@
             <table class="hidden min-w-full divide-y divide-slate-100 text-sm md:table">
                 <thead class="bg-slate-50 text-left text-slate-500">
                     <tr>
-                        <th class="px-6 py-3 font-medium">Package</th>
+                        <th class="px-6 py-3 font-medium">Keterangan</th>
                         <th class="px-6 py-3 font-medium">Total</th>
                         <th class="px-6 py-3 font-medium">Remaining</th>
                         <th class="px-6 py-3 font-medium">Paid</th>
@@ -208,6 +218,113 @@
                     @endforelse
                 </tbody>
             </table>
+        </div>
+    </div>
+
+    <div class="mt-6 overflow-hidden rounded-3xl bg-white shadow-sm">
+        <div class="border-b border-slate-100 px-6 py-4">
+            <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                    <h3 class="text-lg font-semibold text-slate-900">Meeting Journals</h3>
+                    <p class="text-sm text-slate-500">Semua jurnal pembelajaran siswa ini, dari pertemuan terbaru ke paling lama.</p>
+                </div>
+                <span class="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700">
+                    {{ $student->attendances->count() }} journal{{ $student->attendances->count() === 1 ? '' : 's' }}
+                </span>
+            </div>
+        </div>
+
+        <div class="space-y-4 p-4 sm:p-6">
+            @forelse ($student->attendances as $attendance)
+                <div class="rounded-2xl border border-slate-100 bg-slate-50 p-4 sm:p-5">
+                    <div class="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+                        <div class="space-y-2">
+                            <div class="flex flex-wrap items-center gap-2">
+                                <span class="rounded-full bg-white px-3 py-1 text-xs font-semibold text-slate-700">
+                                    {{ $attendance->date->format('d M Y') }}
+                                </span>
+                                <span class="rounded-full bg-white px-3 py-1 text-xs font-semibold text-slate-700">
+                                    {{ $attendance->teacher->name }}
+                                </span>
+                                @if ($attendance->batch?->title)
+                                    <span class="rounded-full bg-sky-100 px-3 py-1 text-xs font-semibold text-sky-700">
+                                        {{ $attendance->batch->title }}
+                                    </span>
+                                @endif
+                                <span class="rounded-full px-3 py-1 text-xs font-semibold {{ $attendance->payment ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700' }}">
+                                    {{ $attendance->payment?->displayLabel() ?? 'Token Debt' }}
+                                </span>
+                            </div>
+                            @if ($attendance->notes)
+                                <p class="text-sm text-slate-500">{{ $attendance->notes }}</p>
+                            @endif
+                        </div>
+                    </div>
+
+                    <div class="mt-4 rounded-2xl bg-white p-4">
+                        <p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Learning Journal</p>
+                        <p class="mt-3 whitespace-pre-line text-sm leading-7 text-slate-700">{{ $attendance->learning_journal }}</p>
+                    </div>
+                </div>
+            @empty
+                <div class="rounded-2xl border border-dashed border-slate-200 px-6 py-10 text-center text-sm text-slate-500">
+                    Belum ada meeting journal untuk siswa ini.
+                </div>
+            @endforelse
+        </div>
+    </div>
+
+    @php
+        $homeworkAttendances = $student->attendances->filter(fn ($attendance) => filled($attendance->homework_content))->values();
+    @endphp
+
+    <div class="mt-6 overflow-hidden rounded-3xl bg-white shadow-sm">
+        <div class="border-b border-slate-100 px-6 py-4">
+            <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                    <h3 class="text-lg font-semibold text-slate-900">Homework History</h3>
+                    <p class="text-sm text-slate-500">Semua target hafalan, phrases, atau chunks yang pernah diberikan ke siswa ini.</p>
+                </div>
+                <span class="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700">
+                    {{ $homeworkAttendances->count() }} homework{{ $homeworkAttendances->count() === 1 ? '' : 's' }}
+                </span>
+            </div>
+        </div>
+
+        <div class="space-y-4 p-4 sm:p-6">
+            @forelse ($homeworkAttendances as $attendance)
+                <div class="rounded-2xl border border-slate-100 bg-slate-50 p-4 sm:p-5">
+                    <div class="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+                        <div class="space-y-2">
+                            <div class="flex flex-wrap items-center gap-2">
+                                <span class="rounded-full bg-white px-3 py-1 text-xs font-semibold text-slate-700">
+                                    {{ $attendance->date->format('d M Y') }}
+                                </span>
+                                <span class="rounded-full bg-white px-3 py-1 text-xs font-semibold text-slate-700">
+                                    {{ $attendance->teacher->name }}
+                                </span>
+                                @if ($attendance->batch?->title)
+                                    <span class="rounded-full bg-sky-100 px-3 py-1 text-xs font-semibold text-sky-700">
+                                        {{ $attendance->batch->title }}
+                                    </span>
+                                @endif
+                            </div>
+                            @if ($attendance->notes)
+                                <p class="text-sm text-slate-500">{{ $attendance->notes }}</p>
+                            @endif
+                        </div>
+                    </div>
+
+                    <div class="mt-4 rounded-2xl bg-white p-4">
+                        <p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Homework / Target Hafalan</p>
+                        <p class="mt-3 whitespace-pre-line text-sm leading-7 text-slate-700">{{ $attendance->homework_content }}</p>
+                    </div>
+                </div>
+            @empty
+                <div class="rounded-2xl border border-dashed border-slate-200 px-6 py-10 text-center text-sm text-slate-500">
+                    Belum ada homework yang tercatat untuk siswa ini.
+                </div>
+            @endforelse
         </div>
     </div>
 </x-app-layout>

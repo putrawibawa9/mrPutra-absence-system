@@ -7,6 +7,13 @@ use Illuminate\Validation\Rule;
 
 class TeacherRequest extends FormRequest
 {
+    protected function prepareForValidation(): void
+    {
+        $this->merge([
+            'username' => strtolower((string) $this->input('username')),
+        ]);
+    }
+
     public function authorize(): bool
     {
         return true;
@@ -18,8 +25,8 @@ class TeacherRequest extends FormRequest
 
         return [
             'name' => ['required', 'string', 'max:255'],
+            'username' => ['required', 'string', 'max:255', 'regex:/^[a-z0-9._-]+$/', Rule::unique('users', 'username')->ignore($teacher)],
             'email' => ['required', 'email', 'max:255', Rule::unique('users', 'email')->ignore($teacher)],
-            'password' => [$teacher ? 'nullable' : 'required', 'confirmed', 'min:8'],
         ];
     }
 }

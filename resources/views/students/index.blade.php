@@ -46,12 +46,13 @@
     </div>
 
     <div class="space-y-4 md:hidden">
-        @forelse ($students as $student)
+            @forelse ($students as $student)
             @php
                 $remainingSessions = $student->payments_sum_remaining_sessions ?? $student->getRemainingSessions();
                 $remainingClass = $remainingSessions <= 0
                     ? 'bg-rose-100 text-rose-700'
                     : ($remainingSessions <= 3 ? 'bg-amber-100 text-amber-700' : 'bg-emerald-100 text-emerald-700');
+                $lowSessionReminderUrl = $remainingSessions < 2 ? $student->lowSessionReminderWhatsAppUrl((int) $remainingSessions) : null;
             @endphp
             <div class="rounded-3xl bg-white p-5 shadow-sm">
                 <div class="flex items-start justify-between gap-3">
@@ -85,6 +86,11 @@
                 <div class="mt-4 flex flex-wrap gap-3 text-sm font-medium">
                     <a href="{{ route('students.show', $student) }}" class="text-slate-700">View</a>
                     @if (auth()->user()->isAdmin())
+                        @if ($lowSessionReminderUrl)
+                            <a href="{{ $lowSessionReminderUrl }}" target="_blank" rel="noopener noreferrer" class="text-emerald-700">
+                                Kirim Pengingat Sisa Pertemuan
+                            </a>
+                        @endif
                         <a href="{{ route('students.edit', $student) }}" class="text-slate-700">Edit</a>
                         <form method="POST" action="{{ route('students.destroy', $student) }}" data-confirm="Delete this student?">
                             @csrf
@@ -119,6 +125,7 @@
                         $remainingClass = $remainingSessions <= 0
                             ? 'bg-rose-100 text-rose-700'
                             : ($remainingSessions <= 3 ? 'bg-amber-100 text-amber-700' : 'bg-emerald-100 text-emerald-700');
+                        $lowSessionReminderUrl = $remainingSessions < 2 ? $student->lowSessionReminderWhatsAppUrl((int) $remainingSessions) : null;
                     @endphp
                     <tr>
                         <td class="px-6 py-4 font-medium text-slate-900">{{ $student->name }}</td>
@@ -155,6 +162,9 @@
                             <div class="flex items-center justify-end gap-3">
                                 <a href="{{ route('students.show', $student) }}" class="text-sm font-medium text-slate-700">View</a>
                                 @if (auth()->user()->isAdmin())
+                                    @if ($lowSessionReminderUrl)
+                                        <a href="{{ $lowSessionReminderUrl }}" target="_blank" rel="noopener noreferrer" class="text-sm font-medium text-emerald-700">Kirim Pengingat</a>
+                                    @endif
                                     <a href="{{ route('students.edit', $student) }}" class="text-sm font-medium text-slate-700">Edit</a>
                                     <form method="POST" action="{{ route('students.toggle-status', $student) }}" data-confirm="Change this student's active status?">
                                         @csrf

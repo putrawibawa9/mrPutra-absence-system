@@ -3,7 +3,6 @@
 namespace Tests\Feature;
 
 use App\Models\Attendance;
-use App\Models\Package;
 use App\Models\Payment;
 use App\Models\Student;
 use App\Models\User;
@@ -17,12 +16,6 @@ class AttendanceEditingTest extends TestCase
     public function test_teacher_can_edit_single_attendance_and_rebalance_tokens(): void
     {
         $teacher = User::factory()->create(['role' => User::ROLE_TEACHER]);
-        $package = Package::query()->create([
-            'name' => '10 Sessions',
-            'total_sessions' => 10,
-            'price' => 500000,
-        ]);
-
         $studentOne = Student::query()->create([
             'name' => 'Student One',
             'phone' => '0811111111',
@@ -39,8 +32,7 @@ class AttendanceEditingTest extends TestCase
         $paymentOne = Payment::query()->create([
             'receipt_number' => 'KWT-EDIT-001',
             'student_id' => $studentOne->id,
-            'package_id' => $package->id,
-            'source_type' => Payment::SOURCE_PACKAGE,
+            'source_type' => Payment::SOURCE_TOKEN,
             'total_sessions' => 10,
             'remaining_sessions' => 4,
             'payment_date' => now()->toDateString(),
@@ -48,8 +40,7 @@ class AttendanceEditingTest extends TestCase
         $paymentTwo = Payment::query()->create([
             'receipt_number' => 'KWT-EDIT-002',
             'student_id' => $studentTwo->id,
-            'package_id' => $package->id,
-            'source_type' => Payment::SOURCE_PACKAGE,
+            'source_type' => Payment::SOURCE_TOKEN,
             'total_sessions' => 10,
             'remaining_sessions' => 3,
             'payment_date' => now()->toDateString(),
@@ -97,26 +88,20 @@ class AttendanceEditingTest extends TestCase
         ]);
     }
 
-    public function test_admin_cannot_edit_attendance(): void
+    public function test_admin_can_edit_attendance_and_update_assigned_teacher(): void
     {
         $admin = User::factory()->create(['role' => User::ROLE_ADMIN]);
         $teacher = User::factory()->create(['role' => User::ROLE_TEACHER]);
+        $coTeacher = User::factory()->create(['role' => User::ROLE_TEACHER]);
         $student = Student::query()->create([
             'name' => 'Student One',
             'phone' => '0811111111',
             'email' => 'blocked-edit@example.com',
             'is_active' => true,
-        ]);
-        $package = Package::query()->create([
-            'name' => '10 Sessions',
-            'total_sessions' => 10,
-            'price' => 500000,
-        ]);
-        $payment = Payment::query()->create([
+        ]);        $payment = Payment::query()->create([
             'receipt_number' => 'KWT-EDIT-003',
             'student_id' => $student->id,
-            'package_id' => $package->id,
-            'source_type' => Payment::SOURCE_PACKAGE,
+            'source_type' => Payment::SOURCE_TOKEN,
             'total_sessions' => 10,
             'remaining_sessions' => 4,
             'payment_date' => now()->toDateString(),
@@ -133,25 +118,25 @@ class AttendanceEditingTest extends TestCase
 
         $this->actingAs($admin)
             ->get(route('attendances.edit', $attendance))
-            ->assertForbidden();
+            ->assertOk();
 
         $this->actingAs($admin)
             ->put(route('attendances.update', $attendance), [
                 'student_id' => $student->id,
-                'teacher_ids' => [$teacher->id],
+                'teacher_ids' => [$coTeacher->id, $teacher->id],
                 'payment_id' => $payment->id,
                 'date' => now()->addDay()->toDateString(),
                 'teaching_minutes' => 90,
-                'notes' => 'Blocked update',
-                'learning_journal' => 'Blocked journal',
+                'notes' => 'Updated by admin',
+                'learning_journal' => 'Updated journal by admin',
             ])
-            ->assertForbidden();
+            ->assertRedirect(route('attendances.index', absolute: false));
 
         $this->assertDatabaseHas('attendances', [
             'id' => $attendance->id,
-            'teacher_id' => $teacher->id,
-            'notes' => 'Initial',
-            'learning_journal' => 'Initial journal',
+            'teacher_id' => $coTeacher->id,
+            'notes' => 'Updated by admin',
+            'learning_journal' => 'Updated journal by admin',
         ]);
     }
 
@@ -163,17 +148,10 @@ class AttendanceEditingTest extends TestCase
             'phone' => '0833333333',
             'email' => 'editable-search@example.com',
             'is_active' => true,
-        ]);
-        $package = Package::query()->create([
-            'name' => '10 Sessions',
-            'total_sessions' => 10,
-            'price' => 500000,
-        ]);
-        $payment = Payment::query()->create([
+        ]);        $payment = Payment::query()->create([
             'receipt_number' => 'KWT-EDIT-004',
             'student_id' => $student->id,
-            'package_id' => $package->id,
-            'source_type' => Payment::SOURCE_PACKAGE,
+            'source_type' => Payment::SOURCE_TOKEN,
             'total_sessions' => 10,
             'remaining_sessions' => 4,
             'payment_date' => now()->toDateString(),

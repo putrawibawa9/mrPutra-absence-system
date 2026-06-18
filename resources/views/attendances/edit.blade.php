@@ -4,11 +4,40 @@
             'id' => (string) $student->id,
             'name' => $student->name,
             'phone' => $student->phone,
+            'material_history' => $student->attendances
+                ->flatMap(function ($attendanceItem) {
+                    $materialLinks = $attendanceItem->materialLinks->isNotEmpty()
+                        ? $attendanceItem->materialLinks
+                        : ($attendanceItem->materialLink ? collect([$attendanceItem->materialLink]) : collect());
+
+                    return $materialLinks->map(fn ($materialLink) => [
+                        'material_link_id' => (string) $materialLink->id,
+                        'title' => $materialLink->title,
+                        'last_date' => $attendanceItem->date?->format('d M Y'),
+                        'teacher_name' => $attendanceItem->teacher?->name,
+                    ]);
+                })
+                ->groupBy('material_link_id')
+                ->map(fn ($histories, $materialLinkId) => [
+                    'material_link_id' => (string) $materialLinkId,
+                    'title' => $histories->first()['title'] ?? null,
+                    'last_date' => $histories->first()['last_date'] ?? null,
+                    'teacher_name' => $histories->first()['teacher_name'] ?? null,
+                    'count' => $histories->count(),
+                ])
+                ->values()
+                ->all(),
         ])->values();
         $selectedTeacherIds = collect(old('teacher_ids', $attendance->teachers->pluck('id')->whenEmpty(fn ($collection) => $collection->push($attendance->teacher_id))->all()))
             ->filter()
             ->map(fn ($id) => (int) $id)
             ->unique()
+            ->all();
+        $selectedMaterialLinkIds = collect(old('material_link_ids', $attendance->materialLinks->pluck('id')->whenEmpty(fn ($collection) => $attendance->material_link_id ? $collection->push($attendance->material_link_id) : $collection)->all()))
+            ->filter()
+            ->map(fn ($id) => (string) $id)
+            ->unique()
+            ->values()
             ->all();
         $resolvedStudentId = old('student_id', $selectedStudent ?? $attendance->student_id);
         $selectedStudentData = $resolvedStudentId ? $students->firstWhere('id', $resolvedStudentId) : null;
@@ -22,6 +51,7 @@
         x-data="attendanceEditPage({
             students: @js($studentOptions),
             selectedStudentId: @js((string) ($resolvedStudentId ?: '')),
+            selectedMaterialLinkIds: @js($selectedMaterialLinkIds),
             editUrl: @js(route('attendances.edit', $attendance)),
         })"
         class="rounded-3xl bg-white p-6 shadow-sm"
@@ -112,6 +142,54 @@
                 </div>
 
                 <div class="md:col-span-2">
+                    <x-input-label value="Link Materi (optional)" />
+                    <p class="mt-1 text-sm text-slate-500">Boleh pilih lebih dari satu link materi untuk attendance ini.</p>
+                    <div class="mt-3 grid gap-3 md:grid-cols-2">
+                        @foreach ($materialLinks as $materialLink)
+                            <label class="flex items-start gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
+                                <input
+                                    type="checkbox"
+                                    name="material_link_ids[]"
+                                    value="{{ $materialLink->id }}"
+                                    x-model="selectedMaterialLinkIds"
+                                    class="mt-1 rounded border-slate-300 text-slate-900"
+                                    @checked(in_array((string) $materialLink->id, $selectedMaterialLinkIds, true))
+                                >
+                                <div class="min-w-0">
+                                    <p class="font-medium text-slate-900">{{ $materialLink->title }}</p>
+                                    <a href="{{ $materialLink->url }}" target="_blank" rel="noopener noreferrer" class="mt-1 inline-flex break-all text-xs text-sky-700 hover:text-sky-900">
+                                        {{ $materialLink->url }}
+                                    </a>
+                                </div>
+                            </label>
+                        @endforeach
+                    </div>
+                    <x-input-error :messages="$errors->get('material_link_ids')" class="mt-2" />
+                    <x-input-error :messages="$errors->get('material_link_ids.*')" class="mt-2" />
+                </div>
+
+                <div x-show="selectedStudentMaterialWarnings.length > 0" x-cloak class="md:col-span-2 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+                    <p class="font-semibold">Warning Materi</p>
+                    <div class="mt-3 space-y-2">
+                        <template x-for="warning in selectedStudentMaterialWarnings" :key="`edit-single-material-warning-${warning.material_link_id}`">
+                            <div class="rounded-xl bg-white px-3 py-3 text-sm text-slate-700">
+                                <p class="font-medium text-slate-900" x-text="warning.title"></p>
+                                <p class="mt-1">
+                                    Murid ini sudah pernah belajar materi ini pada
+                                    <span class="font-medium" x-text="warning.last_date"></span>
+                                    bersama
+                                    <span class="font-medium" x-text="warning.teacher_name || '-'"></span>.
+                                </p>
+                                <p class="mt-1 text-xs text-amber-700">
+                                    Total pernah dipakai:
+                                    <span x-text="warning.count"></span> kali.
+                                </p>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+
+                <div class="md:col-span-2">
                     <x-input-label value="Teachers for This Session" />
                     <p class="mt-1 text-sm text-slate-500">You can choose more than one teacher when this student is taught together.</p>
                     <div class="mt-3 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
@@ -142,6 +220,13 @@
                 </div>
 
                 <div class="md:col-span-2">
+                    <x-input-label for="homework_content" value="Homework / Target Hafalan (optional)" />
+                    <textarea id="homework_content" name="homework_content" rows="7" class="mt-1 block w-full rounded-xl border-slate-300" placeholder="Tuliskan phrases, chunks, atau target hafalan untuk diuji di pertemuan berikutnya.">{{ old('homework_content', $attendance->homework_content) }}</textarea>
+                    <p class="mt-2 text-xs text-slate-500">Field ini mendukung isi yang cukup panjang untuk menyimpan homework per murid.</p>
+                    <x-input-error :messages="$errors->get('homework_content')" class="mt-2" />
+                </div>
+
+                <div class="md:col-span-2">
                     <x-input-label for="notes" value="Notes (optional)" />
                     <textarea id="notes" name="notes" rows="4" class="mt-1 block w-full rounded-xl border-slate-300">{{ old('notes', $attendance->notes) }}</textarea>
                     <x-input-error :messages="$errors->get('notes')" class="mt-2" />
@@ -158,12 +243,28 @@
     </div>
 
     <script>
-        function attendanceEditPage({ students, selectedStudentId, editUrl }) {
+        function attendanceEditPage({ students, selectedStudentId, selectedMaterialLinkIds, editUrl }) {
             return {
                 students,
                 selectedStudentId,
+                selectedMaterialLinkIds,
                 editUrl,
                 studentSearch: '',
+                get selectedStudent() {
+                    return this.students.find((student) => student.id === this.selectedStudentId) ?? null;
+                },
+                materialWarningFor(student, materialLinkId) {
+                    if (! student || ! materialLinkId) {
+                        return null;
+                    }
+
+                    return (student.material_history ?? []).find((item) => item.material_link_id === materialLinkId) ?? null;
+                },
+                get selectedStudentMaterialWarnings() {
+                    return this.selectedMaterialLinkIds
+                        .map((materialLinkId) => this.materialWarningFor(this.selectedStudent, materialLinkId))
+                        .filter(Boolean);
+                },
                 get filteredStudents() {
                     const query = this.studentSearch.trim().toLowerCase();
 

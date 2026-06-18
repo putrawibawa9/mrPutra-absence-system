@@ -21,6 +21,7 @@ class TeacherScheduleRequest extends FormRequest
         return [
             'teacher_id' => ['required', Rule::exists('users', 'id')->where(fn ($query) => $query->where('role', User::ROLE_TEACHER))],
             'student_id' => ['nullable', 'exists:students,id'],
+            'material_link_id' => ['nullable', Rule::exists('material_links', 'id')->where('is_active', true)],
             'title' => ['nullable', 'string', 'max:255'],
             'day_of_week' => ['required', Rule::in(WeeklyDay::values())],
             'start_time' => ['required', 'date_format:H:i'],

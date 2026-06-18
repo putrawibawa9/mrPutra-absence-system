@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\MaterialLink;
 use App\Models\Student;
 use App\Models\TeacherAvailability;
 use App\Models\TeacherSchedule;
@@ -22,10 +23,16 @@ class TeacherScheduleFeatureTest extends TestCase
             'phone' => '08123456789',
             'is_active' => true,
         ]);
+        $materialLink = MaterialLink::create([
+            'title' => 'Daily Conversation Deck',
+            'url' => 'https://example.com/daily-conversation',
+            'is_active' => true,
+        ]);
 
         $response = $this->actingAs($admin)->post(route('teacher-schedules.store'), [
             'teacher_id' => $teacher->id,
             'student_id' => $student->id,
+            'material_link_id' => $materialLink->id,
             'title' => 'Private English',
             'day_of_week' => 'monday',
             'start_time' => '17:00',
@@ -39,6 +46,7 @@ class TeacherScheduleFeatureTest extends TestCase
         $this->assertDatabaseHas('teacher_schedules', [
             'teacher_id' => $teacher->id,
             'student_id' => $student->id,
+            'material_link_id' => $materialLink->id,
             'title' => 'Private English',
             'day_of_week' => 'monday',
         ]);
@@ -50,7 +58,8 @@ class TeacherScheduleFeatureTest extends TestCase
             ->assertSee('Senin')
             ->assertSee('17:00 - 18:30')
             ->assertSee('Private English')
-            ->assertSee('Budi');
+            ->assertSee('Budi')
+            ->assertSee('Daily Conversation Deck');
     }
 
     public function test_admin_cannot_create_overlapping_schedule_for_same_teacher(): void

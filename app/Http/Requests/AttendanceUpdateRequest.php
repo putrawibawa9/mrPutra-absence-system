@@ -28,11 +28,14 @@ class AttendanceUpdateRequest extends FormRequest
         return [
             'student_id' => ['required', Rule::exists('students', 'id')->where('is_active', true)],
             'payment_id' => ['nullable', 'exists:payments,id'],
+            'material_link_ids' => ['nullable', 'array'],
+            'material_link_ids.*' => ['integer', Rule::exists('material_links', 'id')->where('is_active', true)],
             'teacher_ids' => ['nullable', 'array', 'min:1'],
             'teacher_ids.*' => ['integer', Rule::exists('users', 'id')->where('role', \App\Models\User::ROLE_TEACHER)],
             'date' => ['required', 'date'],
             'teaching_minutes' => ['required', 'integer', 'min:1', 'max:600'],
             'learning_journal' => ['required', 'string', 'min:3'],
+            'homework_content' => ['nullable', 'string', 'min:3'],
             'notes' => ['nullable', 'string'],
         ];
     }

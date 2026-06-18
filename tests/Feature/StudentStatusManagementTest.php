@@ -3,7 +3,6 @@
 namespace Tests\Feature;
 
 use App\Models\Attendance;
-use App\Models\Package;
 use App\Models\Payment;
 use App\Models\Student;
 use App\Models\User;
@@ -74,6 +73,35 @@ class StudentStatusManagementTest extends TestCase
         $response->assertDontSee('Hidden Student');
     }
 
+    public function test_student_index_hides_inactive_students_by_default(): void
+    {
+        $admin = User::factory()->create(['role' => User::ROLE_ADMIN]);
+
+        Student::query()->create([
+            'name' => 'Active Listed Student',
+            'phone' => '0813777001',
+            'email' => 'active-listed@example.com',
+            'program_type' => Student::PROGRAM_ENGLISH,
+            'registration_date' => now()->toDateString(),
+            'is_active' => true,
+        ]);
+
+        Student::query()->create([
+            'name' => 'Inactive Hidden Student',
+            'phone' => '0813777002',
+            'email' => 'inactive-hidden@example.com',
+            'program_type' => Student::PROGRAM_CODING,
+            'registration_date' => now()->toDateString(),
+            'is_active' => false,
+        ]);
+
+        $this->actingAs($admin)
+            ->get(route('students.index'))
+            ->assertOk()
+            ->assertSee('Active Listed Student')
+            ->assertDontSee('Inactive Hidden Student');
+    }
+
     public function test_student_pages_show_total_payment_debt_information(): void
     {
         $admin = User::factory()->create(['role' => User::ROLE_ADMIN]);
@@ -97,7 +125,6 @@ class StudentStatusManagementTest extends TestCase
         Payment::query()->create([
             'receipt_number' => 'KWT-DEBT-INFO-001',
             'student_id' => $student->id,
-            'package_id' => null,
             'book_title' => 'Module TOEFL',
             'source_type' => Payment::SOURCE_BOOK,
             'total_sessions' => 0,
@@ -121,6 +148,75 @@ class StudentStatusManagementTest extends TestCase
             ->assertSee('Rp 150.000')
             ->assertSee('Token Debt')
             ->assertSee('1 session');
+    }
+
+    public function test_student_show_page_lists_meeting_journals(): void
+    {
+        $admin = User::factory()->create(['role' => User::ROLE_ADMIN]);
+        $teacher = User::factory()->create([
+            'role' => User::ROLE_TEACHER,
+            'name' => 'Wulan',
+        ]);
+        $student = Student::query()->create([
+            'name' => 'Journal Student',
+            'phone' => '0814555000',
+            'email' => 'journalstudent@example.com',
+            'program_type' => Student::PROGRAM_ENGLISH,
+            'registration_date' => now()->toDateString(),
+            'is_active' => true,
+        ]);
+
+        Attendance::query()->create([
+            'student_id' => $student->id,
+            'teacher_id' => $teacher->id,
+            'payment_id' => null,
+            'date' => now()->toDateString(),
+            'notes' => 'Focus on speaking confidence',
+            'learning_journal' => 'Practiced speaking drills and page 12 reading.',
+        ]);
+
+        $this->actingAs($admin)
+            ->get(route('students.show', $student))
+            ->assertOk()
+            ->assertSee('Meeting Journals')
+            ->assertSee('Wulan')
+            ->assertSee('Focus on speaking confidence')
+            ->assertSee('Practiced speaking drills and page 12 reading.');
+    }
+
+    public function test_student_show_page_lists_homework_history(): void
+    {
+        $admin = User::factory()->create(['role' => User::ROLE_ADMIN]);
+        $teacher = User::factory()->create([
+            'role' => User::ROLE_TEACHER,
+            'name' => 'Leo',
+        ]);
+        $student = Student::query()->create([
+            'name' => 'Homework History Student',
+            'phone' => '0814555009',
+            'email' => 'homeworkhistory@example.com',
+            'program_type' => Student::PROGRAM_ENGLISH,
+            'registration_date' => now()->toDateString(),
+            'is_active' => true,
+        ]);
+
+        Attendance::query()->create([
+            'student_id' => $student->id,
+            'teacher_id' => $teacher->id,
+            'payment_id' => null,
+            'date' => now()->toDateString(),
+            'notes' => 'Homework note',
+            'learning_journal' => 'Speaking practice.',
+            'homework_content' => "Memorize these chunks:\nHow was your day?\nIt was really exciting.",
+        ]);
+
+        $this->actingAs($admin)
+            ->get(route('students.show', $student))
+            ->assertOk()
+            ->assertSee('Homework History')
+            ->assertSee('Leo')
+            ->assertSee('How was your day?')
+            ->assertSee('It was really exciting.');
     }
 
     public function test_admin_can_toggle_student_status(): void
@@ -156,17 +252,13 @@ class StudentStatusManagementTest extends TestCase
             'registration_date' => now()->toDateString(),
             'is_active' => false,
         ]);
-        $package = Package::query()->create([
-            'name' => '10 Sessions',
-            'total_sessions' => 10,
-            'price' => 500000,
-        ]);
-
         $response = $this->from(route('payments.create'))
             ->actingAs($admin)
             ->post(route('payments.store'), [
                 'student_id' => $student->id,
-                'package_id' => $package->id,
+                'source_type' => Payment::SOURCE_TOKEN,
+                'total_sessions' => 10,
+                'price_amount' => 500000,
                 'payment_date' => now()->toDateString(),
             ]);
 
@@ -174,7 +266,6 @@ class StudentStatusManagementTest extends TestCase
         $response->assertSessionHasErrors('student_id');
         $this->assertDatabaseMissing('payments', [
             'student_id' => $student->id,
-            'package_id' => $package->id,
         ]);
     }
 
@@ -239,7 +330,6 @@ class StudentStatusManagementTest extends TestCase
         Payment::query()->create([
             'receipt_number' => 'KWT-SORT-001',
             'student_id' => $lowTokenStudent->id,
-            'package_id' => null,
             'source_type' => Payment::SOURCE_MANUAL,
             'total_sessions' => 3,
             'remaining_sessions' => 2,
@@ -252,7 +342,6 @@ class StudentStatusManagementTest extends TestCase
         Payment::query()->create([
             'receipt_number' => 'KWT-SORT-002',
             'student_id' => $highTokenStudent->id,
-            'package_id' => null,
             'source_type' => Payment::SOURCE_MANUAL,
             'total_sessions' => 10,
             'remaining_sessions' => 8,
@@ -270,5 +359,68 @@ class StudentStatusManagementTest extends TestCase
         $response->assertSee('Token terkecil ke terbesar');
         $response->assertSeeInOrder(['Low Token Student', 'High Token Student']);
         $response->assertSee('bg-amber-100', false);
+    }
+
+    public function test_admin_can_see_whatsapp_reminder_button_for_students_with_less_than_two_sessions(): void
+    {
+        $admin = User::factory()->create(['role' => User::ROLE_ADMIN]);
+
+        $lowSessionStudent = Student::query()->create([
+            'name' => 'Reminder Student',
+            'phone' => '0817000001',
+            'email' => 'reminder@example.com',
+            'program_type' => Student::PROGRAM_ENGLISH,
+            'registration_date' => now()->toDateString(),
+            'is_active' => true,
+        ]);
+        $enoughSessionStudent = Student::query()->create([
+            'name' => 'Enough Session Student',
+            'phone' => '0817000002',
+            'email' => 'enough@example.com',
+            'program_type' => Student::PROGRAM_CODING,
+            'registration_date' => now()->toDateString(),
+            'is_active' => true,
+        ]);
+
+        Payment::query()->create([
+            'receipt_number' => 'KWT-REMINDER-001',
+            'student_id' => $lowSessionStudent->id,
+            'source_type' => Payment::SOURCE_MANUAL,
+            'total_sessions' => 4,
+            'remaining_sessions' => 1,
+            'price_amount' => 0,
+            'amount_paid' => 0,
+            'payment_date' => now()->toDateString(),
+            'signed_by_user_id' => $admin->id,
+        ]);
+        Payment::query()->create([
+            'receipt_number' => 'KWT-REMINDER-002',
+            'student_id' => $enoughSessionStudent->id,
+            'source_type' => Payment::SOURCE_MANUAL,
+            'total_sessions' => 4,
+            'remaining_sessions' => 3,
+            'price_amount' => 0,
+            'amount_paid' => 0,
+            'payment_date' => now()->toDateString(),
+            'signed_by_user_id' => $admin->id,
+        ]);
+
+        $indexResponse = $this->actingAs($admin)->get(route('students.index'));
+
+        $indexResponse->assertOk();
+        $indexResponse->assertSee('Kirim Pengingat Sisa Pertemuan');
+        $indexResponse->assertSee('wa.me/62817000001', false);
+        $indexResponse->assertSee(rawurlencode("Halo Bapak/Ibu / Ananda, semoga sehat selalu.\n\nKami ingin menyampaikan bahwa sisa pertemuan untuk Ananda Reminder Student saat ini tinggal 1 kali pertemuan.\n\nApabila berkenan melanjutkan pertemuan berikutnya, kami siap membantu untuk penjadwalan dan informasi biaya les selanjutnya.\n\nTerima kasih banyak."), false);
+
+        $showResponse = $this->actingAs($admin)->get(route('students.show', $lowSessionStudent));
+
+        $showResponse->assertOk();
+        $showResponse->assertSee('Kirim Pengingat Sisa Pertemuan');
+        $showResponse->assertSee('wa.me/62817000001', false);
+
+        $this->actingAs($admin)
+            ->get(route('students.show', $enoughSessionStudent))
+            ->assertOk()
+            ->assertDontSee('Kirim Pengingat Sisa Pertemuan');
     }
 }

@@ -7,8 +7,9 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
-#[Fillable(['attendance_batch_id', 'student_id', 'teacher_id', 'payment_id', 'date', 'teaching_minutes', 'notes', 'learning_journal'])]
+#[Fillable(['attendance_batch_id', 'student_id', 'teacher_id', 'payment_id', 'material_link_id', 'date', 'teaching_minutes', 'notes', 'learning_journal', 'homework_content'])]
 class Attendance extends Model
 {
     use HasFactory;
@@ -46,5 +47,33 @@ class Attendance extends Model
     public function payment(): BelongsTo
     {
         return $this->belongsTo(Payment::class);
+    }
+
+    public function materialLink(): BelongsTo
+    {
+        return $this->belongsTo(MaterialLink::class);
+    }
+
+    public function materialLinks(): BelongsToMany
+    {
+        return $this->belongsToMany(MaterialLink::class, 'attendance_material_link')
+            ->withTimestamps()
+            ->orderBy('title');
+    }
+
+    public function expenses(): HasMany
+    {
+        return $this->hasMany(Expense::class);
+    }
+
+    public function materialLinkLabels(): string
+    {
+        $links = $this->relationLoaded('materialLinks') ? $this->materialLinks : collect();
+
+        if ($links->isNotEmpty()) {
+            return $links->pluck('title')->join(', ');
+        }
+
+        return $this->materialLink?->title ?? '-';
     }
 }

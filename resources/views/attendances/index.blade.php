@@ -14,8 +14,8 @@
                 <h2 class="text-xl font-semibold text-slate-900 sm:text-2xl">Attendances</h2>
                 <p class="text-sm text-slate-500">Every saved attendance consumes exactly one session from the active token balance.</p>
             </div>
-            @if (auth()->user()->isTeacher())
-                <a href="{{ route('attendances.create') }}" class="inline-flex justify-center rounded-xl bg-slate-900 px-4 py-2 text-sm font-medium text-white">Add Attendance</a>
+            @if (auth()->user()->isAdmin() || auth()->user()->isTeacher())
+                <a href="{{ route('attendances.create') }}" class="inline-flex justify-center rounded-xl bg-slate-900 px-4 py-2 text-sm font-medium text-white">Catat Absensi</a>
             @endif
         </div>
     </x-slot>
@@ -42,7 +42,19 @@
             },
         }"
     >
-        <form method="GET" action="{{ route('attendances.index') }}" class="grid gap-4 md:grid-cols-2 xl:grid-cols-6">
+        <form method="GET" action="{{ route('attendances.index') }}" class="grid gap-4 md:grid-cols-2 xl:grid-cols-8">
+            <div class="xl:col-span-2">
+                <x-input-label for="search" value="Search Attendance / Material" />
+                <x-text-input
+                    id="search"
+                    name="search"
+                    type="text"
+                    class="mt-1 block w-full rounded-xl border-slate-300"
+                    :value="$filters['search'] ?? ''"
+                    placeholder="Cari sesi, jurnal, catatan, guru, atau link materi"
+                />
+            </div>
+
             <div>
                 <x-input-label for="date_from" value="Date From" />
                 <x-text-input id="date_from" name="date_from" type="date" class="mt-1 block w-full rounded-xl border-slate-300" :value="$filters['date_from'] ?? null" />
@@ -108,6 +120,15 @@
                     @foreach ($teachers as $teacher)
                         <option value="{{ $teacher->id }}" @selected((string) request('teacher_id') === (string) $teacher->id)>{{ $teacher->name }}</option>
                     @endforeach
+                </select>
+            </div>
+
+            <div>
+                <x-input-label for="teacher_fee_status" value="Fee Guru" />
+                <select id="teacher_fee_status" name="teacher_fee_status" class="mt-1 block w-full rounded-xl border-slate-300">
+                    <option value="">Semua</option>
+                    <option value="with_fee" @selected(($filters['teacher_fee_status'] ?? null) === 'with_fee')>Sudah</option>
+                    <option value="without_fee" @selected(($filters['teacher_fee_status'] ?? null) === 'without_fee')>Belum</option>
                 </select>
             </div>
 
@@ -207,6 +228,30 @@
                         <dt class="text-slate-500">Teacher</dt>
                         <dd class="font-medium text-slate-900">{{ $attendance->teacher_name }}</dd>
                     </div>
+                    <div class="flex items-center justify-between gap-4">
+                        <dt class="text-slate-500">Fee Guru</dt>
+                        <dd>
+                            <span class="rounded-full px-3 py-1 text-xs font-semibold {{ $attendance->teacher_fee_badge_class }}">
+                                {{ $attendance->teacher_fee_label }}
+                            </span>
+                        </dd>
+                    </div>
+                    <div>
+                        <dt class="text-slate-500">Link Materi</dt>
+                        <dd class="mt-1 text-slate-900">
+                            @if ($attendance->material_links->isNotEmpty())
+                                <div class="space-y-1">
+                                    @foreach ($attendance->material_links as $materialLink)
+                                        <a href="{{ $materialLink->url }}" target="_blank" rel="noopener noreferrer" class="block font-medium text-sky-700 hover:text-sky-900">
+                                            {{ $materialLink->title }}
+                                        </a>
+                                    @endforeach
+                                </div>
+                            @else
+                                -
+                            @endif
+                        </dd>
+                    </div>
                     @if ($attendance->type === 'batch')
                         <div>
                             <dt class="text-slate-500">Students Present</dt>
@@ -222,9 +267,13 @@
                         <dd class="mt-1 text-slate-900">{{ $attendance->notes }}</dd>
                     </div>
                 </dl>
-                @if (auth()->user()->isTeacher())
+                @if (auth()->user()->isAdmin() || auth()->user()->isTeacher())
                     <div class="mt-4">
-                    @if ($attendance->editable)
+                    @if ($attendance->type === 'batch')
+                        <a href="{{ route('attendances.batches.edit', $attendance->attendance_batch) }}" class="inline-flex justify-center rounded-xl border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700">
+                            Edit Batch
+                        </a>
+                    @elseif ($attendance->editable)
                         <a href="{{ route('attendances.edit', $attendance->attendance) }}" class="inline-flex justify-center rounded-xl border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700">
                             Edit
                         </a>
@@ -247,7 +296,9 @@
                     <th class="px-6 py-3 font-medium">Session</th>
                     <th class="px-6 py-3 font-medium">Student</th>
                     <th class="px-6 py-3 font-medium">Teacher</th>
-                    <th class="px-6 py-3 font-medium">Package</th>
+                    <th class="px-6 py-3 font-medium">Fee Guru</th>
+                    <th class="px-6 py-3 font-medium">Pembayaran</th>
+                    <th class="px-6 py-3 font-medium">Link Materi</th>
                     <th class="px-6 py-3 font-medium">Learning Journal</th>
                     <th class="px-6 py-3 font-medium">Notes</th>
                     <th class="px-6 py-3 font-medium"></th>
@@ -266,28 +317,48 @@
                         </td>
                         <td class="px-6 py-4 text-slate-600">{{ $attendance->teacher_name }}</td>
                         <td class="px-6 py-4">
+                            <span class="rounded-full px-3 py-1 text-xs font-semibold {{ $attendance->teacher_fee_badge_class }}">
+                                {{ $attendance->teacher_fee_label }}
+                            </span>
+                        </td>
+                        <td class="px-6 py-4">
                             <span class="{{ $attendance->payment_is_debt ? 'font-medium text-amber-700' : 'text-slate-600' }}">
                                 {{ $attendance->payment_label }}
                             </span>
+                        </td>
+                        <td class="px-6 py-4 text-slate-600">
+                            @if ($attendance->material_links->isNotEmpty())
+                                <div class="space-y-1">
+                                    @foreach ($attendance->material_links as $materialLink)
+                                        <a href="{{ $materialLink->url }}" target="_blank" rel="noopener noreferrer" class="block font-medium text-sky-700 hover:text-sky-900">
+                                            {{ $materialLink->title }}
+                                        </a>
+                                    @endforeach
+                                </div>
+                            @else
+                                -
+                            @endif
                         </td>
                         <td class="max-w-xs px-6 py-4 text-slate-600">
                             <p class="line-clamp-3 whitespace-pre-line">{{ $attendance->learning_journal }}</p>
                         </td>
                         <td class="px-6 py-4 text-slate-600">{{ $attendance->notes }}</td>
                         <td class="px-6 py-4 text-right">
-                            @if (auth()->user()->isTeacher() && $attendance->editable)
+                            @if ((auth()->user()->isAdmin() || auth()->user()->isTeacher()) && $attendance->type === 'batch')
+                                <a href="{{ route('attendances.batches.edit', $attendance->attendance_batch) }}" class="text-sm font-medium text-slate-700">Edit Batch</a>
+                            @elseif ((auth()->user()->isAdmin() || auth()->user()->isTeacher()) && $attendance->editable)
                                 <a href="{{ route('attendances.edit', $attendance->attendance) }}" class="text-sm font-medium text-slate-700">Edit</a>
-                            @elseif (auth()->user()->isTeacher())
+                            @elseif (auth()->user()->isAdmin() || auth()->user()->isTeacher())
                                 <span class="text-xs text-slate-500">Batch</span>
                             @endif
                         </td>
                     </tr>
-                @empty
-                    <tr>
-                        <td colspan="8" class="px-6 py-8 text-center text-slate-500">No attendances recorded.</td>
-                    </tr>
-                @endforelse
-            </tbody>
+                    @empty
+                        <tr>
+                            <td colspan="10" class="px-6 py-8 text-center text-slate-500">No attendances recorded.</td>
+                        </tr>
+                    @endforelse
+                </tbody>
         </table>
     </div>
 

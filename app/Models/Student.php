@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Support\Str;
@@ -36,6 +37,18 @@ class Student extends Model
         return $this->hasMany(Attendance::class)->latest('date');
     }
 
+    public function tokens(): HasMany
+    {
+        return $this->hasMany(Token::class);
+    }
+
+    public function classrooms(): BelongsToMany
+    {
+        return $this->belongsToMany(Classroom::class, 'classroom_student')
+            ->withTimestamps()
+            ->orderBy('name');
+    }
+
     public function latestActivePayment(): HasOne
     {
         return $this->hasOne(Payment::class)
@@ -48,6 +61,24 @@ class Student extends Model
     {
         return $this->hasOne(Attendance::class)
             ->ofMany(['date' => 'max', 'id' => 'max']);
+    }
+
+    public function latestHomeworkAttendance(): HasOne
+    {
+        return $this->hasOne(Attendance::class)
+            ->ofMany(['date' => 'max', 'id' => 'max'], function ($query) {
+                $query->whereNotNull('homework_content')
+                    ->where('homework_content', '!=', '');
+            });
+    }
+
+    public function latestSessionPayment(): HasOne
+    {
+        return $this->hasOne(Payment::class)
+            ->ofMany(['payment_date' => 'max', 'id' => 'max'], function ($query) {
+                $query->where('total_sessions', '>', 0)
+                    ->where('price_amount', '>', 0);
+            });
     }
 
     public function getRemainingSessions(): int
@@ -116,6 +147,42 @@ class Student extends Model
         }
 
         return $digits;
+    }
+
+    public function buildLowSessionReminderMessage(?int $remainingSessions = null): string
+    {
+        $remainingSessions ??= $this->getRemainingSessions();
+        $remainingLabel = $remainingSessions <= 0
+            ? 'saat ini sudah habis'
+            : 'saat ini tinggal '.($remainingSessions === 1 ? '1 kali pertemuan' : $remainingSessions.' kali pertemuan');
+
+        $continuationMessage = 'Apabila berkenan melanjutkan pertemuan berikutnya, kami siap membantu untuk penjadwalan dan informasi biaya les selanjutnya.';
+
+        if ($this->latestSessionPayment && $this->latestSessionPayment->price_amount > 0 && $this->latestSessionPayment->total_sessions > 0) {
+            $continuationMessage = 'Apabila berkenan melanjutkan untuk '
+                .$this->latestSessionPayment->total_sessions
+                .' kali pertemuan berikutnya, kami mohon kesediaannya untuk menyiapkan biaya les sebesar Rp '
+                .number_format($this->latestSessionPayment->price_amount, 0, ',', '.')
+                .'.';
+        }
+
+        return "Halo Bapak/Ibu / Ananda, semoga sehat selalu.\n\n"
+            ."Kami ingin menyampaikan bahwa sisa pertemuan untuk Ananda {$this->name} {$remainingLabel}.\n\n"
+            .$continuationMessage."\n\n"
+            ."Terima kasih banyak.";
+    }
+
+    public function lowSessionReminderWhatsAppUrl(?int $remainingSessions = null): ?string
+    {
+        $whatsAppNumber = $this->whatsappNumber();
+
+        if (! $whatsAppNumber) {
+            return null;
+        }
+
+        return 'https://wa.me/'.$whatsAppNumber.'?text='.rawurlencode(
+            $this->buildLowSessionReminderMessage($remainingSessions)
+        );
     }
 
     public static function programOptions(): array

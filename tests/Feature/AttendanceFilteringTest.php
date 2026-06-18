@@ -4,7 +4,8 @@ namespace Tests\Feature;
 
 use App\Models\Attendance;
 use App\Models\AttendanceBatch;
-use App\Models\Package;
+use App\Models\ExpenseCategory;
+use App\Models\MaterialLink;
 use App\Models\Payment;
 use App\Models\Student;
 use App\Models\User;
@@ -15,15 +16,9 @@ class AttendanceFilteringTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_attendance_index_defaults_to_today(): void
+    public function test_attendance_index_defaults_to_current_month(): void
     {
-        $teacher = User::factory()->create(['name' => 'Teacher One', 'role' => User::ROLE_TEACHER]);
-        $package = Package::query()->create([
-            'name' => '10 Sessions',
-            'total_sessions' => 10,
-            'price' => 500000,
-        ]);
-        $student = Student::query()->create([
+        $teacher = User::factory()->create(['name' => 'Teacher One', 'role' => User::ROLE_TEACHER]);        $student = Student::query()->create([
             'name' => 'Today Student',
             'phone' => '0811111111',
             'email' => 'today@example.com',
@@ -32,18 +27,20 @@ class AttendanceFilteringTest extends TestCase
         $payment = Payment::query()->create([
             'receipt_number' => 'KWT-FILTER-TODAY',
             'student_id' => $student->id,
-            'package_id' => $package->id,
-            'source_type' => Payment::SOURCE_PACKAGE,
+            'source_type' => Payment::SOURCE_TOKEN,
             'total_sessions' => 10,
             'remaining_sessions' => 8,
             'payment_date' => now()->toDateString(),
         ]);
 
+        $currentMonthDate = now()->startOfMonth()->addDays(2)->toDateString();
+        $previousMonthDate = now()->subMonthNoOverflow()->endOfMonth()->toDateString();
+
         Attendance::query()->create([
             'student_id' => $student->id,
             'teacher_id' => $teacher->id,
             'payment_id' => $payment->id,
-            'date' => now()->toDateString(),
+            'date' => $currentMonthDate,
             'notes' => 'Today note',
             'learning_journal' => 'Today learning journal',
         ]);
@@ -51,7 +48,7 @@ class AttendanceFilteringTest extends TestCase
             'student_id' => $student->id,
             'teacher_id' => $teacher->id,
             'payment_id' => $payment->id,
-            'date' => now()->subDay()->toDateString(),
+            'date' => $previousMonthDate,
             'notes' => 'Yesterday note',
             'learning_journal' => 'Yesterday learning journal',
         ]);
@@ -61,19 +58,14 @@ class AttendanceFilteringTest extends TestCase
         $response->assertOk();
         $response->assertSee('Today note');
         $response->assertDontSee('Yesterday note');
-        $response->assertSee('value="'.now()->toDateString().'"', false);
+        $response->assertSee('value="'.now()->startOfMonth()->toDateString().'"', false);
+        $response->assertSee('value="'.now()->endOfMonth()->toDateString().'"', false);
     }
 
     public function test_attendance_index_can_be_filtered_by_date_student_and_teacher(): void
     {
         $teacherOne = User::factory()->create(['name' => 'Teacher One', 'role' => User::ROLE_TEACHER]);
         $teacherTwo = User::factory()->create(['name' => 'Teacher Two', 'role' => User::ROLE_TEACHER]);
-        $package = Package::query()->create([
-            'name' => '10 Sessions',
-            'total_sessions' => 10,
-            'price' => 500000,
-        ]);
-
         $studentOne = Student::query()->create([
             'name' => 'Filtered Student',
             'phone' => '0811111111',
@@ -90,8 +82,7 @@ class AttendanceFilteringTest extends TestCase
         $paymentOne = Payment::query()->create([
             'receipt_number' => 'KWT-FILTER-001',
             'student_id' => $studentOne->id,
-            'package_id' => $package->id,
-            'source_type' => Payment::SOURCE_PACKAGE,
+            'source_type' => Payment::SOURCE_TOKEN,
             'total_sessions' => 10,
             'remaining_sessions' => 8,
             'payment_date' => '2026-04-01',
@@ -99,8 +90,7 @@ class AttendanceFilteringTest extends TestCase
         $paymentTwo = Payment::query()->create([
             'receipt_number' => 'KWT-FILTER-002',
             'student_id' => $studentTwo->id,
-            'package_id' => $package->id,
-            'source_type' => Payment::SOURCE_PACKAGE,
+            'source_type' => Payment::SOURCE_TOKEN,
             'total_sessions' => 10,
             'remaining_sessions' => 8,
             'payment_date' => '2026-04-01',
@@ -135,15 +125,70 @@ class AttendanceFilteringTest extends TestCase
         $response->assertDontSee('Hidden note');
     }
 
+    public function test_attendance_index_can_search_by_material_link(): void
+    {
+        $teacher = User::factory()->create(['name' => 'Search Teacher', 'role' => User::ROLE_TEACHER]);
+        $student = Student::query()->create([
+            'name' => 'Search Student',
+            'phone' => '0813555000',
+            'email' => 'search-student@example.com',
+            'is_active' => true,
+        ]);
+        $payment = Payment::query()->create([
+            'receipt_number' => 'KWT-SEARCH-001',
+            'student_id' => $student->id,
+            'source_type' => Payment::SOURCE_MANUAL,
+            'total_sessions' => 4,
+            'remaining_sessions' => 4,
+            'payment_date' => now()->toDateString(),
+        ]);
+        $matchingMaterial = MaterialLink::create([
+            'title' => 'Chunk Review Pack',
+            'url' => 'https://example.com/chunk-review',
+            'is_active' => true,
+        ]);
+        $otherMaterial = MaterialLink::create([
+            'title' => 'Coding Variables Sheet',
+            'url' => 'https://example.com/coding-variables',
+            'is_active' => true,
+        ]);
+
+        $matchingAttendance = Attendance::query()->create([
+            'student_id' => $student->id,
+            'teacher_id' => $teacher->id,
+            'payment_id' => $payment->id,
+            'date' => now()->toDateString(),
+            'notes' => 'Matching note',
+            'learning_journal' => 'Matching learning journal',
+        ]);
+        $matchingAttendance->materialLinks()->sync([$matchingMaterial->id]);
+
+        $otherAttendance = Attendance::query()->create([
+            'student_id' => $student->id,
+            'teacher_id' => $teacher->id,
+            'payment_id' => $payment->id,
+            'date' => now()->toDateString(),
+            'notes' => 'Other note',
+            'learning_journal' => 'Other learning journal',
+        ]);
+        $otherAttendance->materialLinks()->sync([$otherMaterial->id]);
+
+        $response = $this->actingAs($teacher)->get(route('attendances.index', [
+            'date_from' => now()->startOfMonth()->toDateString(),
+            'date_to' => now()->endOfMonth()->toDateString(),
+            'search' => 'Chunk Review',
+        ]));
+
+        $response->assertOk();
+        $response->assertSee('Matching note');
+        $response->assertDontSee('Other note');
+        $response->assertSee('Chunk Review Pack');
+        $response->assertDontSee('Coding Variables Sheet');
+    }
+
     public function test_group_attendance_is_displayed_once_on_attendance_index(): void
     {
-        $teacher = User::factory()->create(['name' => 'Teacher Group', 'role' => User::ROLE_TEACHER]);
-        $package = Package::query()->create([
-            'name' => '10 Sessions',
-            'total_sessions' => 10,
-            'price' => 500000,
-        ]);
-        $studentOne = Student::query()->create([
+        $teacher = User::factory()->create(['name' => 'Teacher Group', 'role' => User::ROLE_TEACHER]);        $studentOne = Student::query()->create([
             'name' => 'Group Student One',
             'phone' => '0811231231',
             'email' => 'groupstudent1@example.com',
@@ -158,8 +203,7 @@ class AttendanceFilteringTest extends TestCase
         $paymentOne = Payment::query()->create([
             'receipt_number' => 'KWT-GROUP-001',
             'student_id' => $studentOne->id,
-            'package_id' => $package->id,
-            'source_type' => Payment::SOURCE_PACKAGE,
+            'source_type' => Payment::SOURCE_TOKEN,
             'total_sessions' => 10,
             'remaining_sessions' => 8,
             'payment_date' => now()->toDateString(),
@@ -167,8 +211,7 @@ class AttendanceFilteringTest extends TestCase
         $paymentTwo = Payment::query()->create([
             'receipt_number' => 'KWT-GROUP-002',
             'student_id' => $studentTwo->id,
-            'package_id' => $package->id,
-            'source_type' => Payment::SOURCE_PACKAGE,
+            'source_type' => Payment::SOURCE_TOKEN,
             'total_sessions' => 10,
             'remaining_sessions' => 8,
             'payment_date' => now()->toDateString(),
@@ -313,5 +356,66 @@ class AttendanceFilteringTest extends TestCase
         $response->assertSee('1'); // Teacher Two sessions: 1 group
         $response->assertSee('3h 30m'); // Teacher One minutes: 90 + 120
         $response->assertSee('2h'); // Teacher Two minutes: 120
+    }
+
+    public function test_attendance_index_can_filter_by_teacher_fee_status(): void
+    {
+        $teacher = User::factory()->create(['name' => 'Fee Teacher', 'role' => User::ROLE_TEACHER]);
+        $studentWithFee = Student::query()->create([
+            'name' => 'With Fee Student',
+            'phone' => '0812400001',
+            'email' => 'withfee@example.com',
+            'is_active' => true,
+        ]);
+        $studentWithoutFee = Student::query()->create([
+            'name' => 'Without Fee Student',
+            'phone' => '0812400002',
+            'email' => 'withoutfee@example.com',
+            'is_active' => true,
+        ]);
+
+        $attendanceWithFee = Attendance::query()->create([
+            'student_id' => $studentWithFee->id,
+            'teacher_id' => $teacher->id,
+            'date' => '2026-04-10',
+            'learning_journal' => 'Synced fee journal',
+        ]);
+        $attendanceWithFee->teachers()->sync([$teacher->id]);
+
+        $attendanceWithoutFee = Attendance::query()->create([
+            'student_id' => $studentWithoutFee->id,
+            'teacher_id' => $teacher->id,
+            'date' => '2026-04-10',
+            'learning_journal' => 'Missing fee journal',
+        ]);
+        $attendanceWithoutFee->teachers()->sync([$teacher->id]);
+
+        $feeCategory = ExpenseCategory::query()->create([
+            'name' => 'Fee Guru',
+            'is_active' => true,
+        ]);
+
+        $attendanceWithFee->expenses()->create([
+            'expense_category_id' => $feeCategory->id,
+            'created_by_user_id' => $teacher->id,
+            'teacher_user_id' => $teacher->id,
+            'title' => 'Fee guru - Fee Teacher - With Fee Student',
+            'amount' => 40000,
+            'expense_date' => '2026-04-10',
+            'notes' => 'Otomatis dari attendance siswa.',
+        ]);
+
+        $response = $this->actingAs($teacher)->get(route('attendances.index', [
+            'date_from' => '2026-04-10',
+            'date_to' => '2026-04-10',
+            'teacher_fee_status' => 'without_fee',
+        ]));
+
+        $response->assertOk();
+        $response->assertSee('Without Fee Student');
+        $response->assertSee('Belum');
+        $entries = $response->viewData('attendances')->items();
+        $this->assertCount(1, $entries);
+        $this->assertSame('Without Fee Student', $entries[0]->student_label);
     }
 }

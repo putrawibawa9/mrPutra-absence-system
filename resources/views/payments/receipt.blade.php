@@ -86,6 +86,12 @@
                                     <dt class="text-slate-500">Remaining Sessions</dt>
                                     <dd class="font-medium text-slate-900">{{ $payment->remaining_sessions }}</dd>
                                 </div>
+                                @if (! $payment->isBook() && $payment->total_sessions > 0)
+                                    <div class="flex items-center justify-between gap-4">
+                                        <dt class="text-slate-500">Harga / Sesi</dt>
+                                        <dd class="font-medium text-slate-900">Rp {{ number_format($payment->pricePerSession(), 0, ',', '.') }}</dd>
+                                    </div>
+                                @endif
                                 <div class="flex items-center justify-between gap-4">
                                     <dt class="text-slate-500">Bill Amount</dt>
                                     <dd class="font-medium text-slate-900">Rp {{ number_format($payment->price_amount, 0, ',', '.') }}</dd>

@@ -1,11 +1,11 @@
 <?php
 
 namespace Tests\Feature;
-
-use App\Models\Package;
 use App\Models\Payment;
 use App\Models\Student;
 use App\Models\User;
+use App\Models\Expense;
+use App\Models\ExpenseCategory;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -13,7 +13,7 @@ class AttendanceTeacherSelectionTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_attendance_uses_logged_in_user_as_teacher(): void
+    public function test_attendance_uses_selected_teacher_as_primary_teacher(): void
     {
         $teacher = User::factory()->create(['role' => User::ROLE_TEACHER]);
         $student = Student::query()->create([
@@ -21,17 +21,10 @@ class AttendanceTeacherSelectionTest extends TestCase
             'phone' => '0819999999',
             'email' => 'teacherselect@example.com',
             'is_active' => true,
-        ]);
-        $package = Package::query()->create([
-            'name' => '10 Sessions',
-            'total_sessions' => 10,
-            'price' => 500000,
-        ]);
-        $payment = Payment::query()->create([
+        ]);        $payment = Payment::query()->create([
             'receipt_number' => 'KWT-SELECT-001',
             'student_id' => $student->id,
-            'package_id' => $package->id,
-            'source_type' => Payment::SOURCE_PACKAGE,
+            'source_type' => Payment::SOURCE_TOKEN,
             'total_sessions' => 10,
             'remaining_sessions' => 5,
             'payment_date' => now()->toDateString(),
@@ -54,27 +47,32 @@ class AttendanceTeacherSelectionTest extends TestCase
             'payment_id' => $payment->id,
             'teaching_minutes' => 60,
         ]);
+        $this->assertDatabaseHas('expense_categories', [
+            'name' => 'Fee Guru',
+        ]);
+        $feeCategory = ExpenseCategory::query()->where('name', 'Fee Guru')->firstOrFail();
+        $attendance = \App\Models\Attendance::query()->firstOrFail();
+        $this->assertDatabaseHas('expenses', [
+            'expense_category_id' => $feeCategory->id,
+            'attendance_id' => $attendance->id,
+            'teacher_user_id' => $teacher->id,
+            'amount' => 40000,
+        ]);
     }
 
-    public function test_admin_cannot_record_attendance(): void
+    public function test_admin_can_record_attendance_for_selected_teacher(): void
     {
         $admin = User::factory()->create(['role' => User::ROLE_ADMIN]);
+        $teacher = User::factory()->create(['role' => User::ROLE_TEACHER]);
         $student = Student::query()->create([
             'name' => 'Student Two',
             'phone' => '0829999999',
             'email' => 'adminblocked@example.com',
             'is_active' => true,
-        ]);
-        $package = Package::query()->create([
-            'name' => '10 Sessions',
-            'total_sessions' => 10,
-            'price' => 500000,
-        ]);
-        $payment = Payment::query()->create([
+        ]);        $payment = Payment::query()->create([
             'receipt_number' => 'KWT-SELECT-002',
             'student_id' => $student->id,
-            'package_id' => $package->id,
-            'source_type' => Payment::SOURCE_PACKAGE,
+            'source_type' => Payment::SOURCE_TOKEN,
             'total_sessions' => 10,
             'remaining_sessions' => 5,
             'payment_date' => now()->toDateString(),
@@ -82,23 +80,24 @@ class AttendanceTeacherSelectionTest extends TestCase
 
         $this->actingAs($admin)
             ->get(route('attendances.create'))
-            ->assertForbidden();
+            ->assertOk();
 
         $this->actingAs($admin)
             ->post(route('attendances.store'), [
                 'mode' => 'single',
                 'student_id' => $student->id,
                 'payment_id' => $payment->id,
-                'teacher_ids' => [$admin->id],
+                'teacher_ids' => [$teacher->id],
                 'date' => now()->toDateString(),
                 'teaching_minutes' => 60,
-                'learning_journal' => 'Admin should not be able to record attendance.',
+                'learning_journal' => 'Admin recorded attendance for assigned teacher.',
             ])
-            ->assertForbidden();
+            ->assertRedirect(route('attendances.index', absolute: false));
 
-        $this->assertDatabaseMissing('attendances', [
+        $this->assertDatabaseHas('attendances', [
             'student_id' => $student->id,
             'payment_id' => $payment->id,
+            'teacher_id' => $teacher->id,
         ]);
     }
 
@@ -137,5 +136,6 @@ class AttendanceTeacherSelectionTest extends TestCase
 
         $this->assertNotNull($attendance);
         $this->assertSame([$teacher->id, $coTeacher->id], $attendance->teachers->pluck('id')->sort()->values()->all());
+        $this->assertSame(2, Expense::query()->where('attendance_id', $attendance->id)->count());
     }
 }

@@ -51,6 +51,20 @@
     </div>
 
     <div class="md:col-span-2">
+        <x-input-label for="material_link_id" value="Link Materi (opsional)" />
+        <select id="material_link_id" name="material_link_id" class="mt-1 block w-full rounded-xl border-slate-300">
+            <option value="">Tanpa link materi</option>
+            @foreach ($materialLinks as $materialLink)
+                <option value="{{ $materialLink->id }}" @selected(old('material_link_id', $schedule->material_link_id ?? '') == $materialLink->id)>
+                    {{ $materialLink->title }}
+                </option>
+            @endforeach
+        </select>
+        <p class="mt-2 text-xs text-slate-500">Jika dipilih, link ini akan muncul di jadwal kelas dan bisa langsung diklik oleh user.</p>
+        <x-input-error :messages="$errors->get('material_link_id')" class="mt-2" />
+    </div>
+
+    <div class="md:col-span-2">
         <x-input-label for="notes" value="Catatan (opsional)" />
         <textarea id="notes" name="notes" rows="4" class="mt-1 block w-full rounded-2xl border-slate-300">{{ old('notes', $schedule->notes ?? '') }}</textarea>
         <x-input-error :messages="$errors->get('notes')" class="mt-2" />

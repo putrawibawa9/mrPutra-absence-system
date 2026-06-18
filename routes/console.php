@@ -13,3 +13,7 @@ Schedule::command('db:backup-mysql')
     ->timezone(config('app.backup_timezone'))
     ->withoutOverlapping()
     ->appendOutputTo(storage_path('logs/mysql-backup.log'));
+
+Schedule::command('tokens:expire')
+    ->daily()
+    ->withoutOverlapping();

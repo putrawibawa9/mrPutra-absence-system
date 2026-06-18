@@ -11,6 +11,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 #[Fillable([
     'teacher_id',
     'student_id',
+    'material_link_id',
     'title',
     'day_of_week',
     'start_time',
@@ -37,6 +38,11 @@ class TeacherSchedule extends Model
     public function student(): BelongsTo
     {
         return $this->belongsTo(Student::class);
+    }
+
+    public function materialLink(): BelongsTo
+    {
+        return $this->belongsTo(MaterialLink::class);
     }
 
     public function dayLabel(): string
