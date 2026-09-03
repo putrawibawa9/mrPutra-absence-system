@@ -49,9 +49,10 @@
             @forelse ($students as $student)
             @php
                 $remainingSessions = $student->payments_sum_remaining_sessions ?? $student->getRemainingSessions();
-                $remainingClass = $remainingSessions <= 0
+                $netTokens = (int) $remainingSessions - (int) ($student->token_debt_count ?? $student->getTokenDebtCount());
+                $remainingClass = $netTokens < 0
                     ? 'bg-rose-100 text-rose-700'
-                    : ($remainingSessions <= 3 ? 'bg-amber-100 text-amber-700' : 'bg-emerald-100 text-emerald-700');
+                    : ($netTokens === 0 ? 'bg-amber-100 text-amber-700' : ($netTokens <= 3 ? 'bg-amber-100 text-amber-700' : 'bg-emerald-100 text-emerald-700'));
                 $lowSessionReminderUrl = $remainingSessions < 2 ? $student->lowSessionReminderWhatsAppUrl((int) $remainingSessions) : null;
             @endphp
             <div class="rounded-3xl bg-white p-5 shadow-sm">
@@ -70,17 +71,12 @@
                         <p class="mt-1 text-sm text-slate-500">{{ $student->email ?: '-' }}</p>
                     </div>
                     <span class="rounded-full px-3 py-1 text-xs font-semibold {{ $remainingClass }}">
-                        {{ $remainingSessions }}
+                        {{ $netTokens }} token
                     </span>
                 </div>
                 @if ($student->getOutstandingPaymentDebt() > 0)
                     <div class="mt-3 rounded-2xl bg-amber-50 px-4 py-3 text-sm">
                         <p class="text-amber-700"><span class="font-semibold">Total Debt:</span> {{ $student->getOutstandingPaymentDebtLabel() }}</p>
-                    </div>
-                @endif
-                @if ($student->getTokenDebtCount() > 0)
-                    <div class="mt-3 rounded-2xl bg-slate-100 px-4 py-3 text-sm">
-                        <p class="text-slate-700"><span class="font-semibold">Token Debt:</span> {{ $student->getTokenDebtLabel() }}</p>
                     </div>
                 @endif
                 <div class="mt-4 flex flex-wrap gap-3 text-sm font-medium">
@@ -122,9 +118,10 @@
                 @forelse ($students as $student)
                     @php
                         $remainingSessions = $student->payments_sum_remaining_sessions ?? $student->getRemainingSessions();
-                        $remainingClass = $remainingSessions <= 0
+                        $netTokens = (int) $remainingSessions - (int) ($student->token_debt_count ?? $student->getTokenDebtCount());
+                        $remainingClass = $netTokens < 0
                             ? 'bg-rose-100 text-rose-700'
-                            : ($remainingSessions <= 3 ? 'bg-amber-100 text-amber-700' : 'bg-emerald-100 text-emerald-700');
+                            : ($netTokens <= 3 ? 'bg-amber-100 text-amber-700' : 'bg-emerald-100 text-emerald-700');
                         $lowSessionReminderUrl = $remainingSessions < 2 ? $student->lowSessionReminderWhatsAppUrl((int) $remainingSessions) : null;
                     @endphp
                     <tr>
@@ -144,16 +141,11 @@
                         <td class="px-6 py-4">
                             <div class="flex flex-wrap gap-2">
                                 <span class="rounded-full px-3 py-1 text-xs font-semibold {{ $remainingClass }}">
-                                    {{ $remainingSessions }} sessions
+                                    {{ $netTokens }} token
                                 </span>
                                 @if ($student->getOutstandingPaymentDebt() > 0)
                                     <span class="rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold text-amber-700">
                                         Total Debt: {{ $student->getOutstandingPaymentDebtLabel() }}
-                                    </span>
-                                @endif
-                                @if ($student->getTokenDebtCount() > 0)
-                                    <span class="rounded-full bg-slate-200 px-3 py-1 text-xs font-semibold text-slate-700">
-                                        Token Debt: {{ $student->getTokenDebtLabel() }}
                                     </span>
                                 @endif
                             </div>

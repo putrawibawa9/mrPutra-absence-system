@@ -268,15 +268,23 @@
                     </div>
                 </dl>
                 @if (auth()->user()->isAdmin() || auth()->user()->isTeacher())
-                    <div class="mt-4">
+                    <div class="mt-4 flex flex-wrap gap-2">
                     @if ($attendance->type === 'batch')
                         <a href="{{ route('attendances.batches.edit', $attendance->attendance_batch) }}" class="inline-flex justify-center rounded-xl border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700">
                             Edit Batch
                         </a>
+                        <form method="POST" action="{{ route('attendances.batches.destroy', $attendance->attendance_batch) }}" data-confirm="Hapus absensi kelas ini? Token semua murid dikembalikan & fee guru terkait dihapus.">
+                            @csrf @method('DELETE')
+                            <button type="submit" class="inline-flex justify-center rounded-xl border border-rose-200 px-4 py-2 text-sm font-medium text-rose-600">Hapus</button>
+                        </form>
                     @elseif ($attendance->editable)
                         <a href="{{ route('attendances.edit', $attendance->attendance) }}" class="inline-flex justify-center rounded-xl border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700">
                             Edit
                         </a>
+                        <form method="POST" action="{{ route('attendances.destroy', $attendance->attendance) }}" data-confirm="Hapus absensi ini? Token murid dikembalikan & fee guru terkait dihapus.">
+                            @csrf @method('DELETE')
+                            <button type="submit" class="inline-flex justify-center rounded-xl border border-rose-200 px-4 py-2 text-sm font-medium text-rose-600">Hapus</button>
+                        </form>
                     @else
                         <span class="text-xs text-slate-500">Group attendance is not editable per student.</span>
                     @endif
@@ -345,9 +353,21 @@
                         <td class="px-6 py-4 text-slate-600">{{ $attendance->notes }}</td>
                         <td class="px-6 py-4 text-right">
                             @if ((auth()->user()->isAdmin() || auth()->user()->isTeacher()) && $attendance->type === 'batch')
-                                <a href="{{ route('attendances.batches.edit', $attendance->attendance_batch) }}" class="text-sm font-medium text-slate-700">Edit Batch</a>
+                                <div class="flex items-center justify-end gap-3">
+                                    <a href="{{ route('attendances.batches.edit', $attendance->attendance_batch) }}" class="text-sm font-medium text-slate-700">Edit Batch</a>
+                                    <form method="POST" action="{{ route('attendances.batches.destroy', $attendance->attendance_batch) }}" data-confirm="Hapus absensi kelas ini? Token semua murid dikembalikan & fee guru terkait dihapus.">
+                                        @csrf @method('DELETE')
+                                        <button type="submit" class="text-sm font-medium text-rose-600">Hapus</button>
+                                    </form>
+                                </div>
                             @elseif ((auth()->user()->isAdmin() || auth()->user()->isTeacher()) && $attendance->editable)
-                                <a href="{{ route('attendances.edit', $attendance->attendance) }}" class="text-sm font-medium text-slate-700">Edit</a>
+                                <div class="flex items-center justify-end gap-3">
+                                    <a href="{{ route('attendances.edit', $attendance->attendance) }}" class="text-sm font-medium text-slate-700">Edit</a>
+                                    <form method="POST" action="{{ route('attendances.destroy', $attendance->attendance) }}" data-confirm="Hapus absensi ini? Token murid dikembalikan & fee guru terkait dihapus.">
+                                        @csrf @method('DELETE')
+                                        <button type="submit" class="text-sm font-medium text-rose-600">Hapus</button>
+                                    </form>
+                                </div>
                             @elseif (auth()->user()->isAdmin() || auth()->user()->isTeacher())
                                 <span class="text-xs text-slate-500">Batch</span>
                             @endif

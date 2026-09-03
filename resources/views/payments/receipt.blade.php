@@ -131,12 +131,11 @@
                                 <span class="text-slate-500">Outstanding</span>
                                 <span class="font-medium {{ $payment->outstandingAmount() > 0 ? 'text-amber-700' : 'text-emerald-700' }}">Rp {{ number_format($payment->outstandingAmount(), 0, ',', '.') }}</span>
                             </p>
-                            @if ($payment->remaining_sessions > 0)
-                                <p class="flex items-center justify-between gap-4">
-                                    <span class="text-slate-500">Student Debt</span>
-                                    <span class="font-medium {{ $payment->student->getTokenDebtCount() > 0 ? 'text-amber-700' : 'text-emerald-700' }}">{{ $payment->student->getTokenDebtCount() }}</span>
-                                </p>
-                            @endif
+                            @php($studentNetTokens = $payment->student->getNetTokenBalance())
+                            <p class="flex items-center justify-between gap-4">
+                                <span class="text-slate-500">Saldo Token Murid</span>
+                                <span class="font-medium {{ $studentNetTokens < 0 ? 'text-rose-700' : 'text-emerald-700' }}">{{ $studentNetTokens }} token</span>
+                            </p>
                         </div>
 
                         @if ($payment->outstandingAmount() > 0)

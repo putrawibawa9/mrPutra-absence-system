@@ -135,19 +135,20 @@ class StudentStatusManagementTest extends TestCase
             'signed_by_user_id' => $admin->id,
         ]);
 
+        // Sisa token 0 - utang 1 = saldo bersih -1 token.
         $this->actingAs($admin)
             ->get(route('students.index'))
             ->assertOk()
             ->assertSee('Total Debt: Rp 150.000')
-            ->assertSee('Token Debt: 1 session');
+            ->assertSee('-1 token');
 
         $this->actingAs($admin)
             ->get(route('students.show', $student))
             ->assertOk()
             ->assertSee('Total Debt')
             ->assertSee('Rp 150.000')
-            ->assertSee('Token Debt')
-            ->assertSee('1 session');
+            ->assertSee('Saldo Token')
+            ->assertSee('-1 token');
     }
 
     public function test_student_show_page_lists_meeting_journals(): void

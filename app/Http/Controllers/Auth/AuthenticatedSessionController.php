@@ -28,7 +28,12 @@ class AuthenticatedSessionController extends Controller
 
         $request->session()->regenerate();
 
-        return redirect()->intended(route('dashboard', absolute: false));
+        // Guru langsung diarahkan ke halaman absensi; admin ke dashboard.
+        $home = $request->user()->isTeacher()
+            ? route('attendances.index', absolute: false)
+            : route('dashboard', absolute: false);
+
+        return redirect()->intended($home);
     }
 
     /**

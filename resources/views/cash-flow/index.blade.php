@@ -31,6 +31,12 @@
             </form>
         </div>
 
+        <div class="rounded-3xl bg-emerald-600 p-6 shadow-sm">
+            <p class="text-sm font-medium text-emerald-50">Total Uang Masuk — {{ \Illuminate\Support\Carbon::parse($filters['date_from'])->format('d M Y') }} s/d {{ \Illuminate\Support\Carbon::parse($filters['date_to'])->format('d M Y') }}</p>
+            <p class="mt-2 text-4xl font-semibold text-white">Rp {{ number_format($cashInPeriod, 0, ',', '.') }}</p>
+            <p class="mt-2 text-xs text-emerald-100">Kas yang benar-benar diterima (pembayaran/cicilan murid) pada periode filter di atas — terpisah dari angka Revenue (akrual). Ubah filter tanggal untuk melihat periode lain.</p>
+        </div>
+
         <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
             <div class="rounded-3xl bg-white p-5 shadow-sm">
                 <p class="text-sm text-slate-500">Margin</p>
@@ -132,6 +138,9 @@
                             <div class="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
                                 <div>
                                     <p class="font-medium text-slate-900">{{ $netEntry->name }}</p>
+                                    @if (! empty($netEntry->student_hint))
+                                        <p class="mt-0.5 text-sm text-slate-600">👤 {{ $netEntry->student_hint }}</p>
+                                    @endif
                                     <p class="mt-1 text-sm text-slate-500">{{ $netEntry->label }}</p>
                                     <p class="mt-1 text-xs text-slate-400">{{ $netEntry->date->format('d M Y') }}</p>
                                 </div>

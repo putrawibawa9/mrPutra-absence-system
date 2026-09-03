@@ -149,6 +149,33 @@ class TokenService
     }
 
     /**
+     * Restore every consumed/forfeited token tied to a batch back to available
+     * (used when a whole group attendance is deleted). Returns count restored.
+     */
+    public function releaseBatch(AttendanceBatch $batch): int
+    {
+        $tokens = Token::query()
+            ->whereIn('status', [Token::STATUS_CONSUMED, Token::STATUS_FORFEITED])
+            ->where('attendance_batch_id', $batch->id)
+            ->lockForUpdate()
+            ->get();
+
+        foreach ($tokens as $token) {
+            $token->forceFill([
+                'status' => Token::STATUS_AVAILABLE,
+                'attendance_id' => null,
+                'attendance_batch_id' => null,
+                'consumed_at' => null,
+                'forfeited_at' => null,
+            ])->save();
+
+            $token->payment?->increment('remaining_sessions');
+        }
+
+        return $tokens->count();
+    }
+
+    /**
      * Flag available tokens whose expiry window has passed as expired and keep
      * the remaining_sessions counter in sync. Returns the number expired.
      */

@@ -71,7 +71,11 @@ class PaymentController extends Controller
 
     public function create()
     {
-        $students = Student::active()->orderBy('name')->get();
+        $students = Student::active()
+            ->withSum('payments', 'remaining_sessions')
+            ->withCount(['attendances as token_debt_count' => fn ($query) => $query->whereNull('payment_id')])
+            ->orderBy('name')
+            ->get();
         $learningModules = LearningModule::query()->active()->orderBy('name')->get();
 
         return view('payments.create', compact('students', 'learningModules'));

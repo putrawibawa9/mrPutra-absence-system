@@ -18,6 +18,9 @@ class Student extends Model
     public const PROGRAM_CODING = 'coding';
     public const PROGRAM_ENGLISH = 'english';
 
+    /** Sisa token <= angka ini dianggap menipis & dimunculkan di alert admin. */
+    public const LOW_SESSION_THRESHOLD = 1;
+
     protected function casts(): array
     {
         return [
@@ -98,6 +101,29 @@ class Student extends Model
         $debtCount = $this->getTokenDebtCount();
 
         return $debtCount.' session'.($debtCount === 1 ? '' : 's');
+    }
+
+    /**
+     * Saldo token bersih: sisa token dikurangi utang token (absensi tanpa token).
+     * Positif = tersedia, 0 = kosong, negatif = utang (mis. -2).
+     */
+    public function getNetTokenBalance(): int
+    {
+        return $this->getRemainingSessions() - $this->getTokenDebtCount();
+    }
+
+    /**
+     * Label saldo token bersih sebagai angka bertanda, mis. "-2 token" / "0 token" / "5 token".
+     * Terima nilai net yang sudah dihitung (untuk list) agar hemat query.
+     */
+    public static function tokenBalanceLabel(int $net): string
+    {
+        return $net.' token';
+    }
+
+    public function netTokenLabel(): string
+    {
+        return static::tokenBalanceLabel($this->getNetTokenBalance());
     }
 
     public function getOutstandingPaymentDebt(): int

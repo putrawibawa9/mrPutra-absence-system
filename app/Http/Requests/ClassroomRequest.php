@@ -35,10 +35,31 @@ class ClassroomRequest extends FormRequest
                 return;
             }
 
-            $studentIds = collect($this->input('student_ids', []))->filter()->unique();
+            $studentIds = collect($this->input('student_ids', []))->filter()->map(fn ($id) => (int) $id)->unique();
 
             if ($this->input('format') === Classroom::FORMAT_PRIVATE && $studentIds->count() !== 1) {
                 $validator->errors()->add('student_ids', 'Format Private hanya boleh berisi tepat 1 murid.');
+            }
+
+            // Satu murid hanya boleh berada di satu kelas aktif.
+            $currentId = $this->route('classroom')?->id;
+            $conflicts = Classroom::query()
+                ->where('is_active', true)
+                ->when($currentId, fn ($query) => $query->whereKeyNot($currentId))
+                ->whereHas('students', fn ($query) => $query->whereIn('students.id', $studentIds->all()))
+                ->with(['students' => fn ($query) => $query->whereIn('students.id', $studentIds->all())])
+                ->get();
+
+            $taken = [];
+            foreach ($conflicts as $conflict) {
+                foreach ($conflict->students as $student) {
+                    $taken[$student->name] = $conflict->name;
+                }
+            }
+
+            if ($taken !== []) {
+                $list = collect($taken)->map(fn ($className, $name) => $name.' (kelas "'.$className.'")')->values()->join(', ');
+                $validator->errors()->add('student_ids', 'Murid berikut sudah punya kelas aktif: '.$list.'. Keluarkan dulu dari kelas lama.');
             }
         });
     }

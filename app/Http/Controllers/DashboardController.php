@@ -11,6 +11,11 @@ class DashboardController extends Controller
 {
     public function __invoke()
     {
+        // Dashboard hanya untuk admin. Guru diarahkan ke halaman absensi.
+        if (auth()->user()->isTeacher()) {
+            return redirect()->route('attendances.index');
+        }
+
         $startOfMonth = Carbon::now()->startOfMonth();
         $endOfMonth = Carbon::now()->endOfMonth();
 
@@ -30,10 +35,16 @@ class DashboardController extends Controller
         $englishStudents = Student::query()
             ->where('program_type', Student::PROGRAM_ENGLISH)
             ->count();
-        $studentsNeedingPayment = Student::active()->with(['payments' => fn ($query) => $query->latest('payment_date')])
+        // Alert token menipis: murid aktif dgn sisa token <= ambang (default 1),
+        // diurutkan paling mendesak (paling sedikit/0) dulu, siap diingatkan via WA.
+        $lowTokenStudents = Student::active()
+            ->withSum('payments', 'remaining_sessions')
+            ->withCount(['attendances as token_debt_count' => fn ($query) => $query->whereNull('payment_id')])
+            ->with('latestSessionPayment')
             ->get()
-            ->filter(fn (Student $student) => $student->getRemainingSessions() === 0)
-            ->take(5);
+            ->filter(fn (Student $student) => (int) ($student->payments_sum_remaining_sessions ?? 0) <= Student::LOW_SESSION_THRESHOLD)
+            ->sortBy(fn (Student $student) => (int) ($student->payments_sum_remaining_sessions ?? 0))
+            ->values();
         $mySchedule = collect();
         $myAvailability = collect();
 
@@ -80,7 +91,7 @@ class DashboardController extends Controller
             'activeStudents',
             'codingStudents',
             'englishStudents',
-            'studentsNeedingPayment',
+            'lowTokenStudents',
             'mySchedule',
             'myAvailability',
         ));

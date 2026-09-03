@@ -77,6 +77,7 @@ class TokenLifecycleTest extends TestCase
             'teacher_ids' => [$teacher->id],
             'present_student_ids' => [$present->id], // absent is intentionally omitted
             'teaching_minutes' => 60,
+            'learning_journal' => 'Catatan sesi.',
         ])->assertRedirect(route('attendances.index'));
 
         // Present student: one token consumed.
@@ -107,6 +108,7 @@ class TokenLifecycleTest extends TestCase
             'teacher_ids' => [$teacher->id],
             'present_student_ids' => [$present->id],
             'teaching_minutes' => 60,
+            'learning_journal' => 'Catatan sesi.',
         ])->assertRedirect(route('attendances.index'));
 
         $this->assertSame(4, $payPresent->fresh()->remaining_sessions);
@@ -145,6 +147,7 @@ class TokenLifecycleTest extends TestCase
             'teacher_ids' => [$teacher->id],
             'present_student_ids' => [$student->id],
             'teaching_minutes' => 60,
+            'learning_journal' => 'Catatan sesi.',
         ])->assertRedirect(route('attendances.index'));
 
         $this->assertSame(4, $payment->fresh()->remaining_sessions);
@@ -178,6 +181,7 @@ class TokenLifecycleTest extends TestCase
             'teacher_ids' => [$teacher->id],
             'present_student_ids' => [$student->id],
             'teaching_minutes' => 60,
+            'learning_journal' => 'Catatan sesi.',
         ])->assertRedirect(route('attendances.index'));
 
         // Attendance recorded as token debt; expired token untouched.
@@ -202,6 +206,7 @@ class TokenLifecycleTest extends TestCase
             'teacher_ids' => [$teacher->id],
             'present_student_ids' => [$student->id],
             'teaching_minutes' => 60,
+            'learning_journal' => 'Catatan sesi.',
         ])->assertRedirect(route('attendances.index'));
 
         $this->assertSame(5, $englishToken->fresh()->remaining_sessions); // untouched

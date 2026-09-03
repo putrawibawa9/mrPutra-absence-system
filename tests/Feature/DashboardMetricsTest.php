@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\Attendance;
+use App\Models\Payment;
 use App\Models\Student;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -75,5 +76,35 @@ class DashboardMetricsTest extends TestCase
         $response->assertSee((string) 2, false);
 
         Carbon::setTestNow();
+    }
+
+    public function test_dashboard_lists_low_token_students_with_whatsapp_reminder(): void
+    {
+        $admin = User::factory()->create(['role' => User::ROLE_ADMIN]);
+
+        $low = Student::query()->create(['name' => 'Hampir Habis', 'phone' => '08123456789', 'program_type' => Student::PROGRAM_ENGLISH, 'registration_date' => now()->toDateString(), 'is_active' => true]);
+        Payment::query()->create(['student_id' => $low->id, 'source_type' => Payment::SOURCE_TOKEN, 'total_sessions' => 8, 'remaining_sessions' => 1, 'price_amount' => 800000, 'amount_paid' => 800000, 'payment_date' => now()->toDateString()]);
+
+        $habis = Student::query()->create(['name' => 'Token Habis', 'phone' => '08987654321', 'program_type' => Student::PROGRAM_CODING, 'registration_date' => now()->toDateString(), 'is_active' => true]);
+        Payment::query()->create(['student_id' => $habis->id, 'source_type' => Payment::SOURCE_TOKEN, 'total_sessions' => 8, 'remaining_sessions' => 0, 'price_amount' => 800000, 'amount_paid' => 800000, 'payment_date' => now()->toDateString()]);
+
+        $aman = Student::query()->create(['name' => 'Masih Banyak', 'phone' => '08111222333', 'program_type' => Student::PROGRAM_ENGLISH, 'registration_date' => now()->toDateString(), 'is_active' => true]);
+        Payment::query()->create(['student_id' => $aman->id, 'source_type' => Payment::SOURCE_TOKEN, 'total_sessions' => 8, 'remaining_sessions' => 5, 'price_amount' => 800000, 'amount_paid' => 800000, 'payment_date' => now()->toDateString()]);
+
+        $response = $this->actingAs($admin)->get(route('dashboard'));
+
+        $response->assertOk();
+        $response->assertViewHas('lowTokenStudents', function ($students) use ($low, $habis, $aman) {
+            $ids = $students->pluck('id');
+
+            return $ids->contains($low->id)
+                && $ids->contains($habis->id)
+                && ! $ids->contains($aman->id)
+                && (int) $students->first()->id === $habis->id; // paling mendesak (0) di atas
+        });
+        $response->assertSee('Token Menipis');
+        $response->assertSee('Hampir Habis');
+        $response->assertSee('wa.me'); // tombol WA sekali klik tersedia
+        $response->assertDontSee('Masih Banyak');
     }
 }

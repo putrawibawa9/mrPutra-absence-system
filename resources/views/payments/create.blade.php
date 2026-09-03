@@ -5,6 +5,8 @@
             'name' => $student->name,
             'phone' => $student->phone,
             'email' => $student->email,
+            'remaining' => (int) ($student->payments_sum_remaining_sessions ?? 0),
+            'net' => (int) ($student->payments_sum_remaining_sessions ?? 0) - (int) ($student->token_debt_count ?? 0),
         ])->values();
     @endphp
 
@@ -89,12 +91,19 @@
                                 <p class="font-medium text-slate-900" x-text="student.name"></p>
                                 <p class="mt-1 text-sm text-slate-500" x-text="student.phone"></p>
                             </div>
-                            <span
-                                x-show="selectedStudentId === student.id"
-                                class="shrink-0 rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-semibold text-emerald-700"
-                            >
-                                Dipilih
-                            </span>
+                            <div class="flex shrink-0 items-center gap-2">
+                                <span
+                                    class="rounded-full px-2.5 py-1 text-xs font-semibold"
+                                    :class="student.net > 0 ? 'bg-emerald-50 text-emerald-700' : (student.net < 0 ? 'bg-rose-50 text-rose-700' : 'bg-amber-50 text-amber-700')"
+                                    x-text="student.net + ' token'"
+                                ></span>
+                                <span
+                                    x-show="selectedStudentId === student.id"
+                                    class="rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-semibold text-emerald-700"
+                                >
+                                    Dipilih
+                                </span>
+                            </div>
                         </button>
                     </template>
 
@@ -105,9 +114,16 @@
 
                 <div class="mt-3 rounded-2xl border border-slate-200 bg-white px-4 py-3">
                     <template x-if="selectedStudent">
-                        <div>
-                            <p class="font-medium text-slate-900" x-text="selectedStudent.name"></p>
-                            <p class="mt-1 text-sm text-slate-500" x-text="selectedStudent.phone"></p>
+                        <div class="flex items-start justify-between gap-3">
+                            <div>
+                                <p class="font-medium text-slate-900" x-text="selectedStudent.name"></p>
+                                <p class="mt-1 text-sm text-slate-500" x-text="selectedStudent.phone"></p>
+                            </div>
+                            <span
+                                class="shrink-0 rounded-full px-2.5 py-1 text-xs font-semibold"
+                                :class="selectedStudent.net > 0 ? 'bg-emerald-50 text-emerald-700' : (selectedStudent.net < 0 ? 'bg-rose-50 text-rose-700' : 'bg-amber-50 text-amber-700')"
+                                x-text="'Saldo ' + selectedStudent.net + ' token'"
+                            ></span>
                         </div>
                     </template>
                     <template x-if="! selectedStudent">

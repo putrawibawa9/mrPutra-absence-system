@@ -1,53 +1,65 @@
 #!/usr/bin/env bash
 #
-# Deploy script for absensi.mrputra.xyz
-# Run ON THE SERVER from the project root:
-#   cd /home/u936565777/domains/mrputra.xyz/public_html/absensi
-#   bash deploy.sh
+# Server-side deploy for absensi.mrputra.xyz (non-git shared host).
+# Uploaded via rsync, then run on the server:
+#   ssh -p 65002 u936565777@145.79.14.101 "cd /home/u936565777/domains/mrputra.xyz/public_html/absensi && bash deploy.sh"
 #
-# Assumes PROJECT_PATH is a git clone of origin/main. Verify first with:
-#   git remote -v
-# If it is NOT a git checkout, stop and use the rsync/SFTP method instead.
-#
-# Safety: aborts on the first error. If it aborts during/after migrate, the
-# site stays in maintenance mode — investigate, restore the DB backup if
-# needed, then run `php artisan up`.
+# Self-healing & safe: creates missing framework dirs, ensures the MySQL
+# connection is set, validates DB connectivity BEFORE migrating, and only then
+# flips to maintenance + migrates. Aborts on the first error.
 
 set -euo pipefail
-
 cd "$(dirname "$0")"
 echo "==> Project: $(pwd)"
 
-echo "==> [1/8] Maintenance mode ON"
+echo "==> [0] Ensuring writable framework directories"
+mkdir -p bootstrap/cache \
+         storage/framework/cache/data \
+         storage/framework/sessions \
+         storage/framework/views \
+         storage/logs \
+         storage/app/public \
+         database
+chmod -R 775 bootstrap/cache storage 2>/dev/null || true
+
+echo "==> [1] Checking .env"
+if [ ! -f .env ]; then
+  echo "FATAL: .env tidak ada di server. Restore .env dulu (berisi DB password & APP_KEY)."
+  exit 1
+fi
+# Ensure DB_CONNECTION=mysql (root cause of the earlier backup failure)
+if grep -qE '^DB_CONNECTION=mysql([[:space:]]|$)' .env; then
+  echo "  DB_CONNECTION already mysql"
+elif grep -qE '^DB_CONNECTION=' .env; then
+  sed -i.bak 's/^DB_CONNECTION=.*/DB_CONNECTION=mysql/' .env
+  echo "  fixed DB_CONNECTION=mysql (backup: .env.bak)"
+else
+  printf '\nDB_CONNECTION=mysql\n' >> .env
+  echo "  added DB_CONNECTION=mysql"
+fi
+# Ensure an app key exists
+grep -qE '^APP_KEY=base64:' .env || php artisan key:generate --force
+
+echo "==> [2] Clearing stale caches"
+php artisan optimize:clear
+
+echo "==> [3] Linking storage"
+php artisan storage:link || true
+
+echo "==> [4] Verifying DB connection (stops here if credentials are wrong)"
+php artisan migrate:status
+
+echo "==> [5] Maintenance mode ON"
 php artisan down || true
 
-echo "==> [2/8] Backing up database (writes to ./database/pre-deploy-*.sql)"
-php artisan db:backup-mysql --filename="pre-deploy-$(date +%Y%m%d-%H%M%S).sql"
-
-echo "==> [3/8] Fetching latest code (origin/main)"
-git fetch origin
-# Hard reset guarantees the working tree (incl. compiled public/build assets)
-# matches the remote. This DISCARDS any uncommitted changes to tracked files
-# on the server. Gitignored files (.env, storage, db backups) are preserved.
-git reset --hard origin/main
-
-echo "==> [4/8] Installing PHP dependencies"
-composer install --no-dev --optimize-autoloader --no-interaction
-
-echo "==> [5/8] Current migration status:"
-php artisan migrate:status || true
-
-echo "==> [6/8] Running migrations"
+echo "==> [6] Migrating + backfilling tokens"
 php artisan migrate --force
-
-echo "==> [7/8] Backfilling token ledger for existing payments"
 php artisan tokens:backfill
 
-echo "==> [8/8] Rebuilding caches"
-php artisan config:clear
+echo "==> [7] Rebuilding caches"
 php artisan config:cache
 php artisan route:cache
 php artisan view:cache
 
 php artisan up
-echo "==> Deploy complete. Site is live."
+echo "==> DONE. Live: https://absensi.mrputra.xyz"

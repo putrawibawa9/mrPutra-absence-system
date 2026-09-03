@@ -41,8 +41,9 @@ class ClassroomController extends Controller
     public function create()
     {
         $students = Student::active()->orderBy('name')->get(['id', 'name', 'phone']);
+        $takenStudents = $this->takenStudentMap();
 
-        return view('classrooms.create', compact('students'));
+        return view('classrooms.create', compact('students', 'takenStudents'));
     }
 
     public function store(ClassroomRequest $request)
@@ -68,8 +69,9 @@ class ClassroomController extends Controller
         $classroom->load('students:id,name');
         $students = Student::active()->orderBy('name')->get(['id', 'name', 'phone']);
         $selectedStudentIds = $classroom->students->pluck('id')->all();
+        $takenStudents = $this->takenStudentMap($classroom->id);
 
-        return view('classrooms.edit', compact('classroom', 'students', 'selectedStudentIds'));
+        return view('classrooms.edit', compact('classroom', 'students', 'selectedStudentIds', 'takenStudents'));
     }
 
     public function update(ClassroomRequest $request, Classroom $classroom)
@@ -109,7 +111,9 @@ class ClassroomController extends Controller
         abort_unless($classroom->is_active, 404);
 
         $classroom->load([
-            'students' => fn ($query) => $query->with(['payments' => fn ($payment) => $payment->where('remaining_sessions', '>', 0)]),
+            'students' => fn ($query) => $query
+                ->with(['payments' => fn ($payment) => $payment->where('remaining_sessions', '>', 0)])
+                ->withCount(['attendances as token_debt_count' => fn ($debt) => $debt->whereNull('payment_id')]),
         ]);
         $teachers = User::teachers()->orderBy('name')->get();
         $materialLinks = MaterialLink::query()->where('is_active', true)->orderBy('title')->get();
@@ -127,11 +131,13 @@ class ClassroomController extends Controller
             'teacher_ids.*' => ['integer', Rule::exists('users', 'id')->where(fn ($query) => $query->where('role', User::ROLE_TEACHER))],
             'present_student_ids' => ['array'],
             'present_student_ids.*' => ['integer'],
-            'learning_journal' => ['nullable', 'string'],
+            'learning_journal' => ['required', 'string'],
             'notes' => ['nullable', 'string'],
             'teaching_minutes' => ['nullable', 'integer', 'min:0'],
             'material_link_ids' => ['array'],
             'material_link_ids.*' => ['integer', Rule::exists('material_links', 'id')],
+        ], [
+            'learning_journal.required' => 'Jurnal belajar wajib diisi.',
         ]);
 
         $memberIds = $classroom->students()->pluck('students.id');
@@ -163,7 +169,8 @@ class ClassroomController extends Controller
         $date = $request->date('date');
         $journal = $request->string('learning_journal')->toString() ?: null;
         $notes = $request->string('notes')->toString() ?: null;
-        $minutes = (int) $request->integer('teaching_minutes');
+        // Durasi tidak lagi diisi di form; pakai default 60 menit agar data tetap konsisten.
+        $minutes = $request->filled('teaching_minutes') ? (int) $request->integer('teaching_minutes') : 60;
 
         $absentIds = $memberIds
             ->map(fn ($id) => (int) $id)
@@ -233,6 +240,8 @@ class ClassroomController extends Controller
 
             // Synchronous (live cohort) sessions: absent students still burn a
             // token because the live session took place and is not repeated.
+            // Tidak ada baris Attendance untuk yang absen — token cukup di-forfeit
+            // di ledger, dan cash-flow menghitung token forfeited sebagai pendapatan.
             if ($classroom->isSynchronous()) {
                 foreach ($absentIds as $studentId) {
                     $payment = $this->resolvePayment((int) $studentId, $classroom->division, $classroom->format);
@@ -247,8 +256,35 @@ class ClassroomController extends Controller
             $this->teacherFeeService->syncBatch($batch, $teacherIds, $request->user()->id);
         });
 
+        $statusNote = $classroom->isSynchronous()
+            ? 'Token murid yang hadir & yang bolos (kelas live) terpotong.'
+            : 'Token murid yang hadir terpotong.';
+
         return redirect()->route('attendances.index')
-            ->with('status', 'Absensi kelas "'.$classroom->name.'" tersimpan & token murid yang hadir terpotong.');
+            ->with('status', 'Absensi kelas "'.$classroom->name.'" tersimpan. '.$statusNote);
+    }
+
+    /**
+     * Peta murid yang sudah jadi anggota kelas aktif lain: [student_id => nama_kelas].
+     */
+    protected function takenStudentMap(?int $excludeClassroomId = null): array
+    {
+        // NB: dibangun manual (bukan flatMap) karena flatMap me-reindex kunci
+        // integer, sehingga map jadi ber-key posisi, bukan student_id.
+        $map = [];
+
+        Classroom::query()
+            ->where('is_active', true)
+            ->when($excludeClassroomId, fn ($query) => $query->whereKeyNot($excludeClassroomId))
+            ->with('students:id,name')
+            ->get()
+            ->each(function (Classroom $classroom) use (&$map): void {
+                foreach ($classroom->students as $student) {
+                    $map[$student->id] = $classroom->name;
+                }
+            });
+
+        return $map;
     }
 
     protected function resolveName(array $data): string

@@ -76,7 +76,6 @@ class AttendanceController extends Controller
                 });
             })
             ->latest('date')
-            ->latest('attendance_batch_id')
             ->latest('id')
             ->get();
 
@@ -189,8 +188,10 @@ class AttendanceController extends Controller
     public function create(Request $request)
     {
         // Absensi kini berbasis kelas: pilih kelas, lalu centang murid yang hadir.
+        // Nama murid ikut dimuat agar pencarian bisa via nama murid (hasil tetap kelas).
         $classrooms = Classroom::query()
             ->active()
+            ->with('students:id,name')
             ->withCount('students')
             ->orderBy('name')
             ->get();
@@ -532,6 +533,42 @@ class AttendanceController extends Controller
         });
 
         return redirect()->route('attendances.index')->with('status', 'Group attendance updated successfully.');
+    }
+
+    public function destroy(Attendance $attendance)
+    {
+        abort_if($attendance->attendance_batch_id, 403, 'Absensi grup dihapus lewat tombol Hapus pada barisnya.');
+
+        DB::transaction(function () use ($attendance): void {
+            // Kembalikan token yang dipakai (kalau bukan token debt).
+            if ($attendance->payment) {
+                $this->tokenService->release($attendance->payment, $attendance);
+            }
+
+            // Hapus attendance — fee guru (FK attendance_id) & pivot ikut terhapus (cascade).
+            $attendance->delete();
+        });
+
+        return redirect()->route('attendances.index')
+            ->with('status', 'Absensi dihapus. Token murid dikembalikan & fee guru terkait ikut dihapus.');
+    }
+
+    public function destroyBatch(AttendanceBatch $attendanceBatch)
+    {
+        DB::transaction(function () use ($attendanceBatch): void {
+            // Kembalikan semua token batch ini: yang hadir (consumed) & yang bolos (forfeited).
+            $this->tokenService->releaseBatch($attendanceBatch);
+
+            // attendance_batch_id = nullOnDelete, jadi tiap absensi dihapus manual
+            // (fee guru per-attendance & pivot ikut terhapus via cascade).
+            $attendanceBatch->attendances()->get()->each(fn (Attendance $attendance) => $attendance->delete());
+
+            // Hapus batch — fee guru batch & pivot guru/materi batch ikut terhapus (cascade).
+            $attendanceBatch->delete();
+        });
+
+        return redirect()->route('attendances.index')
+            ->with('status', 'Absensi kelas dihapus. Token semua murid dikembalikan & fee guru terkait ikut dihapus.');
     }
 
     protected function attendanceFormData()

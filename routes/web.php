@@ -74,6 +74,8 @@ Route::middleware('auth')->group(function () {
         Route::put('/attendance-batches/{attendanceBatch}', [AttendanceController::class, 'updateBatch'])->name('attendances.batches.update');
         Route::get('/attendances/{attendance}/edit', [AttendanceController::class, 'edit'])->name('attendances.edit');
         Route::put('/attendances/{attendance}', [AttendanceController::class, 'update'])->name('attendances.update');
+        Route::delete('/attendances/{attendance}', [AttendanceController::class, 'destroy'])->name('attendances.destroy');
+        Route::delete('/attendance-batches/{attendanceBatch}', [AttendanceController::class, 'destroyBatch'])->name('attendances.batches.destroy');
     });
 
     Route::middleware('role:'.User::ROLE_TEACHER)->group(function () {

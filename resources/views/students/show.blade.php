@@ -17,11 +17,10 @@
                         Total Debt: {{ $student->getOutstandingPaymentDebtLabel() }}
                     </span>
                 @endif
-                @if ($student->getTokenDebtCount() > 0)
-                    <span class="rounded-full bg-slate-200 px-3 py-1 text-xs font-semibold text-slate-700">
-                        Token Debt: {{ $student->getTokenDebtLabel() }}
-                    </span>
-                @endif
+                @php $netTokens = $student->getNetTokenBalance(); @endphp
+                <span class="rounded-full px-3 py-1 text-xs font-semibold {{ $netTokens > 0 ? 'bg-emerald-100 text-emerald-700' : ($netTokens < 0 ? 'bg-rose-100 text-rose-700' : 'bg-amber-100 text-amber-700') }}">
+                    Saldo Token: {{ $netTokens }} token
+                </span>
                 @if (auth()->user()->isAdmin() && $student->getRemainingSessions() < 2 && $student->lowSessionReminderWhatsAppUrl($student->getRemainingSessions()))
                     <a
                         href="{{ $student->lowSessionReminderWhatsAppUrl($student->getRemainingSessions()) }}"
@@ -69,8 +68,8 @@
                     <dd class="mt-1 font-medium {{ $student->getOutstandingPaymentDebt() > 0 ? 'text-amber-700' : 'text-slate-900' }}">{{ $student->getOutstandingPaymentDebtLabel() }}</dd>
                 </div>
                 <div>
-                    <dt class="text-sm text-slate-500">Token Debt</dt>
-                    <dd class="mt-1 font-medium {{ $student->getTokenDebtCount() > 0 ? 'text-slate-700' : 'text-slate-900' }}">{{ $student->getTokenDebtLabel() }}</dd>
+                    <dt class="text-sm text-slate-500">Saldo Token</dt>
+                    <dd class="mt-1 font-medium {{ $student->getNetTokenBalance() < 0 ? 'text-rose-700' : 'text-slate-900' }}">{{ $student->getNetTokenBalance() }} token</dd>
                 </div>
                 <div class="md:col-span-2">
                     <dt class="text-sm text-slate-500">Book Info</dt>

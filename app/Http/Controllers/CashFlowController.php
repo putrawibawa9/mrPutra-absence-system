@@ -5,6 +5,8 @@ namespace App\Http\Controllers;
 use App\Models\Attendance;
 use App\Models\Expense;
 use App\Models\Payment;
+use App\Models\PaymentInstallment;
+use App\Models\Token;
 use App\Services\AttendanceTeacherFeeService;
 use Illuminate\Http\Request;
 
@@ -20,25 +22,49 @@ class CashFlowController extends Controller
         $dateFrom = $filters['date_from'] ?? now()->startOfMonth()->toDateString();
         $dateTo = $filters['date_to'] ?? now()->endOfMonth()->toDateString();
 
+        // Total uang masuk (kas) pada PERIODE filter — uang yang benar-benar
+        // diterima (jumlah cicilan/pembayaran murid) dalam rentang tanggal.
+        $cashInPeriod = (int) PaymentInstallment::query()
+            ->whereDate('payment_date', '>=', $dateFrom)
+            ->whereDate('payment_date', '<=', $dateTo)
+            ->sum('amount');
+
         // === Pendapatan diakui secara akrual (saat jasa diberikan) ===
 
         // 1) Pendapatan kelas: tiap sesi yang dihadiri "memakan" satu token,
         //    dan diakui sebesar harga-per-sesi dari pembayaran yang tertaut.
         $tokenAttendances = Attendance::query()
             ->whereNotNull('payment_id')
-            ->whereBetween('date', [$dateFrom, $dateTo])
+            ->whereDate('date', '>=', $dateFrom)
+            ->whereDate('date', '<=', $dateTo)
             ->with(['payment', 'student', 'batch'])
             ->get()
             ->filter(fn (Attendance $attendance) => $attendance->payment
                 && in_array($attendance->payment->source_type, Payment::TOKEN_SOURCES, true));
 
-        // Pendapatan kelas (token) diakui per sesi yang dihadiri.
-        $tokenRevenue = (int) $tokenAttendances->sum(fn (Attendance $attendance) => $attendance->payment->pricePerSession());
+        // Token "forfeited": murid yang bolos di kelas synchronous (live) — tokennya
+        // tetap hangus & tetap dihitung sebagai pendapatan (per tanggal pertemuan/batch).
+        $forfeitedTokens = Token::query()
+            ->where('status', Token::STATUS_FORFEITED)
+            ->whereNotNull('attendance_batch_id')
+            ->whereHas('batch', fn ($query) => $query->whereDate('date', '>=', $dateFrom)->whereDate('date', '<=', $dateTo))
+            ->with(['payment', 'batch', 'student'])
+            ->get()
+            ->filter(fn (Token $token) => $token->payment !== null);
+
+        $forfeitByBatch = $forfeitedTokens->groupBy('attendance_batch_id');
+        $forfeitRevenue = (int) $forfeitedTokens->sum(fn (Token $token) => $token->payment->pricePerSession());
+        $forfeitCount = $forfeitedTokens->count();
+
+        // Pendapatan kelas (token) = sesi yang dihadiri + token hangus (synchronous).
+        $tokenRevenue = (int) $tokenAttendances->sum(fn (Attendance $attendance) => $attendance->payment->pricePerSession())
+            + $forfeitRevenue;
 
         // 2) Pendapatan buku/modul: diakui saat penjualan (tanggal pembayaran).
         $bookRevenue = (int) Payment::query()
             ->where('source_type', Payment::SOURCE_BOOK)
-            ->whereBetween('payment_date', [$dateFrom, $dateTo])
+            ->whereDate('payment_date', '>=', $dateFrom)
+            ->whereDate('payment_date', '<=', $dateTo)
             ->sum('price_amount');
 
         $revenue = $tokenRevenue + $bookRevenue;
@@ -46,7 +72,8 @@ class CashFlowController extends Controller
         // === Expense yang terjadi pada periode (termasuk fee guru per pertemuan) ===
         $expenses = Expense::query()
             ->with(['category', 'creator'])
-            ->whereBetween('expense_date', [$dateFrom, $dateTo])
+            ->whereDate('expense_date', '>=', $dateFrom)
+            ->whereDate('expense_date', '<=', $dateTo)
             ->latest('expense_date')
             ->latest('id')
             ->get();
@@ -63,16 +90,20 @@ class CashFlowController extends Controller
         $privateAttendances = $tokenAttendances->whereNull('attendance_batch_id');
         $groupAttendances = $tokenAttendances->whereNotNull('attendance_batch_id');
 
+        // Token hangus (synchronous) selalu masuk kategori grup/semi.
         $privateRevenue = (int) $privateAttendances->sum(fn (Attendance $attendance) => $attendance->payment->pricePerSession());
-        $groupRevenue = (int) $groupAttendances->sum(fn (Attendance $attendance) => $attendance->payment->pricePerSession());
+        $groupRevenue = (int) $groupAttendances->sum(fn (Attendance $attendance) => $attendance->payment->pricePerSession())
+            + $forfeitRevenue;
 
         // Fee guru private tertaut attendance_id; fee guru grup tertaut attendance_batch_id.
         $privateFee = (int) $feeGuruExpenses->whereNotNull('attendance_id')->sum('amount');
         $groupFee = (int) $feeGuruExpenses->whereNotNull('attendance_batch_id')->sum('amount');
 
         $privateSessions = $privateAttendances->count();
-        $groupParticipants = $groupAttendances->count();
-        $groupSessions = $groupAttendances->pluck('attendance_batch_id')->unique()->count();
+        $groupParticipants = $groupAttendances->count() + $forfeitCount;
+        $groupSessions = $groupAttendances->pluck('attendance_batch_id')
+            ->merge($forfeitByBatch->keys())
+            ->unique()->count();
 
         // Fee guru per sesi untuk perhitungan net income per pertemuan.
         $feeByAttendance = $feeGuruExpenses->whereNotNull('attendance_id')
@@ -97,18 +128,41 @@ class CashFlowController extends Controller
                 ];
             });
 
-        $groupNetEntries = $groupAttendances
-            ->groupBy('attendance_batch_id')
-            ->map(function ($attendances) use ($feeByBatch) {
-                $first = $attendances->first();
-                $gross = (int) $attendances->sum(fn (Attendance $attendance) => $attendance->payment->pricePerSession());
-                $fee = (int) ($feeByBatch[$first->attendance_batch_id] ?? 0);
+        $groupedAttendances = $groupAttendances->groupBy('attendance_batch_id');
+        $groupBatchIds = $groupedAttendances->keys()
+            ->merge($forfeitByBatch->keys())
+            ->unique()
+            ->values();
+
+        $groupNetEntries = $groupBatchIds
+            ->map(function ($batchId) use ($groupedAttendances, $forfeitByBatch, $feeByBatch) {
+                $attendances = $groupedAttendances->get($batchId, collect());
+                $forfeits = $forfeitByBatch->get($batchId, collect());
+
+                $gross = (int) $attendances->sum(fn (Attendance $attendance) => $attendance->payment->pricePerSession())
+                    + (int) $forfeits->sum(fn (Token $token) => $token->payment->pricePerSession());
+                $count = $attendances->count() + $forfeits->count();
+                $fee = (int) ($feeByBatch[$batchId] ?? 0);
+
+                $batch = $attendances->first()?->batch ?? $forfeits->first()?->batch;
+                $date = $attendances->first()?->date ?? $batch?->date;
+
+                // Satu nama murid sebagai penanda kelas (admin mungkin tak hafal nama kelas).
+                $names = $attendances->map(fn (Attendance $attendance) => $attendance->student?->name)
+                    ->merge($forfeits->map(fn (Token $token) => $token->student?->name))
+                    ->filter()
+                    ->values();
+                $studentHint = $names->first();
+                if ($names->count() > 1) {
+                    $studentHint .= ' +'.($names->count() - 1).' lainnya';
+                }
 
                 return (object) [
-                    'id' => 'net-batch-'.$first->attendance_batch_id,
-                    'date' => $first->date,
-                    'name' => $first->batch?->title ?: 'Kelas Grup',
-                    'label' => $attendances->count().' peserta',
+                    'id' => 'net-batch-'.$batchId,
+                    'date' => $date,
+                    'name' => $batch?->title ?: 'Kelas Grup',
+                    'student_hint' => $studentHint,
+                    'label' => $count.' peserta',
                     'gross' => $gross,
                     'fee' => $fee,
                     'net' => $gross - $fee,
@@ -150,14 +204,15 @@ class CashFlowController extends Controller
 
         // Jumlah pertemuan (sesi yang digelar) pada periode — batch dihitung sekali.
         $meetingCount = Attendance::query()
-            ->whereBetween('date', [$dateFrom, $dateTo])
+            ->whereDate('date', '>=', $dateFrom)
+            ->whereDate('date', '<=', $dateTo)
             ->get(['id', 'attendance_batch_id'])
             ->groupBy(fn (Attendance $attendance) => $attendance->attendance_batch_id
                 ? 'batch-'.$attendance->attendance_batch_id
                 : 'single-'.$attendance->id)
             ->count();
 
-        $tokenSessionCount = $tokenAttendances->count();
+        $tokenSessionCount = $tokenAttendances->count() + $forfeitCount;
         $averageRevenuePerMeeting = $tokenSessionCount > 0
             ? (int) round($tokenRevenue / $tokenSessionCount)
             : 0;
@@ -173,6 +228,7 @@ class CashFlowController extends Controller
                 'date_to' => $dateTo,
             ],
             'revenue' => $revenue,
+            'cashInPeriod' => $cashInPeriod,
             'expenseTotal' => $expenseTotal,
             'teacherFeeTotal' => $teacherFeeTotal,
             'netProfit' => $netProfit,

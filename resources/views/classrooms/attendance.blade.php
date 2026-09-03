@@ -21,18 +21,14 @@
         @endif
 
         <div class="rounded-3xl bg-white p-6 shadow-sm">
-            <div class="grid gap-5 md:grid-cols-3">
+            <div class="grid gap-5 md:grid-cols-2">
                 <div>
                     <x-input-label for="date" value="Tanggal" />
                     <x-text-input id="date" name="date" type="date" class="mt-1 block w-full rounded-xl border-slate-300" :value="old('date', now()->toDateString())" />
                 </div>
                 <div>
-                    <x-input-label for="teaching_minutes" value="Durasi (menit)" />
-                    <x-text-input id="teaching_minutes" name="teaching_minutes" type="number" min="0" class="mt-1 block w-full rounded-xl border-slate-300" :value="old('teaching_minutes', 60)" />
-                </div>
-                <div>
                     <x-input-label value="Guru" />
-                    <div class="mt-1 max-h-28 space-y-1 overflow-y-auto rounded-xl border border-slate-200 p-2">
+                    <div class="mt-1 max-h-64 space-y-1 overflow-y-auto rounded-xl border border-slate-200 p-2">
                         @foreach ($teachers as $teacher)
                             <label class="flex items-center gap-2 rounded-lg px-2 py-1 text-sm hover:bg-slate-50">
                                 <input type="checkbox" name="teacher_ids[]" value="{{ $teacher->id }}"
@@ -44,24 +40,11 @@
                 </div>
             </div>
 
-            @if ($materialLinks->isNotEmpty())
-                <div class="mt-5">
-                    <x-input-label value="Link Materi (opsional)" />
-                    <div class="mt-1 flex flex-wrap gap-2">
-                        @foreach ($materialLinks as $materialLink)
-                            <label class="flex items-center gap-2 rounded-xl border border-slate-200 px-3 py-1.5 text-sm">
-                                <input type="checkbox" name="material_link_ids[]" value="{{ $materialLink->id }}"
-                                    @checked(collect(old('material_link_ids', []))->map(fn ($id) => (int) $id)->contains($materialLink->id))>
-                                {{ $materialLink->title }}
-                            </label>
-                        @endforeach
-                    </div>
-                </div>
-            @endif
-
             <div class="mt-5">
-                <x-input-label for="learning_journal" value="Catatan Belajar (opsional)" />
-                <textarea id="learning_journal" name="learning_journal" rows="3" class="mt-1 block w-full rounded-xl border-slate-300">{{ old('learning_journal') }}</textarea>
+                <x-input-label for="learning_journal" value="Jurnal Belajar *" />
+                <textarea id="learning_journal" name="learning_journal" rows="3" required class="mt-1 block w-full rounded-xl border-slate-300">{{ old('learning_journal') }}</textarea>
+                <x-input-error :messages="$errors->get('learning_journal')" class="mt-2" />
+                <p class="mt-1 text-xs text-slate-400">Wajib diisi.</p>
             </div>
         </div>
 
@@ -72,7 +55,7 @@
             </div>
             <div class="mt-4 space-y-2">
                 @forelse ($classroom->students as $student)
-                    @php($remaining = (int) $student->payments->sum('remaining_sessions'))
+                    @php $net = (int) $student->payments->sum('remaining_sessions') - (int) ($student->token_debt_count ?? 0); @endphp
                     <label class="flex items-center justify-between gap-3 rounded-2xl border border-slate-200 p-4 hover:bg-slate-50">
                         <div class="flex items-center gap-3">
                             <input type="checkbox" name="present_student_ids[]" value="{{ $student->id }}"
@@ -80,8 +63,8 @@
                                 class="h-5 w-5 rounded">
                             <span class="font-medium text-slate-900">{{ $student->name }}</span>
                         </div>
-                        <span class="text-sm {{ $remaining > 0 ? 'text-emerald-700' : 'text-amber-700' }}">
-                            {{ $remaining > 0 ? $remaining.' token tersisa' : 'Tidak ada token → token debt' }}
+                        <span class="text-sm font-medium {{ $net > 0 ? 'text-emerald-700' : ($net < 0 ? 'text-rose-700' : 'text-amber-700') }}">
+                            {{ $net }} token
                         </span>
                     </label>
                 @empty

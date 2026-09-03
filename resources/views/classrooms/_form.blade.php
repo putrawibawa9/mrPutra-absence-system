@@ -117,13 +117,20 @@
             <span class="text-xs text-slate-500" x-text="format === 'private' ? 'Pilih 1 murid' : 'Pilih murid kelas'"></span>
         </div>
         <input type="text" x-model="q" placeholder="Cari nama / nomor HP..." class="mt-1 block w-full rounded-xl border-slate-300">
+        @php($takenStudents = $takenStudents ?? [])
         <div class="mt-3 max-h-80 space-y-1 overflow-y-auto rounded-2xl border border-slate-200 p-2">
             @forelse ($students as $student)
-                <label class="flex items-center gap-3 rounded-xl px-3 py-2 hover:bg-slate-50"
+                @php($lockedClass = $takenStudents[$student->id] ?? null)
+                @php($isLocked = $lockedClass && ! in_array($student->id, $selectedStudentIds, true))
+                <label class="flex items-center gap-3 rounded-xl px-3 py-2 {{ $isLocked ? 'opacity-50' : 'hover:bg-slate-50' }}"
                     x-show="q === '' || '{{ Str::lower($student->name) }}'.includes(q.toLowerCase()) || '{{ $student->phone }}'.includes(q)">
-                    <input type="checkbox" name="student_ids[]" value="{{ $student->id }}" @checked(in_array($student->id, $selectedStudentIds, true)) class="rounded">
+                    <input type="checkbox" name="student_ids[]" value="{{ $student->id }}" @checked(in_array($student->id, $selectedStudentIds, true)) @disabled($isLocked) class="rounded">
                     <span class="text-sm text-slate-800">{{ $student->name }}</span>
-                    <span class="text-xs text-slate-400">{{ $student->phone }}</span>
+                    @if ($isLocked)
+                        <span class="text-xs font-medium text-amber-600">sudah di kelas "{{ $lockedClass }}"</span>
+                    @else
+                        <span class="text-xs text-slate-400">{{ $student->phone }}</span>
+                    @endif
                 </label>
             @empty
                 <p class="px-3 py-2 text-sm text-slate-500">Belum ada murid aktif.</p>

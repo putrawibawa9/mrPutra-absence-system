@@ -8,6 +8,7 @@ use App\Models\Expense;
 use App\Models\ExpenseCategory;
 use App\Models\LearningModule;
 use App\Models\Payment;
+use App\Models\PaymentInstallment;
 use App\Models\Student;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -299,5 +300,36 @@ class CashFlowMonitoringTest extends TestCase
         // Expense entries menyembunyikan fee guru (di test ini semua expense adalah fee guru -> kosong).
         $response->assertViewHas('expenses', fn ($expenses) => collect($expenses)
             ->every(fn ($expense) => $expense->category?->name !== 'Fee Guru'));
+    }
+
+    public function test_cash_flow_total_cash_in_follows_period_filter(): void
+    {
+        $admin = User::factory()->create(['role' => User::ROLE_ADMIN]);
+        $student = Student::query()->create(['name' => 'Payer', 'phone' => '0811', 'is_active' => true]);
+        $payment = Payment::query()->create([
+            'student_id' => $student->id,
+            'source_type' => Payment::SOURCE_TOKEN,
+            'total_sessions' => 8,
+            'remaining_sessions' => 8,
+            'price_amount' => 800000,
+            'amount_paid' => 0,
+            'payment_date' => '2026-04-10',
+        ]);
+
+        // 2 cicilan dalam periode filter (April) + 1 di luar (Mei) -> tidak dihitung.
+        PaymentInstallment::query()->create(['payment_id' => $payment->id, 'amount' => 300000, 'payment_date' => '2026-04-05', 'received_by_user_id' => $admin->id]);
+        PaymentInstallment::query()->create(['payment_id' => $payment->id, 'amount' => 200000, 'payment_date' => '2026-04-28', 'received_by_user_id' => $admin->id]);
+        PaymentInstallment::query()->create(['payment_id' => $payment->id, 'amount' => 999000, 'payment_date' => '2026-05-03', 'received_by_user_id' => $admin->id]);
+
+        // Filter April -> hanya 500.000
+        $this->actingAs($admin)->get(route('cash-flow.index', ['date_from' => '2026-04-01', 'date_to' => '2026-04-30']))
+            ->assertOk()
+            ->assertViewHas('cashInPeriod', 500000)
+            ->assertSee('Total Uang Masuk');
+
+        // Filter Mei -> hanya 999.000
+        $this->actingAs($admin)->get(route('cash-flow.index', ['date_from' => '2026-05-01', 'date_to' => '2026-05-31']))
+            ->assertOk()
+            ->assertViewHas('cashInPeriod', 999000);
     }
 }

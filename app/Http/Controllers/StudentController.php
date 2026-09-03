@@ -20,6 +20,7 @@ class StudentController extends Controller
         $students = Student::active()
             ->with(['latestActivePayment', 'latestSessionPayment'])
             ->withSum('payments', 'remaining_sessions')
+            ->withCount(['attendances as token_debt_count' => fn ($query) => $query->whereNull('payment_id')])
             ->when($filters['search'] ?? null, function ($query, $search) {
                 $query->where(function ($query) use ($search) {
                     $query->where('name', 'like', '%'.$search.'%')

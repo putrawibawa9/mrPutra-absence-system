@@ -15,68 +15,76 @@
         @vite(['resources/css/app.css', 'resources/js/app.js'])
     </head>
     @php
-        $navSections = [
-            [
-                'label' => 'Overview',
-                'items' => [
-                    ['label' => 'Dashboard', 'route' => 'dashboard', 'pattern' => 'dashboard'],
-                ],
-            ],
-            [
-                'label' => 'Students',
-                'items' => [
-                    ['label' => 'All Students', 'route' => 'students.index', 'pattern' => 'students.*'],
-                ],
-            ],
-        ];
-
         if (auth()->user()->isAdmin()) {
-            $navSections[] = [
-                'label' => 'Teaching',
-                'items' => [
-                    ['label' => 'Kelas', 'route' => 'classrooms.index', 'pattern' => 'classrooms.*'],
-                    ['label' => 'Attendances', 'route' => 'attendances.index', 'pattern' => 'attendances.*'],
-                    ['label' => 'Teachers', 'route' => 'teachers.index', 'pattern' => 'teachers.*'],
-                    ['label' => 'Jadwal Guru', 'route' => 'teacher-schedules.index', 'pattern' => 'teacher-schedules.*'],
-                    ['label' => 'Ketersediaan Guru', 'route' => 'teacher-availabilities.index', 'pattern' => 'teacher-availabilities.*'],
+            $navSections = [
+                [
+                    'label' => 'Overview',
+                    'items' => [
+                        ['label' => 'Dashboard', 'route' => 'dashboard', 'pattern' => 'dashboard'],
+                    ],
                 ],
-            ];
-
-            $navSections[] = [
-                'label' => 'Academics',
-                'items' => [
-                    ['label' => 'Modules', 'route' => 'learning-modules.index', 'pattern' => 'learning-modules.*'],
-                    ['label' => 'Link Materi', 'route' => 'material-links.index', 'pattern' => 'material-links.*'],
+                [
+                    'label' => 'Students',
+                    'items' => [
+                        ['label' => 'All Students', 'route' => 'students.index', 'pattern' => 'students.*'],
+                    ],
                 ],
-            ];
-
-            $navSections[] = [
-                'label' => 'Finance',
-                'items' => [
-                    ['label' => 'Payments', 'route' => 'payments.index', 'pattern' => 'payments.*'],
-                    ['label' => 'Expenses', 'route' => 'expenses.index', 'pattern' => 'expenses.*'],
-                    ['label' => 'Expense Categories', 'route' => 'expense-categories.index', 'pattern' => 'expense-categories.*'],
-                    ['label' => 'Cash Flow', 'route' => 'cash-flow.index', 'pattern' => 'cash-flow.*'],
+                [
+                    'label' => 'Teaching',
+                    'items' => [
+                        ['label' => 'Kelas', 'route' => 'classrooms.index', 'pattern' => 'classrooms.*'],
+                        ['label' => 'Attendances', 'route' => 'attendances.index', 'pattern' => 'attendances.*'],
+                        ['label' => 'Teachers', 'route' => 'teachers.index', 'pattern' => 'teachers.*'],
+                        ['label' => 'Jadwal Guru', 'route' => 'teacher-schedules.index', 'pattern' => 'teacher-schedules.*'],
+                        ['label' => 'Ketersediaan Guru', 'route' => 'teacher-availabilities.index', 'pattern' => 'teacher-availabilities.*'],
+                    ],
+                ],
+                [
+                    'label' => 'Academics',
+                    'items' => [
+                        ['label' => 'Modules', 'route' => 'learning-modules.index', 'pattern' => 'learning-modules.*'],
+                        ['label' => 'Link Materi', 'route' => 'material-links.index', 'pattern' => 'material-links.*'],
+                    ],
+                ],
+                [
+                    'label' => 'Finance',
+                    'items' => [
+                        ['label' => 'Payments', 'route' => 'payments.index', 'pattern' => 'payments.*'],
+                        ['label' => 'Expenses', 'route' => 'expenses.index', 'pattern' => 'expenses.*'],
+                        ['label' => 'Expense Categories', 'route' => 'expense-categories.index', 'pattern' => 'expense-categories.*'],
+                        ['label' => 'Cash Flow', 'route' => 'cash-flow.index', 'pattern' => 'cash-flow.*'],
+                    ],
+                ],
+                [
+                    'label' => 'Account',
+                    'items' => [
+                        ['label' => 'Profile', 'route' => 'profile.edit', 'pattern' => 'profile.*'],
+                    ],
                 ],
             ];
         } else {
-            $navSections[] = [
-                'label' => 'Teaching',
-                'items' => [
-                    ['label' => 'Kelas', 'route' => 'classrooms.index', 'pattern' => 'classrooms.*'],
-                    ['label' => 'Attendances', 'route' => 'attendances.index', 'pattern' => 'attendances.*'],
-                    ['label' => 'Jadwal Saya', 'route' => 'my-schedule.index', 'pattern' => 'my-schedule.*'],
-                    ['label' => 'Ketersediaan Saya', 'route' => 'my-availability.index', 'pattern' => 'my-availability.*'],
+            // Guru: hanya Absensi yang aktif. Jadwal & Ketersediaan menyusul.
+            $navSections = [
+                [
+                    'label' => 'Absensi',
+                    'items' => [
+                        ['label' => 'Attendance', 'route' => 'attendances.index', 'pattern' => 'attendances.*'],
+                    ],
+                ],
+                [
+                    'label' => 'Jadwal',
+                    'items' => [
+                        ['label' => 'Jadwal Saya', 'disabled' => true],
+                    ],
+                ],
+                [
+                    'label' => 'Ketersediaan',
+                    'items' => [
+                        ['label' => 'Ketersediaan', 'disabled' => true],
+                    ],
                 ],
             ];
         }
-
-        $navSections[] = [
-            'label' => 'Account',
-            'items' => [
-                ['label' => 'Profile', 'route' => 'profile.edit', 'pattern' => 'profile.*'],
-            ],
-        ];
     @endphp
     <body class="bg-slate-100 font-sans antialiased text-slate-900">
         <div x-data="{ mobileNavOpen: false }" class="min-h-screen lg:flex">
@@ -101,10 +109,12 @@
                 <nav class="flex-1 space-y-5 overflow-y-auto px-4 pb-5 lg:px-5">
                     @foreach ($navSections as $section)
                         @php
-                            $sectionIsActive = collect($section['items'])->contains(fn ($item) => request()->routeIs($item['pattern']));
-                            $activeSectionItem = collect($section['items'])->first(fn ($item) => request()->routeIs($item['pattern']));
+                            $sectionIsActive = collect($section['items'])->contains(fn ($item) => isset($item['pattern']) && request()->routeIs($item['pattern']));
+                            $activeSectionItem = collect($section['items'])->first(fn ($item) => isset($item['pattern']) && request()->routeIs($item['pattern']));
+                            $sectionSummary = $activeSectionItem['label']
+                                ?? (count($section['items']) === 1 ? $section['items'][0]['label'] : 'Open menu');
                         @endphp
-                        <div x-data="{ open: {{ $sectionIsActive ? 'true' : 'false' }} }" class="rounded-2xl border border-white/5 bg-white/[0.03]">
+                        <div x-data="{ open: {{ $sectionIsActive || count($section['items']) === 1 ? 'true' : 'false' }} }" class="rounded-2xl border border-white/5 bg-white/[0.03]">
                             <button
                                 type="button"
                                 @click="open = ! open"
@@ -113,7 +123,7 @@
                                 <div>
                                     <p class="text-[11px] uppercase tracking-[0.25em] text-slate-500">{{ $section['label'] }}</p>
                                     <p class="mt-1 text-sm font-medium text-white">
-                                        {{ $activeSectionItem['label'] ?? 'Open menu' }}
+                                        {{ $sectionSummary }}
                                     </p>
                                 </div>
                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-slate-400 transition-transform" :class="open ? 'rotate-180' : ''" viewBox="0 0 20 20" fill="currentColor">
@@ -123,12 +133,19 @@
 
                             <div x-show="open" x-transition.opacity.duration.150ms class="space-y-1 px-2 pb-2">
                                 @foreach ($section['items'] as $item)
-                                    <a
-                                        href="{{ route($item['route']) }}"
-                                        class="{{ request()->routeIs($item['pattern']) ? 'bg-white/10 text-white' : 'text-slate-300 hover:bg-white/5 hover:text-white' }} flex items-center rounded-xl px-3 py-2.5 text-sm font-medium transition"
-                                    >
-                                        {{ $item['label'] }}
-                                    </a>
+                                    @if (! empty($item['disabled']))
+                                        <div class="flex cursor-not-allowed items-center justify-between rounded-xl px-3 py-2.5 text-sm font-medium text-slate-500">
+                                            <span>{{ $item['label'] }}</span>
+                                            <span class="rounded-full bg-white/5 px-2 py-1 text-[11px] uppercase tracking-wide text-slate-400">Coming soon</span>
+                                        </div>
+                                    @else
+                                        <a
+                                            href="{{ route($item['route']) }}"
+                                            class="{{ request()->routeIs($item['pattern']) ? 'bg-white/10 text-white' : 'text-slate-300 hover:bg-white/5 hover:text-white' }} flex items-center rounded-xl px-3 py-2.5 text-sm font-medium transition"
+                                        >
+                                            {{ $item['label'] }}
+                                        </a>
+                                    @endif
                                 @endforeach
                             </div>
                         </div>
