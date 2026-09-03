@@ -167,7 +167,31 @@ class ClassroomTest extends TestCase
         $this->assertSame($attendance->id, (int) $fee->attendance_id);
     }
 
-    public function test_only_present_students_are_recorded_for_self_paced(): void
+    public function test_private_no_show_records_nothing_and_keeps_token(): void
+    {
+        $admin = User::factory()->create(['role' => User::ROLE_ADMIN]);
+        $teacher = User::factory()->create(['role' => User::ROLE_TEACHER]);
+        $a = Student::query()->create(['name' => 'Solo', 'phone' => '0811', 'is_active' => true]);
+        $pay = $this->tokenPayment($a);
+
+        $classroom = $this->makeClassroom(Classroom::FORMAT_PRIVATE, [$a->id]);
+
+        // Kelas private (1-on-1): kalau muridnya tidak datang, sesi tidak dicatat
+        // sama sekali. Tidak ada token yang hangus & tidak ada fee guru.
+        $response = $this->actingAs($admin)->post(route('classrooms.attendances.store', $classroom), [
+            'date' => now()->toDateString(),
+            'teacher_ids' => [$teacher->id],
+            'present_student_ids' => [], // murid tidak hadir
+            'learning_journal' => 'Catatan sesi.',
+        ]);
+
+        $response->assertSessionHasErrors('present_student_ids');
+        $this->assertSame(0, Attendance::query()->count());
+        $this->assertDatabaseCount('attendance_batches', 0);
+        $this->assertSame(5, $pay->fresh()->remaining_sessions); // token utuh, tidak hangus
+    }
+
+    public function test_self_paced_absent_student_forfeits_token(): void
     {
         $admin = User::factory()->create(['role' => User::ROLE_ADMIN]);
         $teacher = User::factory()->create(['role' => User::ROLE_TEACHER]);
@@ -176,21 +200,23 @@ class ClassroomTest extends TestCase
         $payA = $this->tokenPayment($a);
         $payB = $this->tokenPayment($b);
 
-        // Coding Semi is self-paced: absent students keep their tokens.
+        // Coding Semi is self-paced, tapi begitu sesi grup tercatat, murid yang
+        // tidak hadir tetap kehilangan 1 token (sama seperti kelas synchronous).
         $classroom = $this->makeClassroom(Classroom::FORMAT_SEMI, [$a->id, $b->id], Classroom::DIVISION_CODING);
         $this->assertTrue($classroom->isSelfPaced());
 
         $this->actingAs($admin)->post(route('classrooms.attendances.store', $classroom), [
             'date' => now()->toDateString(),
             'teacher_ids' => [$teacher->id],
-            'present_student_ids' => [$a->id], // hanya A hadir
+            'present_student_ids' => [$a->id], // hanya A hadir, B tidak hadir
             'teaching_minutes' => 60,
             'learning_journal' => 'Catatan sesi.',
         ])->assertRedirect(route('attendances.index'));
 
+        // Hanya A yang punya baris Attendance; B cukup di-forfeit di ledger.
         $this->assertSame(1, Attendance::query()->count());
         $this->assertSame(4, $payA->fresh()->remaining_sessions);
-        $this->assertSame(5, $payB->fresh()->remaining_sessions); // B tidak hadir, token utuh
+        $this->assertSame(4, $payB->fresh()->remaining_sessions); // B tidak hadir -> token hangus
     }
 
     public function test_synchronous_absent_student_forfeits_token_without_attendance(): void

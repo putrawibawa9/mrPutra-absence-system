@@ -90,7 +90,7 @@ class TokenLifecycleTest extends TestCase
         $this->assertSame(0, Attendance::query()->where('student_id', $absent->id)->count());
     }
 
-    public function test_self_paced_open_lab_only_consumes_on_attendance(): void
+    public function test_self_paced_absent_student_also_forfeits_token(): void
     {
         $admin = User::factory()->create(['role' => User::ROLE_ADMIN]);
         $teacher = User::factory()->create(['role' => User::ROLE_TEACHER]);
@@ -112,9 +112,12 @@ class TokenLifecycleTest extends TestCase
         ])->assertRedirect(route('attendances.index'));
 
         $this->assertSame(4, $payPresent->fresh()->remaining_sessions);
-        // Absent self-paced student keeps every token (no forfeit).
-        $this->assertSame(5, $payAbsent->fresh()->remaining_sessions);
-        $this->assertSame(0, $payAbsent->tokens()->where('status', '!=', Token::STATUS_AVAILABLE)->count());
+        // Sesi grup tetap terjadi: murid absen kehilangan 1 token (forfeited),
+        // berlaku juga untuk kelas self-paced.
+        $this->assertSame(4, $payAbsent->fresh()->remaining_sessions);
+        $this->assertSame(1, $payAbsent->tokens()->where('status', Token::STATUS_FORFEITED)->count());
+        // Tidak ada baris Attendance untuk murid yang absen.
+        $this->assertSame(0, Attendance::query()->where('student_id', $absent->id)->count());
     }
 
     public function test_cancelled_session_does_not_deduct_any_token(): void

@@ -238,17 +238,18 @@ class ClassroomController extends Controller
                 }
             }
 
-            // Synchronous (live cohort) sessions: absent students still burn a
-            // token because the live session took place and is not repeated.
-            // Tidak ada baris Attendance untuk yang absen — token cukup di-forfeit
-            // di ledger, dan cash-flow menghitung token forfeited sebagai pendapatan.
-            if ($classroom->isSynchronous()) {
-                foreach ($absentIds as $studentId) {
-                    $payment = $this->resolvePayment((int) $studentId, $classroom->division, $classroom->format);
+            // Sesi grup: begitu sesi tercatat (batch dibuat), setiap anggota kelas
+            // yang tidak hadir tetap kehilangan 1 token — berlaku untuk semua mode
+            // (synchronous maupun self-paced). Tidak ada baris Attendance untuk yang
+            // absen; token cukup di-forfeit di ledger, dan cash-flow menghitung token
+            // forfeited sebagai pendapatan (peserta absen = 1 token = 1 sesi terbayar).
+            // Kelas private tidak masuk sini: kalau muridnya tidak datang, sesi tidak
+            // dicatat sama sekali (validasi butuh minimal 1 murid hadir).
+            foreach ($absentIds as $studentId) {
+                $payment = $this->resolvePayment((int) $studentId, $classroom->division, $classroom->format);
 
-                    if ($payment) {
-                        $this->tokenService->forfeit($payment, $batch, $date);
-                    }
+                if ($payment) {
+                    $this->tokenService->forfeit($payment, $batch, $date);
                 }
             }
 
@@ -256,9 +257,9 @@ class ClassroomController extends Controller
             $this->teacherFeeService->syncBatch($batch, $teacherIds, $request->user()->id);
         });
 
-        $statusNote = $classroom->isSynchronous()
-            ? 'Token murid yang hadir & yang bolos (kelas live) terpotong.'
-            : 'Token murid yang hadir terpotong.';
+        $statusNote = $classroom->isPrivate()
+            ? 'Token murid terpotong.'
+            : 'Token murid yang hadir & yang tidak hadir terpotong.';
 
         return redirect()->route('attendances.index')
             ->with('status', 'Absensi kelas "'.$classroom->name.'" tersimpan. '.$statusNote);
