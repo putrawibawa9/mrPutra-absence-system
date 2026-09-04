@@ -150,29 +150,6 @@
 
             {{-- ===== Token kelas ===== --}}
             <div x-show="sourceType === 'token'" x-cloak>
-                <x-input-label for="division" value="Divisi (scope token, opsional)" />
-                <select id="division" name="division" x-bind:disabled="sourceType !== 'token'" class="mt-1 block w-full rounded-xl border-slate-300">
-                    <option value="">— Semua (umum) —</option>
-                    @foreach (\App\Models\Classroom::divisionOptions() as $value => $label)
-                        <option value="{{ $value }}" @selected(old('division') === $value)>{{ $label }}</option>
-                    @endforeach
-                </select>
-                <x-input-error :messages="$errors->get('division')" class="mt-2" />
-                <p class="mt-1 text-xs text-slate-500">Kosongkan untuk token umum; isi agar token hanya bisa dipakai di divisi + format tertentu.</p>
-            </div>
-
-            <div x-show="sourceType === 'token'" x-cloak>
-                <x-input-label for="format" value="Format (scope token, opsional)" />
-                <select id="format" name="format" x-bind:disabled="sourceType !== 'token'" class="mt-1 block w-full rounded-xl border-slate-300">
-                    <option value="">— Semua (umum) —</option>
-                    @foreach (\App\Models\Classroom::formatOptions() as $value => $label)
-                        <option value="{{ $value }}" @selected(old('format') === $value)>{{ $label }}</option>
-                    @endforeach
-                </select>
-                <x-input-error :messages="$errors->get('format')" class="mt-2" />
-            </div>
-
-            <div x-show="sourceType === 'token'" x-cloak>
                 <x-input-label for="total_sessions" value="Jumlah Token (sesi)" />
                 <x-text-input id="total_sessions" name="total_sessions" type="number" min="1" x-model="totalSessions" x-bind:disabled="sourceType !== 'token'" class="mt-1 block w-full rounded-xl border-slate-300" :value="old('total_sessions')" placeholder="Contoh: 8" />
                 <x-input-error :messages="$errors->get('total_sessions')" class="mt-2" />
@@ -187,13 +164,6 @@
                         Harga per sesi: Rp <span x-text="formatCurrency(pricePerSession)"></span>
                     </p>
                 </template>
-            </div>
-
-            <div x-show="sourceType === 'token'" x-cloak class="md:col-span-2">
-                <x-input-label for="initial_paid_amount" value="Dibayar Sekarang (opsional)" />
-                <x-text-input id="initial_paid_amount" name="initial_paid_amount" type="number" min="0" x-bind:disabled="sourceType !== 'token'" class="mt-1 block w-full rounded-xl border-slate-300" :value="old('initial_paid_amount')" placeholder="Kosongkan jika lunas penuh" />
-                <x-input-error :messages="$errors->get('initial_paid_amount')" class="mt-2" />
-                <p class="mt-2 text-xs text-slate-500">Kosongkan untuk langsung lunas. Isi sebagian jika bayar cicilan.</p>
             </div>
 
             {{-- ===== Buku / Modul ===== --}}
@@ -218,12 +188,6 @@
                 <x-input-label for="book_price" value="Harga Buku / Modul" />
                 <x-text-input id="book_price" name="book_price" type="number" min="1" x-model="bookPrice" x-bind:disabled="sourceType !== 'book' || !! selectedLearningModuleId" x-bind:value="selectedLearningModule ? selectedLearningModule.price : bookPrice" class="mt-1 block w-full rounded-xl border-slate-300" :value="old('book_price')" placeholder="Contoh: 150000" />
                 <x-input-error :messages="$errors->get('book_price')" class="mt-2" />
-            </div>
-
-            <div x-show="sourceType === 'book'" x-cloak>
-                <x-input-label for="initial_paid_amount_book" value="Dibayar Sekarang (opsional)" />
-                <x-text-input id="initial_paid_amount_book" name="initial_paid_amount" type="number" min="0" x-bind:disabled="sourceType !== 'book'" class="mt-1 block w-full rounded-xl border-slate-300" :value="old('initial_paid_amount')" placeholder="Kosongkan jika lunas penuh" />
-                <x-input-error :messages="$errors->get('initial_paid_amount')" class="mt-2" />
             </div>
 
             <div class="md:col-span-2">
