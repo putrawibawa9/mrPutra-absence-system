@@ -191,6 +191,52 @@ class ClassroomTest extends TestCase
         $this->assertSame(5, $pay->fresh()->remaining_sessions); // token utuh, tidak hangus
     }
 
+    public function test_deactivating_student_kicks_them_from_classroom(): void
+    {
+        $admin = User::factory()->create(['role' => User::ROLE_ADMIN]);
+        $a = Student::query()->create(['name' => 'A', 'phone' => '0811', 'is_active' => true]);
+        $b = Student::query()->create(['name' => 'B', 'phone' => '0812', 'is_active' => true]);
+
+        $classroom = $this->makeClassroom(Classroom::FORMAT_SEMI, [$a->id, $b->id], Classroom::DIVISION_CODING);
+
+        // Nonaktifkan A lewat aksi admin.
+        $this->actingAs($admin)->patch(route('students.toggle-status', $a))->assertRedirect();
+
+        $this->assertFalse($a->fresh()->is_active);
+        // A dikeluarkan dari kelas, B tetap.
+        $this->assertDatabaseMissing('classroom_student', ['classroom_id' => $classroom->id, 'student_id' => $a->id]);
+        $this->assertDatabaseHas('classroom_student', ['classroom_id' => $classroom->id, 'student_id' => $b->id]);
+    }
+
+    public function test_inactive_student_still_linked_cannot_be_attended_or_forfeited(): void
+    {
+        $admin = User::factory()->create(['role' => User::ROLE_ADMIN]);
+        $teacher = User::factory()->create(['role' => User::ROLE_TEACHER]);
+        $active = Student::query()->create(['name' => 'Active', 'phone' => '0811', 'is_active' => true]);
+        // Dibuat non-aktif sejak awal (tidak memicu event detach), lalu ditautkan
+        // manual — mensimulasikan data lama: murid non-aktif masih nyangkut di kelas.
+        $inactive = Student::query()->create(['name' => 'Inactive', 'phone' => '0812', 'is_active' => false]);
+        $payActive = $this->tokenPayment($active);
+        $payInactive = $this->tokenPayment($inactive);
+
+        // English Semi = synchronous: normalnya anggota absen kena forfeit.
+        $classroom = $this->makeClassroom(Classroom::FORMAT_SEMI, [$active->id], Classroom::DIVISION_ENGLISH);
+        $classroom->students()->attach($inactive->id);
+        $this->assertTrue($classroom->isSynchronous());
+
+        $this->actingAs($admin)->post(route('classrooms.attendances.store', $classroom), [
+            'date' => now()->toDateString(),
+            'teacher_ids' => [$teacher->id],
+            'present_student_ids' => [$active->id],
+            'learning_journal' => 'Catatan sesi.',
+        ])->assertRedirect(route('attendances.index'));
+
+        $this->assertSame(4, $payActive->fresh()->remaining_sessions); // hadir -> token terpotong
+        // Murid non-aktif tidak dianggap anggota: token utuh, tidak ada baris Attendance.
+        $this->assertSame(5, $payInactive->fresh()->remaining_sessions);
+        $this->assertSame(0, Attendance::query()->where('student_id', $inactive->id)->count());
+    }
+
     public function test_self_paced_absent_student_forfeits_token(): void
     {
         $admin = User::factory()->create(['role' => User::ROLE_ADMIN]);

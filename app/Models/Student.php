@@ -30,6 +30,17 @@ class Student extends Model
         ];
     }
 
+    protected static function booted(): void
+    {
+        // Begitu murid di-nonaktifkan, otomatis keluarkan dari semua kelas
+        // (kick dari grup) supaya tidak lagi muncul & tidak bisa diabsen.
+        static::updated(function (Student $student): void {
+            if ($student->wasChanged('is_active') && ! $student->is_active) {
+                $student->classrooms()->detach();
+            }
+        });
+    }
+
     public function payments(): HasMany
     {
         return $this->hasMany(Payment::class)->latest('payment_date');

@@ -111,7 +111,9 @@ class ClassroomController extends Controller
         abort_unless($classroom->is_active, 404);
 
         $classroom->load([
+            // Murid non-aktif tidak ditampilkan di daftar hadir (sudah di-kick dari kelas).
             'students' => fn ($query) => $query
+                ->where('students.is_active', true)
                 ->with(['payments' => fn ($payment) => $payment->where('remaining_sessions', '>', 0)])
                 ->withCount(['attendances as token_debt_count' => fn ($debt) => $debt->whereNull('payment_id')]),
         ]);
@@ -140,7 +142,9 @@ class ClassroomController extends Controller
             'learning_journal.required' => 'Jurnal belajar wajib diisi.',
         ]);
 
-        $memberIds = $classroom->students()->pluck('students.id');
+        // Hanya murid aktif yang dihitung sebagai anggota kelas saat absensi;
+        // murid non-aktif tidak bisa hadir maupun kena forfeit token.
+        $memberIds = $classroom->students()->where('students.is_active', true)->pluck('students.id');
         $presentIds = collect($request->input('present_student_ids', []))
             ->map(fn ($id) => (int) $id)
             ->unique()
