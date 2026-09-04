@@ -5,11 +5,21 @@
                 <h2 class="text-2xl font-semibold text-slate-900">Dashboard</h2>
                 <p class="text-sm text-slate-500">Quick overview of new registrations, students who left this month, and active students.</p>
             </div>
-            @if (auth()->user()->isAdmin() || auth()->user()->isTeacher())
-                <a href="{{ route('attendances.create') }}" class="inline-flex items-center rounded-xl bg-slate-900 px-4 py-2 text-sm font-medium text-white transition hover:bg-slate-800">
-                    Catat Absensi
-                </a>
-            @endif
+            <div class="flex flex-wrap items-center gap-2">
+                @if (auth()->user()->isAdmin() || auth()->user()->isTeacher())
+                    <a href="{{ route('attendances.create') }}" class="inline-flex items-center rounded-xl bg-slate-900 px-4 py-2 text-sm font-medium text-white transition hover:bg-slate-800">
+                        Catat Absensi
+                    </a>
+                @endif
+                @if (auth()->user()->isAdmin())
+                    <a href="{{ route('payments.create') }}" class="inline-flex items-center rounded-xl bg-emerald-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-emerald-700">
+                        + Pembayaran
+                    </a>
+                    <a href="{{ route('expenses.create') }}" class="inline-flex items-center rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50">
+                        + Expense
+                    </a>
+                @endif
+            </div>
         </div>
     </x-slot>
 
