@@ -40,6 +40,13 @@
                     ],
                 ],
                 [
+                    'label' => 'Tindak Lanjut',
+                    'items' => [
+                        ['label' => 'Murid Sering Absen', 'route' => 'follow-up.absent', 'pattern' => 'follow-up.absent'],
+                        ['label' => 'Murid Non-aktif', 'route' => 'follow-up.inactive', 'pattern' => 'follow-up.inactive'],
+                    ],
+                ],
+                [
                     'label' => 'Academics',
                     'items' => [
                         ['label' => 'Modules', 'route' => 'learning-modules.index', 'pattern' => 'learning-modules.*'],

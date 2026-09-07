@@ -6,6 +6,7 @@ use App\Http\Controllers\ClassroomController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\ExpenseCategoryController;
 use App\Http\Controllers\ExpenseController;
+use App\Http\Controllers\FollowUpController;
 use App\Http\Controllers\LearningModuleController;
 use App\Http\Controllers\MaterialLinkController;
 use App\Http\Controllers\PaymentController;
@@ -50,6 +51,9 @@ Route::middleware('auth')->group(function () {
         Route::resource('teacher-availabilities', TeacherAvailabilityController::class)->except(['show']);
         Route::resource('expense-categories', ExpenseCategoryController::class)->except(['show']);
         Route::resource('expenses', ExpenseController::class)->except(['show']);
+        Route::get('/follow-up/absent', [FollowUpController::class, 'absent'])->name('follow-up.absent');
+        Route::get('/follow-up/inactive', [FollowUpController::class, 'inactive'])->name('follow-up.inactive');
+
         Route::get('/cash-flow', CashFlowController::class)->name('cash-flow.index');
         Route::get('/payments', [PaymentController::class, 'index'])->name('payments.index');
         Route::get('/payments/create', [PaymentController::class, 'create'])->name('payments.create');

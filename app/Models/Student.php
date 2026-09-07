@@ -21,6 +21,9 @@ class Student extends Model
     /** Sisa token <= angka ini dianggap menipis & dimunculkan di alert admin. */
     public const LOW_SESSION_THRESHOLD = 1;
 
+    /** Absen berturut-turut >= angka ini => murid perlu ditanyakan kabarnya. */
+    public const CONSECUTIVE_ABSENCE_ALERT = 3;
+
     protected function casts(): array
     {
         return [
@@ -219,6 +222,49 @@ class Student extends Model
 
         return 'https://wa.me/'.$whatsAppNumber.'?text='.rawurlencode(
             $this->buildLowSessionReminderMessage($remainingSessions)
+        );
+    }
+
+    public function buildAttendanceCheckInMessage(): string
+    {
+        return "Halo Bapak/Ibu / Ananda {$this->name}, semoga sehat selalu.\n\n"
+            ."Kami dari Mr. Putra memperhatikan Ananda belum hadir di beberapa pertemuan les terakhir. "
+            ."Apakah ada kendala atau ada yang bisa kami bantu, misalnya terkait jadwal les?\n\n"
+            ."Kami harap Ananda bisa melanjutkan belajarnya bersama kami. Terima kasih banyak.";
+    }
+
+    public function attendanceCheckInWhatsAppUrl(): ?string
+    {
+        $whatsAppNumber = $this->whatsappNumber();
+
+        if (! $whatsAppNumber) {
+            return null;
+        }
+
+        return 'https://wa.me/'.$whatsAppNumber.'?text='.rawurlencode(
+            $this->buildAttendanceCheckInMessage()
+        );
+    }
+
+    public function buildFeedbackRequestMessage(): string
+    {
+        return "Halo Bapak/Ibu / Ananda {$this->name}, semoga sehat selalu.\n\n"
+            ."Terima kasih sudah menjadi bagian dari Mr. Putra Speak. "
+            ."Kami ingin meminta sedikit waktu Ananda untuk berbagi pesan, kesan, dan saran "
+            ."selama belajar bersama kami, agar layanan kami bisa terus lebih baik ke depannya.\n\n"
+            ."Masukan sekecil apa pun sangat berarti bagi kami. Terima kasih banyak.";
+    }
+
+    public function feedbackRequestWhatsAppUrl(): ?string
+    {
+        $whatsAppNumber = $this->whatsappNumber();
+
+        if (! $whatsAppNumber) {
+            return null;
+        }
+
+        return 'https://wa.me/'.$whatsAppNumber.'?text='.rawurlencode(
+            $this->buildFeedbackRequestMessage()
         );
     }
 
