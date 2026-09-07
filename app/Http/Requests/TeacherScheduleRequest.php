@@ -7,27 +7,51 @@ use App\Models\TeacherSchedule;
 use App\Models\User;
 use App\Support\WeeklyDay;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Support\Carbon;
 use Illuminate\Validation\Rule;
 
 class TeacherScheduleRequest extends FormRequest
 {
+    /** Durasi tetap satu pertemuan (menit). Jam selesai = jam mulai + durasi ini. */
+    public const SESSION_MINUTES = 70;
+
     public function authorize(): bool
     {
         return true;
+    }
+
+    /**
+     * Jam selesai tidak diisi manual — otomatis jam mulai + 70 menit.
+     */
+    protected function prepareForValidation(): void
+    {
+        $start = $this->string('start_time')->toString();
+
+        if (preg_match('/^\d{2}:\d{2}$/', $start)) {
+            $this->merge([
+                'end_time' => Carbon::createFromFormat('H:i', $start)
+                    ->addMinutes(self::SESSION_MINUTES)
+                    ->format('H:i'),
+            ]);
+        }
     }
 
     public function rules(): array
     {
         return [
             'teacher_id' => ['required', Rule::exists('users', 'id')->where(fn ($query) => $query->where('role', User::ROLE_TEACHER))],
-            'student_id' => ['nullable', 'exists:students,id'],
-            'material_link_id' => ['nullable', Rule::exists('material_links', 'id')->where('is_active', true)],
-            'title' => ['nullable', 'string', 'max:255'],
+            'classroom_id' => ['required', Rule::exists('classrooms', 'id')],
             'day_of_week' => ['required', Rule::in(WeeklyDay::values())],
             'start_time' => ['required', 'date_format:H:i'],
             'end_time' => ['required', 'date_format:H:i', 'after:start_time'],
-            'notes' => ['nullable', 'string'],
             'is_active' => ['required', 'boolean'],
+        ];
+    }
+
+    public function messages(): array
+    {
+        return [
+            'classroom_id.required' => 'Pilih kelas untuk jadwal ini.',
         ];
     }
 

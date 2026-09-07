@@ -73,8 +73,8 @@
                                         style="position: absolute; top: {{ $e['top'] }}px; height: {{ $e['height'] }}px; left: calc({{ $e['left'] }}% + 2px); width: calc({{ $e['width'] }}% - 4px); background: {{ $e['color'] }};{{ $e['s']->is_active ? '' : ' opacity: 0.45;' }}">
                                         <span class="block truncate font-semibold">{{ $e['s']->timeRangeLabel() }}</span>
                                         <span class="block truncate">{{ $e['s']->teacher->name }}</span>
-                                        @if ($e['s']->title || $e['s']->student)
-                                            <span class="block truncate">{{ $e['s']->title ?: $e['s']->student->name }}</span>
+                                        @if ($e['s']->classroom)
+                                            <span class="block truncate">{{ $e['s']->classroom->name }}</span>
                                         @endif
                                     </a>
                                 @endforeach
@@ -99,19 +99,7 @@
                     </span>
                 </div>
                 <div class="mt-4 space-y-1 text-sm text-slate-600">
-                    <p>Info: {{ $schedule->title ?: ($schedule->student?->name ?: '-') }}</p>
-                    <p>Murid: {{ $schedule->student?->name ?: '-' }}</p>
-                    <p>
-                        Link Materi:
-                        @if ($schedule->materialLink)
-                            <a href="{{ $schedule->materialLink->url }}" target="_blank" rel="noopener noreferrer" class="font-medium text-sky-700 hover:text-sky-900">
-                                {{ $schedule->materialLink->title }}
-                            </a>
-                        @else
-                            -
-                        @endif
-                    </p>
-                    <p>Catatan: {{ $schedule->notes ?: '-' }}</p>
+                    <p>Kelas: {{ $schedule->classroom?->name ?: '-' }}</p>
                 </div>
                 <div class="mt-4 flex flex-wrap gap-3 text-sm font-medium">
                     <a href="{{ route('teacher-schedules.edit', $schedule) }}" class="text-slate-700">Edit</a>
@@ -134,9 +122,7 @@
                     <th class="px-6 py-3 font-medium">Guru</th>
                     <th class="px-6 py-3 font-medium">Hari</th>
                     <th class="px-6 py-3 font-medium">Jam</th>
-                    <th class="px-6 py-3 font-medium">Info Kelas</th>
-                    <th class="px-6 py-3 font-medium">Murid</th>
-                    <th class="px-6 py-3 font-medium">Link Materi</th>
+                    <th class="px-6 py-3 font-medium">Kelas</th>
                     <th class="px-6 py-3 font-medium">Status</th>
                     <th class="px-6 py-3 font-medium"></th>
                 </tr>
@@ -147,17 +133,7 @@
                         <td class="px-6 py-4 font-medium text-slate-900">{{ $schedule->teacher->name }}</td>
                         <td class="px-6 py-4 text-slate-600">{{ $schedule->dayLabel() }}</td>
                         <td class="px-6 py-4 text-slate-600">{{ $schedule->timeRangeLabel() }}</td>
-                        <td class="px-6 py-4 text-slate-600">{{ $schedule->title ?: '-' }}</td>
-                        <td class="px-6 py-4 text-slate-600">{{ $schedule->student?->name ?: '-' }}</td>
-                        <td class="px-6 py-4 text-slate-600">
-                            @if ($schedule->materialLink)
-                                <a href="{{ $schedule->materialLink->url }}" target="_blank" rel="noopener noreferrer" class="font-medium text-sky-700 hover:text-sky-900">
-                                    {{ $schedule->materialLink->title }}
-                                </a>
-                            @else
-                                -
-                            @endif
-                        </td>
+                        <td class="px-6 py-4 text-slate-600">{{ $schedule->classroom?->name ?: '-' }}</td>
                         <td class="px-6 py-4">
                             <span class="rounded-full px-3 py-1 text-xs font-medium {{ $schedule->is_active ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-600' }}">
                                 {{ $schedule->statusLabel() }}
@@ -176,7 +152,7 @@
                     </tr>
                 @empty
                     <tr>
-                        <td colspan="8" class="px-6 py-8 text-center text-slate-500">Belum ada jadwal guru.</td>
+                        <td colspan="6" class="px-6 py-8 text-center text-slate-500">Belum ada jadwal guru.</td>
                     </tr>
                 @endforelse
             </tbody>

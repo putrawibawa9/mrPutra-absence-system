@@ -11,6 +11,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 #[Fillable([
     'teacher_id',
     'student_id',
+    'classroom_id',
     'material_link_id',
     'title',
     'day_of_week',
@@ -38,6 +39,11 @@ class TeacherSchedule extends Model
     public function student(): BelongsTo
     {
         return $this->belongsTo(Student::class);
+    }
+
+    public function classroom(): BelongsTo
+    {
+        return $this->belongsTo(Classroom::class);
     }
 
     public function materialLink(): BelongsTo

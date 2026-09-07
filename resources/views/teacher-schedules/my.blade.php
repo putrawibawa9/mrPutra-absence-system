@@ -14,16 +14,7 @@
                     @forelse ($day->items as $schedule)
                         <div class="rounded-2xl border border-slate-100 bg-slate-50 p-4">
                             <p class="font-medium text-slate-900">{{ $schedule->timeRangeLabel() }}</p>
-                            <p class="mt-1 text-sm text-slate-600">{{ $schedule->title ?: 'Tanpa info kelas khusus' }}</p>
-                            <p class="mt-1 text-sm text-slate-500">Murid: {{ $schedule->student?->name ?: '-' }}</p>
-                            @if ($schedule->materialLink)
-                                <a href="{{ $schedule->materialLink->url }}" target="_blank" rel="noopener noreferrer" class="mt-2 inline-flex text-sm font-medium text-sky-700 hover:text-sky-900">
-                                    Buka Materi: {{ $schedule->materialLink->title }}
-                                </a>
-                            @endif
-                            @if ($schedule->notes)
-                                <p class="mt-2 text-sm text-slate-500">{{ $schedule->notes }}</p>
-                            @endif
+                            <p class="mt-1 text-sm text-slate-600">Kelas: {{ $schedule->classroom?->name ?: ($schedule->title ?: '-') }}</p>
                         </div>
                     @empty
                         <p class="text-sm text-slate-500">Belum ada jadwal.</p>

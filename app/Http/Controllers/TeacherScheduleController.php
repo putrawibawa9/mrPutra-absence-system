@@ -3,8 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\TeacherScheduleRequest;
-use App\Models\MaterialLink;
-use App\Models\Student;
+use App\Models\Classroom;
 use App\Models\TeacherSchedule;
 use App\Models\User;
 use App\Support\WeeklyDay;
@@ -19,7 +18,7 @@ class TeacherScheduleController extends Controller
         $teachers = User::teachers()->orderBy('name')->get();
 
         $base = TeacherSchedule::query()
-            ->with(['teacher', 'student', 'materialLink'])
+            ->with(['teacher', 'classroom'])
             ->when($teacherId, fn ($query) => $query->where('teacher_id', $teacherId));
 
         $schedules = (clone $base)
@@ -155,9 +154,20 @@ class TeacherScheduleController extends Controller
 
     public function store(TeacherScheduleRequest $request)
     {
-        TeacherSchedule::create($request->validated());
+        TeacherSchedule::create($this->scheduleData($request));
 
         return redirect()->route('teacher-schedules.index')->with('status', 'Jadwal guru berhasil ditambahkan.');
+    }
+
+    /**
+     * Data jadwal dari request + judul otomatis dari nama kelas (buat tampilan).
+     */
+    private function scheduleData(TeacherScheduleRequest $request): array
+    {
+        $data = $request->validated();
+        $data['title'] = Classroom::whereKey($data['classroom_id'])->value('name');
+
+        return $data;
     }
 
     public function edit(TeacherSchedule $teacher_schedule)
@@ -170,7 +180,7 @@ class TeacherScheduleController extends Controller
 
     public function update(TeacherScheduleRequest $request, TeacherSchedule $teacher_schedule)
     {
-        $teacher_schedule->update($request->validated());
+        $teacher_schedule->update($this->scheduleData($request));
 
         return redirect()->route('teacher-schedules.index')->with('status', 'Jadwal guru berhasil diperbarui.');
     }
@@ -187,7 +197,7 @@ class TeacherScheduleController extends Controller
         $teacher = auth()->user();
         $groupedSchedules = $this->groupByDay(
             $teacher->teacherSchedules()
-                ->with(['student', 'materialLink'])
+                ->with(['classroom'])
                 ->where('is_active', true)
                 ->orderByRaw($this->dayOrderSql())
                 ->orderBy('start_time')
@@ -201,8 +211,7 @@ class TeacherScheduleController extends Controller
     {
         return [
             'teachers' => User::teachers()->orderBy('name')->get(),
-            'students' => Student::active()->orderBy('name')->get(),
-            'materialLinks' => MaterialLink::query()->where('is_active', true)->orderBy('title')->get(),
+            'classrooms' => Classroom::query()->active()->orderBy('name')->get(),
             'dayOptions' => WeeklyDay::options(),
         ];
     }

@@ -2,8 +2,7 @@
 
 namespace Tests\Feature;
 
-use App\Models\MaterialLink;
-use App\Models\Student;
+use App\Models\Classroom;
 use App\Models\TeacherAvailability;
 use App\Models\TeacherSchedule;
 use App\Models\User;
@@ -14,41 +13,41 @@ class TeacherScheduleFeatureTest extends TestCase
 {
     use RefreshDatabase;
 
+    private function classroom(): Classroom
+    {
+        return Classroom::create([
+            'name' => 'English · Semi · Kids',
+            'division' => Classroom::DIVISION_ENGLISH,
+            'format' => Classroom::FORMAT_SEMI,
+            'age_group' => Classroom::AGE_KIDS,
+            'is_active' => true,
+        ]);
+    }
+
     public function test_admin_can_create_teacher_schedule_and_teacher_can_view_it(): void
     {
         $admin = User::factory()->create(['role' => User::ROLE_ADMIN]);
         $teacher = User::factory()->create(['role' => User::ROLE_TEACHER, 'name' => 'Wulan']);
-        $student = Student::create([
-            'name' => 'Budi',
-            'phone' => '08123456789',
-            'is_active' => true,
-        ]);
-        $materialLink = MaterialLink::create([
-            'title' => 'Daily Conversation Deck',
-            'url' => 'https://example.com/daily-conversation',
-            'is_active' => true,
-        ]);
+        $classroom = $this->classroom();
 
         $response = $this->actingAs($admin)->post(route('teacher-schedules.store'), [
             'teacher_id' => $teacher->id,
-            'student_id' => $student->id,
-            'material_link_id' => $materialLink->id,
-            'title' => 'Private English',
+            'classroom_id' => $classroom->id,
             'day_of_week' => 'monday',
             'start_time' => '17:00',
-            'end_time' => '18:30',
-            'notes' => 'Kelas reguler',
             'is_active' => '1',
         ]);
 
         $response->assertRedirect(route('teacher-schedules.index', absolute: false));
 
+        // Jam selesai otomatis = 17:00 + 70 menit = 18:10; judul mengikuti nama kelas.
         $this->assertDatabaseHas('teacher_schedules', [
             'teacher_id' => $teacher->id,
-            'student_id' => $student->id,
-            'material_link_id' => $materialLink->id,
-            'title' => 'Private English',
+            'classroom_id' => $classroom->id,
+            'title' => $classroom->name,
             'day_of_week' => 'monday',
+            'start_time' => '17:00',
+            'end_time' => '18:10',
         ]);
 
         $this->actingAs($teacher)
@@ -56,16 +55,15 @@ class TeacherScheduleFeatureTest extends TestCase
             ->assertOk()
             ->assertSee('Jadwal Mingguan Saya')
             ->assertSee('Senin')
-            ->assertSee('17:00 - 18:30')
-            ->assertSee('Private English')
-            ->assertSee('Budi')
-            ->assertSee('Daily Conversation Deck');
+            ->assertSee('17:00 - 18:10')
+            ->assertSee('English · Semi · Kids', false);
     }
 
     public function test_admin_cannot_create_overlapping_schedule_for_same_teacher(): void
     {
         $admin = User::factory()->create(['role' => User::ROLE_ADMIN]);
         $teacher = User::factory()->create(['role' => User::ROLE_TEACHER]);
+        $classroom = $this->classroom();
 
         TeacherSchedule::create([
             'teacher_id' => $teacher->id,
@@ -79,9 +77,9 @@ class TeacherScheduleFeatureTest extends TestCase
             ->actingAs($admin)
             ->post(route('teacher-schedules.store'), [
                 'teacher_id' => $teacher->id,
+                'classroom_id' => $classroom->id,
                 'day_of_week' => 'monday',
-                'start_time' => '18:00',
-                'end_time' => '19:00',
+                'start_time' => '18:00', // auto end 19:10 -> bentrok
                 'is_active' => '1',
             ]);
 
@@ -93,6 +91,7 @@ class TeacherScheduleFeatureTest extends TestCase
     {
         $admin = User::factory()->create(['role' => User::ROLE_ADMIN]);
         $teacher = User::factory()->create(['role' => User::ROLE_TEACHER]);
+        $classroom = $this->classroom();
 
         TeacherAvailability::create([
             'teacher_id' => $teacher->id,
@@ -107,9 +106,9 @@ class TeacherScheduleFeatureTest extends TestCase
             ->actingAs($admin)
             ->post(route('teacher-schedules.store'), [
                 'teacher_id' => $teacher->id,
+                'classroom_id' => $classroom->id,
                 'day_of_week' => 'monday',
-                'start_time' => '17:00',
-                'end_time' => '18:30',
+                'start_time' => '17:00', // auto end 18:10, di luar ketersediaan 17:00-18:00
                 'is_active' => '1',
             ]);
 

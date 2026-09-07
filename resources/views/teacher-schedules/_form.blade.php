@@ -11,6 +11,17 @@
     </div>
 
     <div>
+        <x-input-label for="classroom_id" value="Kelas" />
+        <select id="classroom_id" name="classroom_id" class="mt-1 block w-full rounded-xl border-slate-300" required>
+            <option value="">Pilih kelas</option>
+            @foreach ($classrooms as $classroom)
+                <option value="{{ $classroom->id }}" @selected(old('classroom_id', $schedule->classroom_id ?? '') == $classroom->id)>{{ $classroom->name }}</option>
+            @endforeach
+        </select>
+        <x-input-error :messages="$errors->get('classroom_id')" class="mt-2" />
+    </div>
+
+    <div>
         <x-input-label for="day_of_week" value="Hari" />
         <select id="day_of_week" name="day_of_week" class="mt-1 block w-full rounded-xl border-slate-300" required>
             <option value="">Pilih hari</option>
@@ -24,50 +35,9 @@
     <div>
         <x-input-label for="start_time" value="Jam Mulai" />
         <x-text-input id="start_time" name="start_time" type="time" class="mt-1 block w-full rounded-xl border-slate-300" :value="old('start_time', isset($schedule) ? substr((string) $schedule->start_time, 0, 5) : '')" required />
+        <p class="mt-1 text-xs text-slate-500">Jam selesai otomatis: jam mulai + 70 menit.</p>
         <x-input-error :messages="$errors->get('start_time')" class="mt-2" />
-    </div>
-
-    <div>
-        <x-input-label for="end_time" value="Jam Selesai" />
-        <x-text-input id="end_time" name="end_time" type="time" class="mt-1 block w-full rounded-xl border-slate-300" :value="old('end_time', isset($schedule) ? substr((string) $schedule->end_time, 0, 5) : '')" required />
         <x-input-error :messages="$errors->get('end_time')" class="mt-2" />
-    </div>
-
-    <div>
-        <x-input-label for="student_id" value="Murid (opsional)" />
-        <select id="student_id" name="student_id" class="mt-1 block w-full rounded-xl border-slate-300">
-            <option value="">Tanpa murid spesifik</option>
-            @foreach ($students as $student)
-                <option value="{{ $student->id }}" @selected(old('student_id', $schedule->student_id ?? '') == $student->id)>{{ $student->name }}</option>
-            @endforeach
-        </select>
-        <x-input-error :messages="$errors->get('student_id')" class="mt-2" />
-    </div>
-
-    <div>
-        <x-input-label for="title" value="Info Kelas / Course" />
-        <x-text-input id="title" name="title" type="text" class="mt-1 block w-full rounded-xl border-slate-300" :value="old('title', $schedule->title ?? '')" placeholder="Contoh: Private English / Group Coding" />
-        <x-input-error :messages="$errors->get('title')" class="mt-2" />
-    </div>
-
-    <div class="md:col-span-2">
-        <x-input-label for="material_link_id" value="Link Materi (opsional)" />
-        <select id="material_link_id" name="material_link_id" class="mt-1 block w-full rounded-xl border-slate-300">
-            <option value="">Tanpa link materi</option>
-            @foreach ($materialLinks as $materialLink)
-                <option value="{{ $materialLink->id }}" @selected(old('material_link_id', $schedule->material_link_id ?? '') == $materialLink->id)>
-                    {{ $materialLink->title }}
-                </option>
-            @endforeach
-        </select>
-        <p class="mt-2 text-xs text-slate-500">Jika dipilih, link ini akan muncul di jadwal kelas dan bisa langsung diklik oleh user.</p>
-        <x-input-error :messages="$errors->get('material_link_id')" class="mt-2" />
-    </div>
-
-    <div class="md:col-span-2">
-        <x-input-label for="notes" value="Catatan (opsional)" />
-        <textarea id="notes" name="notes" rows="4" class="mt-1 block w-full rounded-2xl border-slate-300">{{ old('notes', $schedule->notes ?? '') }}</textarea>
-        <x-input-error :messages="$errors->get('notes')" class="mt-2" />
     </div>
 
     <div>
