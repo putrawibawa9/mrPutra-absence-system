@@ -119,6 +119,25 @@ class Classroom extends Model
         return $query->where('is_active', true);
     }
 
+    /**
+     * Nama kelas + nama murid perwakilan, supaya kelas yang namanya sama
+     * (mis. "English · Private · Teens/Adult") tetap bisa dibedakan.
+     * Perlu relasi students sudah di-load.
+     */
+    public function nameWithStudentHint(): string
+    {
+        $first = $this->students->first();
+
+        if (! $first) {
+            return $this->name;
+        }
+
+        $others = $this->students->count() - 1;
+        $extra = $others > 0 ? ' +'.$others : '';
+
+        return $this->name.' — '.$first->name.$extra;
+    }
+
     public function isPrivate(): bool
     {
         return $this->format === self::FORMAT_PRIVATE;

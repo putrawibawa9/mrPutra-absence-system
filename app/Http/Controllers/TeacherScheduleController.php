@@ -211,7 +211,7 @@ class TeacherScheduleController extends Controller
     {
         return [
             'teachers' => User::teachers()->orderBy('name')->get(),
-            'classrooms' => Classroom::query()->active()->orderBy('name')->get(),
+            'classrooms' => Classroom::query()->active()->with('students:id,name')->orderBy('name')->get(),
             'dayOptions' => WeeklyDay::options(),
         ];
     }

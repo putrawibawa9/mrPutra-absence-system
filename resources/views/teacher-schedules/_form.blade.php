@@ -15,7 +15,7 @@
         <select id="classroom_id" name="classroom_id" class="mt-1 block w-full rounded-xl border-slate-300" required>
             <option value="">Pilih kelas</option>
             @foreach ($classrooms as $classroom)
-                <option value="{{ $classroom->id }}" @selected(old('classroom_id', $schedule->classroom_id ?? '') == $classroom->id)>{{ $classroom->name }}</option>
+                <option value="{{ $classroom->id }}" @selected(old('classroom_id', $schedule->classroom_id ?? '') == $classroom->id)>{{ $classroom->nameWithStudentHint() }}</option>
             @endforeach
         </select>
         <x-input-error :messages="$errors->get('classroom_id')" class="mt-2" />
