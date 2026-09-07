@@ -81,7 +81,7 @@
                 [
                     'label' => 'Jadwal',
                     'items' => [
-                        ['label' => 'Jadwal Saya', 'disabled' => true],
+                        ['label' => 'Jadwal Saya', 'route' => 'my-schedule.index', 'pattern' => 'my-schedule.*'],
                     ],
                 ],
                 [

@@ -6,6 +6,14 @@
         </div>
     </x-slot>
 
+    <div class="mb-6 rounded-3xl bg-white p-4 shadow-sm sm:p-6">
+        <div class="mb-4">
+            <h3 class="text-lg font-semibold text-slate-900">Kalender Mingguan</h3>
+            <p class="text-sm text-slate-500">Jadwal berulang tiap minggu.</p>
+        </div>
+        @include('teacher-schedules._calendar', ['mode' => 'teacher'])
+    </div>
+
     <div class="grid gap-4 lg:grid-cols-2">
         @foreach ($groupedSchedules as $day)
             <div class="rounded-3xl bg-white p-5 shadow-sm">

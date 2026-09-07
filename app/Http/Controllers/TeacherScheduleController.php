@@ -29,22 +29,24 @@ class TeacherScheduleController extends Controller
             ->withQueryString();
 
         $calendar = $this->buildCalendar(
-            (clone $base)->orderBy('start_time')->get()
+            (clone $base)->orderBy('start_time')->get(),
+            'teacher_id'
         );
+        $legend = $teachers->pluck('name', 'id')->all();
 
-        return view('teacher-schedules.index', compact('schedules', 'teachers', 'teacherId', 'calendar'));
+        return view('teacher-schedules.index', compact('schedules', 'teachers', 'teacherId', 'calendar', 'legend'));
     }
 
     /**
      * Susun jadwal mingguan jadi data kalender (grid hari x jam), lengkap dengan
      * peletakan blok yang bertumpuk berdampingan (seperti Google Calendar).
      */
-    private function buildCalendar(Collection $schedules): array
+    private function buildCalendar(Collection $schedules, string $colorKey = 'teacher_id'): array
     {
         $palette = ['#2563eb', '#16a34a', '#d97706', '#db2777', '#7c3aed', '#0891b2', '#dc2626', '#4f46e5', '#ca8a04', '#0d9488'];
         $colors = [];
-        foreach ($schedules->pluck('teacher_id')->unique()->values() as $index => $teacherId) {
-            $colors[$teacherId] = $palette[$index % count($palette)];
+        foreach ($schedules->pluck($colorKey)->filter()->unique()->values() as $index => $key) {
+            $colors[$key] = $palette[$index % count($palette)];
         }
 
         $toMinutes = function ($time): int {
@@ -80,7 +82,7 @@ class TeacherScheduleController extends Controller
             $cluster = [];
             $clusterMaxEnd = null;
 
-            $flush = function () use (&$cluster, &$events, $startMin, $hourHeight, $colors): void {
+            $flush = function () use (&$cluster, &$events, $startMin, $hourHeight, $colors, $colorKey): void {
                 if ($cluster === []) {
                     return;
                 }
@@ -110,7 +112,7 @@ class TeacherScheduleController extends Controller
                         'height' => max(22, ($item['end'] - $item['start']) / 60 * $hourHeight),
                         'left' => $item['col'] * $width,
                         'width' => $width,
-                        'color' => $colors[$item['s']->teacher_id] ?? '#334155',
+                        'color' => $colors[$item['s']->{$colorKey}] ?? '#334155',
                     ];
                 }
 
@@ -195,16 +197,26 @@ class TeacherScheduleController extends Controller
     public function mySchedule()
     {
         $teacher = auth()->user();
-        $groupedSchedules = $this->groupByDay(
-            $teacher->teacherSchedules()
-                ->with(['classroom'])
-                ->where('is_active', true)
-                ->orderByRaw($this->dayOrderSql())
-                ->orderBy('start_time')
-                ->get()
-        );
 
-        return view('teacher-schedules.my', compact('groupedSchedules'));
+        // Hanya jadwal milik guru yang sedang login.
+        $schedules = $teacher->teacherSchedules()
+            ->with(['classroom.students'])
+            ->where('is_active', true)
+            ->orderByRaw($this->dayOrderSql())
+            ->orderBy('start_time')
+            ->get();
+
+        $groupedSchedules = $this->groupByDay($schedules);
+        $calendar = $this->buildCalendar($schedules, 'classroom_id');
+
+        $legend = [];
+        foreach ($schedules as $schedule) {
+            if ($schedule->classroom && ! isset($legend[$schedule->classroom_id])) {
+                $legend[$schedule->classroom_id] = $schedule->classroom->nameWithStudentHint();
+            }
+        }
+
+        return view('teacher-schedules.my', compact('groupedSchedules', 'calendar', 'legend'));
     }
 
     protected function formData(): array
