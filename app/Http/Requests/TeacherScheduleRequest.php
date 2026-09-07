@@ -68,20 +68,22 @@ class TeacherScheduleRequest extends FormRequest
             $endTime = $this->string('end_time')->toString().':00';
             $dayOfWeek = $this->string('day_of_week')->toString();
 
-            if ($this->boolean('is_active')) {
-                $hasConflict = TeacherSchedule::query()
-                    ->where('teacher_id', $teacherId)
-                    ->where('day_of_week', $dayOfWeek)
-                    ->where('is_active', true)
-                    ->where('start_time', '<', $endTime)
-                    ->where('end_time', '>', $startTime)
-                    ->when($schedule, fn ($query) => $query->whereKeyNot($schedule->id))
-                    ->exists();
-
-                if ($hasConflict) {
-                    $validator->errors()->add('start_time', 'Jadwal guru bentrok dengan jadwal lain pada hari dan jam yang sama.');
-                }
-            }
+            // NOTE: Validasi bentrok jadwal dinonaktifkan sementara atas permintaan.
+            // Untuk mengaktifkan kembali, hapus tanda komentar blok di bawah ini.
+            // if ($this->boolean('is_active')) {
+            //     $hasConflict = TeacherSchedule::query()
+            //         ->where('teacher_id', $teacherId)
+            //         ->where('day_of_week', $dayOfWeek)
+            //         ->where('is_active', true)
+            //         ->where('start_time', '<', $endTime)
+            //         ->where('end_time', '>', $startTime)
+            //         ->when($schedule, fn ($query) => $query->whereKeyNot($schedule->id))
+            //         ->exists();
+            //
+            //     if ($hasConflict) {
+            //         $validator->errors()->add('start_time', 'Jadwal guru bentrok dengan jadwal lain pada hari dan jam yang sama.');
+            //     }
+            // }
 
             $hasActiveAvailability = TeacherAvailability::query()
                 ->where('teacher_id', $teacherId)

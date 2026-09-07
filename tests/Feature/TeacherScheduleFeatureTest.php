@@ -59,8 +59,10 @@ class TeacherScheduleFeatureTest extends TestCase
             ->assertSee('English · Semi · Kids', false);
     }
 
-    public function test_admin_cannot_create_overlapping_schedule_for_same_teacher(): void
+    public function test_overlapping_schedule_is_allowed_conflict_check_disabled(): void
     {
+        // Validasi bentrok jadwal dinonaktifkan sementara: jadwal yang tumpang
+        // tindih untuk guru yang sama kini boleh dibuat.
         $admin = User::factory()->create(['role' => User::ROLE_ADMIN]);
         $teacher = User::factory()->create(['role' => User::ROLE_TEACHER]);
         $classroom = $this->classroom();
@@ -79,12 +81,13 @@ class TeacherScheduleFeatureTest extends TestCase
                 'teacher_id' => $teacher->id,
                 'classroom_id' => $classroom->id,
                 'day_of_week' => 'monday',
-                'start_time' => '18:00', // auto end 19:10 -> bentrok
+                'start_time' => '18:00', // auto end 19:10 -> tumpang tindih, tapi diizinkan
                 'is_active' => '1',
             ]);
 
-        $response->assertRedirect(route('teacher-schedules.create', absolute: false));
-        $response->assertSessionHasErrors('start_time');
+        $response->assertRedirect(route('teacher-schedules.index', absolute: false));
+        $response->assertSessionHasNoErrors();
+        $this->assertSame(2, TeacherSchedule::query()->where('teacher_id', $teacher->id)->count());
     }
 
     public function test_schedule_must_fit_active_teacher_availability_when_availability_exists(): void
