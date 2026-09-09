@@ -22,7 +22,7 @@
                     @forelse ($day->items as $schedule)
                         <div class="rounded-2xl border border-slate-100 bg-slate-50 p-4">
                             <p class="font-medium text-slate-900">{{ $schedule->timeRangeLabel() }}</p>
-                            <p class="mt-1 text-sm text-slate-600">Kelas: {{ $schedule->classroom?->name ?: ($schedule->title ?: '-') }}</p>
+                            <p class="mt-1 text-sm text-slate-600">Murid: {{ $schedule->classroom?->studentHint() ?: ($schedule->title ?: '-') }}</p>
                         </div>
                     @empty
                         <p class="text-sm text-slate-500">Belum ada jadwal.</p>
