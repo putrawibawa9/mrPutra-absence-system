@@ -41,24 +41,26 @@
         <x-input-error :messages="$errors->get('end_time')" class="mt-2" />
     </div>
 
-    <div>
-        <x-input-label for="status" value="Status Slot" />
-        <select id="status" name="status" class="mt-1 block w-full rounded-xl border-slate-300" required>
-            @foreach ($statusOptions as $value => $label)
-                <option value="{{ $value }}" @selected(old('status', $availability->status ?? 'available') === $value)>{{ $label }}</option>
-            @endforeach
-        </select>
-        <x-input-error :messages="$errors->get('status')" class="mt-2" />
-    </div>
+    @unless ($isSelfForm)
+        <div>
+            <x-input-label for="status" value="Status Slot" />
+            <select id="status" name="status" class="mt-1 block w-full rounded-xl border-slate-300" required>
+                @foreach ($statusOptions as $value => $label)
+                    <option value="{{ $value }}" @selected(old('status', $availability->status ?? 'available') === $value)>{{ $label }}</option>
+                @endforeach
+            </select>
+            <x-input-error :messages="$errors->get('status')" class="mt-2" />
+        </div>
 
-    <div>
-        <x-input-label for="is_active" value="Status Aktif" />
-        <select id="is_active" name="is_active" class="mt-1 block w-full rounded-xl border-slate-300" required>
-            <option value="1" @selected(old('is_active', isset($availability) ? (int) $availability->is_active : 1) == 1)>Aktif</option>
-            <option value="0" @selected(old('is_active', isset($availability) ? (int) $availability->is_active : 1) == 0)>Nonaktif</option>
-        </select>
-        <x-input-error :messages="$errors->get('is_active')" class="mt-2" />
-    </div>
+        <div>
+            <x-input-label for="is_active" value="Status Aktif" />
+            <select id="is_active" name="is_active" class="mt-1 block w-full rounded-xl border-slate-300" required>
+                <option value="1" @selected(old('is_active', isset($availability) ? (int) $availability->is_active : 1) == 1)>Aktif</option>
+                <option value="0" @selected(old('is_active', isset($availability) ? (int) $availability->is_active : 1) == 0)>Nonaktif</option>
+            </select>
+            <x-input-error :messages="$errors->get('is_active')" class="mt-2" />
+        </div>
+    @endunless
 
     <div class="md:col-span-2">
         <x-input-label for="notes" value="Catatan (opsional)" />

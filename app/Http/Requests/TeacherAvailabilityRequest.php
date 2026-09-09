@@ -15,6 +15,18 @@ class TeacherAvailabilityRequest extends FormRequest
         return true;
     }
 
+    /**
+     * Form guru cukup isi hari + jam; slot otomatis dianggap "available" & aktif.
+     */
+    protected function prepareForValidation(): void
+    {
+        $this->mergeIfMissing([
+            'teacher_id' => $this->user()?->id,
+            'status' => TeacherAvailability::STATUS_AVAILABLE,
+            'is_active' => 1,
+        ]);
+    }
+
     public function rules(): array
     {
         return [

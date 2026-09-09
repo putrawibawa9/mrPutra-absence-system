@@ -87,7 +87,7 @@
                 [
                     'label' => 'Ketersediaan',
                     'items' => [
-                        ['label' => 'Ketersediaan', 'disabled' => true],
+                        ['label' => 'Ketersediaan', 'route' => 'my-availability.index', 'pattern' => 'my-availability.*'],
                     ],
                 ],
             ];

@@ -58,6 +58,27 @@ class TeacherAvailabilityFeatureTest extends TestCase
             ->assertSee('17:00 - 18:30');
     }
 
+    public function test_teacher_can_add_availability_without_status_fields(): void
+    {
+        // Form guru cukup hari + jam; status "available" & aktif otomatis.
+        $teacher = User::factory()->create(['role' => User::ROLE_TEACHER]);
+
+        $this->actingAs($teacher)->post(route('my-availability.store'), [
+            'day_of_week' => 'tuesday',
+            'start_time' => '13:00',
+            'end_time' => '15:00',
+        ])->assertRedirect(route('my-availability.index', absolute: false));
+
+        $this->assertDatabaseHas('teacher_availabilities', [
+            'teacher_id' => $teacher->id,
+            'day_of_week' => 'tuesday',
+            'start_time' => '13:00',
+            'end_time' => '15:00',
+            'status' => TeacherAvailability::STATUS_AVAILABLE,
+            'is_active' => true,
+        ]);
+    }
+
     public function test_teacher_availability_cannot_overlap(): void
     {
         $admin = User::factory()->create(['role' => User::ROLE_ADMIN]);
