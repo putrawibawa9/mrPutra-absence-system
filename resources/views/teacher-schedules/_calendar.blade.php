@@ -45,7 +45,7 @@
                             @php($schedule = $e['s'])
                             <a href="{{ $mode === 'admin' ? route('teacher-schedules.edit', $schedule) : '#' }}"
                                 @if ($mode !== 'admin') onclick="return false;" @endif
-                                title="{{ $schedule->timeRangeLabel() }}{{ $mode === 'admin' ? ' — '.$schedule->teacher->name : '' }}{{ $schedule->classroom ? ' — '.$schedule->classroom->name : '' }}"
+                                title="{{ $schedule->timeRangeLabel() }}{{ $mode === 'admin' ? ' — '.$schedule->teacher->name : '' }}{{ $schedule->classroom ? ' — '.$schedule->classroom->name.' ('.$schedule->classroom->studentHint().')' : '' }}"
                                 class="block overflow-hidden rounded-lg px-2 py-1 text-[11px] leading-tight text-white shadow-sm"
                                 style="position: absolute; top: {{ $e['top'] }}px; height: {{ $e['height'] }}px; left: calc({{ $e['left'] }}% + 2px); width: calc({{ $e['width'] }}% - 4px); background: {{ $e['color'] }};{{ $schedule->is_active ? '' : ' opacity: 0.45;' }}">
                                 <span class="block truncate font-semibold">{{ $schedule->timeRangeLabel() }}</span>
@@ -53,7 +53,7 @@
                                     <span class="block truncate">{{ $schedule->teacher->name }}</span>
                                 @endif
                                 @if ($schedule->classroom)
-                                    <span class="block truncate">{{ $schedule->classroom->name }}</span>
+                                    <span class="block truncate">{{ $schedule->classroom->studentHint() }}</span>
                                 @endif
                             </a>
                         @endforeach

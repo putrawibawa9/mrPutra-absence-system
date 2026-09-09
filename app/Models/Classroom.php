@@ -138,6 +138,24 @@ class Classroom extends Model
         return $this->name.' — '.$first->name.$extra;
     }
 
+    /**
+     * Nama murid perwakilan + jumlah sisanya, mis. "Devana (+2)".
+     * Kalau kelas belum punya murid, jatuh balik ke nama kelas.
+     * Perlu relasi students sudah di-load.
+     */
+    public function studentHint(): string
+    {
+        $first = $this->students->first();
+
+        if (! $first) {
+            return $this->name;
+        }
+
+        $others = $this->students->count() - 1;
+
+        return $others > 0 ? $first->name.' (+'.$others.')' : $first->name;
+    }
+
     public function isPrivate(): bool
     {
         return $this->format === self::FORMAT_PRIVATE;

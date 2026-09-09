@@ -18,7 +18,7 @@ class TeacherScheduleController extends Controller
         $teachers = User::teachers()->orderBy('name')->get();
 
         $base = TeacherSchedule::query()
-            ->with(['teacher', 'classroom'])
+            ->with(['teacher', 'classroom.students'])
             ->when($teacherId, fn ($query) => $query->where('teacher_id', $teacherId));
 
         $schedules = (clone $base)
