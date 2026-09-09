@@ -325,17 +325,15 @@ class PaymentController extends Controller
         }
 
         $message = implode("\n", [
-            'Halo '.$payment->student->name.', terima kasih ya!',
-            'Pembayaran Anda di Mr. Putra sudah kami terima.',
+            'Halo Kak '.$payment->student->name.', terima kasih ya!',
             '',
-            'No. Kwitansi: '.$payment->displayReceiptNumber(),
-            'Tanggal: '.$payment->payment_date->format('d/m/Y'),
-            'Total: Rp '.number_format($payment->amount_paid, 0, ',', '.'),
+            'Pembayaran sebesar Rp '.number_format($payment->amount_paid, 0, ',', '.').' sudah kami terima',
+            '(Kwitansi '.$payment->displayReceiptNumber().' — '.$payment->payment_date->locale('id')->translatedFormat('d F Y').').',
             '',
-            'E-kwitansi bisa dilihat & disimpan di sini:',
+            'E-kwitansi bisa dibuka & disimpan di sini:',
             $publicReceiptUrl,
             '',
-            'Simpan pesan ini sebagai bukti pembayaran ya.',
+            'Simpan pesan ini sebagai bukti pembayaran ya. Sampai jumpa di kelas!',
         ]);
 
         return 'https://wa.me/'.$whatsAppNumber.'?text='.rawurlencode($message);
