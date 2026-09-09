@@ -44,6 +44,7 @@
                     'items' => [
                         ['label' => 'Murid Sering Absen', 'route' => 'follow-up.absent', 'pattern' => 'follow-up.absent'],
                         ['label' => 'Murid Non-aktif', 'route' => 'follow-up.inactive', 'pattern' => 'follow-up.inactive'],
+                        ['label' => 'Feedback Murid', 'route' => 'follow-up.feedback', 'pattern' => 'follow-up.feedback'],
                     ],
                 ],
                 [

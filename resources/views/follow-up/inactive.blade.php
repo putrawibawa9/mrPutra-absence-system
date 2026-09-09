@@ -33,6 +33,9 @@
                             <td class="px-6 py-4 text-slate-600">{{ $student->phone ?: '-' }}</td>
                             <td class="px-6 py-4 text-slate-600">{{ $student->deactivated_at?->translatedFormat('d M Y') ?? '-' }}</td>
                             <td class="px-6 py-4 text-right">
+                                @if (($student->feedbacks_count ?? 0) > 0)
+                                    <span class="mr-2 inline-flex items-center rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700">Sudah kirim feedback</span>
+                                @endif
                                 @php $waUrl = $student->feedbackRequestWhatsAppUrl(); @endphp
                                 @if ($waUrl)
                                     <a href="{{ $waUrl }}" target="_blank" rel="noopener noreferrer"

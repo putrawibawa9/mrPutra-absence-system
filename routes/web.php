@@ -6,6 +6,7 @@ use App\Http\Controllers\ClassroomController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\ExpenseCategoryController;
 use App\Http\Controllers\ExpenseController;
+use App\Http\Controllers\FeedbackController;
 use App\Http\Controllers\FollowUpController;
 use App\Http\Controllers\LearningModuleController;
 use App\Http\Controllers\MaterialLinkController;
@@ -23,6 +24,14 @@ Route::redirect('/', '/login');
 Route::get('/receipts/{payment}/public', [PaymentController::class, 'publicReceipt'])
     ->middleware('signed')
     ->name('payments.public-receipt');
+
+// Form feedback publik untuk murid (tanpa login, diamankan signed URL).
+Route::get('/feedback/{student}', [FeedbackController::class, 'create'])
+    ->middleware('signed')
+    ->name('feedback.create');
+Route::post('/feedback/{student}', [FeedbackController::class, 'store'])
+    ->middleware('signed')
+    ->name('feedback.store');
 
 Route::middleware('auth')->group(function () {
     Route::get('/dashboard', DashboardController::class)->name('dashboard');
@@ -53,6 +62,7 @@ Route::middleware('auth')->group(function () {
         Route::resource('expenses', ExpenseController::class)->except(['show']);
         Route::get('/follow-up/absent', [FollowUpController::class, 'absent'])->name('follow-up.absent');
         Route::get('/follow-up/inactive', [FollowUpController::class, 'inactive'])->name('follow-up.inactive');
+        Route::get('/follow-up/feedback', [FollowUpController::class, 'feedback'])->name('follow-up.feedback');
 
         Route::get('/cash-flow', CashFlowController::class)->name('cash-flow.index');
         Route::get('/payments', [PaymentController::class, 'index'])->name('payments.index');

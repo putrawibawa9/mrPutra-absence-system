@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Support\Facades\URL;
 use Illuminate\Support\Str;
 
 #[Fillable(['name', 'phone', 'email', 'program_type', 'book_info', 'registration_date', 'is_active', 'deactivated_at'])]
@@ -64,6 +65,11 @@ class Student extends Model
         return $this->belongsToMany(Classroom::class, 'classroom_student')
             ->withTimestamps()
             ->orderBy('name');
+    }
+
+    public function feedbacks(): HasMany
+    {
+        return $this->hasMany(Feedback::class)->latest();
     }
 
     public function latestActivePayment(): HasOne
@@ -246,13 +252,18 @@ class Student extends Model
         );
     }
 
+    public function feedbackFormUrl(): string
+    {
+        return URL::temporarySignedRoute('feedback.create', now()->addDays(30), ['student' => $this->id]);
+    }
+
     public function buildFeedbackRequestMessage(): string
     {
-        return "Halo Bapak/Ibu / Ananda {$this->name}, semoga sehat selalu.\n\n"
-            ."Terima kasih sudah menjadi bagian dari Mr. Putra Speak. "
-            ."Kami ingin meminta sedikit waktu Ananda untuk berbagi pesan, kesan, dan saran "
-            ."selama belajar bersama kami, agar layanan kami bisa terus lebih baik ke depannya.\n\n"
-            ."Masukan sekecil apa pun sangat berarti bagi kami. Terima kasih banyak.";
+        return "Halo Kak {$this->name}, terima kasih ya sudah menjadi bagian dari Mr. Putra Speak.\n\n"
+            ."Boleh minta waktunya sebentar untuk berbagi pesan, kesan, dan saran lewat form singkat ini? "
+            ."Masukan Kakak sangat membantu kami untuk terus berkembang.\n\n"
+            .$this->feedbackFormUrl()."\n\n"
+            ."Terima kasih banyak!";
     }
 
     public function feedbackRequestWhatsAppUrl(): ?string

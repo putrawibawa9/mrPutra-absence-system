@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Attendance;
+use App\Models\Feedback;
 use App\Models\Student;
 use App\Models\Token;
 use Illuminate\Support\Carbon;
@@ -74,10 +75,22 @@ class FollowUpController extends Controller
     {
         $students = Student::query()
             ->where('is_active', false)
+            ->withCount('feedbacks')
             ->orderByDesc('deactivated_at')
             ->orderBy('name')
             ->get();
 
         return view('follow-up.inactive', ['students' => $students]);
+    }
+
+    /**
+     * Kumpulan feedback yang sudah dikirim murid lewat form publik.
+     */
+    public function feedback()
+    {
+        $feedbacks = Feedback::query()->with('student')->latest()->get();
+        $average = $feedbacks->isNotEmpty() ? round($feedbacks->avg('rating'), 1) : null;
+
+        return view('follow-up.feedback', compact('feedbacks', 'average'));
     }
 }
