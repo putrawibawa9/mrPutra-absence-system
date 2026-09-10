@@ -464,4 +464,26 @@ class ClassroomTest extends TestCase
         $response->assertRedirect(route('classrooms.index'));
         $this->assertSame(2, Classroom::query()->count());
     }
+
+    public function test_classroom_gets_auto_code_unique_per_type(): void
+    {
+        $a = Classroom::create(['name' => 'x1', 'division' => Classroom::DIVISION_ENGLISH, 'format' => Classroom::FORMAT_SEMI, 'age_group' => Classroom::AGE_TEENS_ADULT, 'is_active' => true]);
+        $b = Classroom::create(['name' => 'x2', 'division' => Classroom::DIVISION_ENGLISH, 'format' => Classroom::FORMAT_SEMI, 'age_group' => Classroom::AGE_TEENS_ADULT, 'is_active' => true]);
+        $c = Classroom::create(['name' => 'x3', 'division' => Classroom::DIVISION_CODING, 'format' => Classroom::FORMAT_PRIVATE, 'age_group' => Classroom::AGE_KIDS, 'is_active' => true]);
+
+        $this->assertSame('ESA-01', $a->code);
+        $this->assertSame('ESA-02', $b->code);
+        $this->assertSame('CPK-01', $c->code);
+    }
+
+    public function test_backfill_assigns_codes_to_codeless_classrooms(): void
+    {
+        $a = Classroom::create(['name' => 'x1', 'division' => Classroom::DIVISION_ENGLISH, 'format' => Classroom::FORMAT_PRIVATE, 'age_group' => Classroom::AGE_KIDS, 'is_active' => true]);
+        // Kosongkan kode via mass update (tanpa memicu event) untuk mensimulasikan data lama.
+        Classroom::query()->update(['code' => null]);
+
+        $this->artisan('classrooms:backfill-codes')->assertExitCode(0);
+
+        $this->assertSame('EPK-01', $a->fresh()->code);
+    }
 }

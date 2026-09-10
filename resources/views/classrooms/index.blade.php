@@ -21,6 +21,9 @@
                 <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                     <div class="min-w-0">
                         <div class="flex flex-wrap items-center gap-2">
+                            @if ($classroom->code)
+                                <span class="rounded-lg bg-slate-900 px-2.5 py-1 text-xs font-bold tracking-wide text-white">{{ $classroom->code }}</span>
+                            @endif
                             <h3 class="text-lg font-semibold text-slate-900">{{ $classroom->name }}</h3>
                             <span class="rounded-full bg-sky-50 px-3 py-1 text-xs font-semibold text-sky-700">{{ $classroom->divisionLabel() }}</span>
                             <span class="rounded-full px-3 py-1 text-xs font-semibold {{ $classroom->isPrivate() ? 'bg-indigo-50 text-indigo-700' : 'bg-amber-50 text-amber-700' }}">{{ $classroom->formatLabel() }}</span>

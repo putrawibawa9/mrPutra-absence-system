@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
-#[Fillable(['name', 'division', 'format', 'learning_mode', 'age_group', 'level', 'is_active'])]
+#[Fillable(['name', 'code', 'division', 'format', 'learning_mode', 'age_group', 'level', 'is_active'])]
 class Classroom extends Model
 {
     use HasFactory;
@@ -37,6 +37,59 @@ class Classroom extends Model
                 $classroom->learning_mode = static::defaultLearningMode($classroom->division, $classroom->format);
             }
         });
+
+        // Kode kelas otomatis (mis. ESA-01) supaya tiap kelas unik walau nama
+        // deskriptifnya sama. Bisa dikosongkan/di-override lewat atribut 'code'.
+        static::creating(function (Classroom $classroom): void {
+            if (blank($classroom->code)) {
+                $classroom->code = static::nextCode($classroom->division, $classroom->format, $classroom->age_group);
+            }
+        });
+    }
+
+    /**
+     * Inisial kode dari divisi + format + umur, mis. English·Semi·Teens/Adult => ESA.
+     */
+    public static function codePrefixFor(?string $division, ?string $format, ?string $ageGroup): string
+    {
+        $d = match ($division) {
+            self::DIVISION_ENGLISH => 'E',
+            self::DIVISION_CODING => 'C',
+            default => 'X',
+        };
+        $f = match ($format) {
+            self::FORMAT_PRIVATE => 'P',
+            self::FORMAT_SEMI => 'S',
+            default => 'X',
+        };
+        $a = match ($ageGroup) {
+            self::AGE_KIDS => 'K',
+            self::AGE_TEENS_ADULT => 'A',
+            default => 'X',
+        };
+
+        return $d.$f.$a;
+    }
+
+    /**
+     * Kode berikutnya untuk kombinasi divisi/format/umur tertentu (ESA-01, ESA-02, ...).
+     */
+    public static function nextCode(?string $division, ?string $format, ?string $ageGroup): string
+    {
+        $prefix = static::codePrefixFor($division, $format, $ageGroup);
+
+        $max = static::query()
+            ->where('code', 'like', $prefix.'-%')
+            ->pluck('code')
+            ->map(fn ($code) => (int) substr((string) $code, strlen($prefix) + 1))
+            ->max() ?? 0;
+
+        return $prefix.'-'.str_pad((string) ($max + 1), 2, '0', STR_PAD_LEFT);
+    }
+
+    public function labelWithCode(): string
+    {
+        return $this->code ? $this->code.' · '.$this->name : $this->name;
     }
 
     protected function casts(): array
