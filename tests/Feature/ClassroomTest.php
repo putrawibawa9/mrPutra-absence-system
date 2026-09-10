@@ -66,6 +66,41 @@ class ClassroomTest extends TestCase
         $this->assertEqualsCanonicalizing([$a->id, $b->id], $classroom->students->pluck('id')->all());
     }
 
+    public function test_admin_can_set_and_edit_custom_classroom_name(): void
+    {
+        $admin = User::factory()->create(['role' => User::ROLE_ADMIN]);
+        $a = Student::query()->create(['name' => 'A', 'phone' => '0811', 'is_active' => true]);
+
+        // Buat kelas dengan nama custom.
+        $this->actingAs($admin)->post(route('classrooms.store'), [
+            'name' => 'Kelas Kesayangan Bu Sarah',
+            'division' => Classroom::DIVISION_ENGLISH,
+            'format' => Classroom::FORMAT_PRIVATE,
+            'age_group' => Classroom::AGE_KIDS,
+            'is_active' => 1,
+            'student_ids' => [$a->id],
+        ])->assertRedirect(route('classrooms.index'));
+
+        $classroom = Classroom::query()->firstOrFail();
+        $this->assertSame('Kelas Kesayangan Bu Sarah', $classroom->name);
+        $originalCode = $classroom->code;
+        $this->assertNotNull($originalCode);
+
+        // Ubah namanya lagi; kode & kategori tidak berubah.
+        $this->actingAs($admin)->put(route('classrooms.update', $classroom), [
+            'name' => 'Kelas English Sore',
+            'division' => Classroom::DIVISION_ENGLISH,
+            'format' => Classroom::FORMAT_PRIVATE,
+            'age_group' => Classroom::AGE_KIDS,
+            'is_active' => 1,
+            'student_ids' => [$a->id],
+        ])->assertRedirect(route('classrooms.index'));
+
+        $classroom->refresh();
+        $this->assertSame('Kelas English Sore', $classroom->name);
+        $this->assertSame($originalCode, $classroom->code); // kode tetap
+    }
+
     public function test_private_format_must_have_exactly_one_student(): void
     {
         $admin = User::factory()->create(['role' => User::ROLE_ADMIN]);
