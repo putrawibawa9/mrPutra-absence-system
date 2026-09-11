@@ -59,6 +59,31 @@ class TeacherScheduleFeatureTest extends TestCase
             ->assertSee('English · Semi · Kids', false);
     }
 
+    public function test_classes_today_lists_only_todays_classes(): void
+    {
+        $admin = User::factory()->create(['role' => User::ROLE_ADMIN]);
+        $teacher = User::factory()->create(['role' => User::ROLE_TEACHER, 'name' => 'Pak Guru']);
+        $classroom = $this->classroom();
+        $student = \App\Models\Student::query()->create(['name' => 'Murid Hari Ini', 'phone' => '0811', 'is_active' => true]);
+        $classroom->students()->attach($student->id);
+
+        $today = strtolower(now()->englishDayOfWeek);
+        $tomorrow = strtolower(now()->addDay()->englishDayOfWeek);
+
+        TeacherSchedule::create(['teacher_id' => $teacher->id, 'classroom_id' => $classroom->id, 'title' => $classroom->name, 'day_of_week' => $today, 'start_time' => '10:00', 'end_time' => '11:10', 'is_active' => true]);
+        TeacherSchedule::create(['teacher_id' => $teacher->id, 'classroom_id' => $classroom->id, 'title' => $classroom->name, 'day_of_week' => $tomorrow, 'start_time' => '14:00', 'end_time' => '15:10', 'is_active' => true]);
+
+        $this->actingAs($admin)->get(route('classes.today'))
+            ->assertOk()
+            ->assertSee('Kelas Hari Ini')
+            ->assertSee('Murid Hari Ini')
+            ->assertSee('Pak Guru')
+            ->assertSee('10:00 - 11:10')
+            ->assertDontSee('14:00 - 15:10');
+
+        $this->actingAs($teacher)->get(route('classes.today'))->assertForbidden();
+    }
+
     public function test_overlapping_schedule_is_allowed_conflict_check_disabled(): void
     {
         // Validasi bentrok jadwal dinonaktifkan sementara: jadwal yang tumpang

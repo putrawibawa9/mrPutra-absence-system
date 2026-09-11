@@ -78,7 +78,7 @@ class DashboardMetricsTest extends TestCase
         Carbon::setTestNow();
     }
 
-    public function test_dashboard_lists_low_token_students_with_whatsapp_reminder(): void
+    public function test_low_token_followup_lists_students_with_whatsapp_reminder(): void
     {
         $admin = User::factory()->create(['role' => User::ROLE_ADMIN]);
 
@@ -91,7 +91,7 @@ class DashboardMetricsTest extends TestCase
         $aman = Student::query()->create(['name' => 'Masih Banyak', 'phone' => '08111222333', 'program_type' => Student::PROGRAM_ENGLISH, 'registration_date' => now()->toDateString(), 'is_active' => true]);
         Payment::query()->create(['student_id' => $aman->id, 'source_type' => Payment::SOURCE_TOKEN, 'total_sessions' => 8, 'remaining_sessions' => 5, 'price_amount' => 800000, 'amount_paid' => 800000, 'payment_date' => now()->toDateString()]);
 
-        $response = $this->actingAs($admin)->get(route('dashboard'));
+        $response = $this->actingAs($admin)->get(route('follow-up.low-token'));
 
         $response->assertOk();
         $response->assertViewHas('lowTokenStudents', function ($students) use ($low, $habis, $aman) {

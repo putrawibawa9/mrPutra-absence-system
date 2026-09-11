@@ -69,6 +69,23 @@ class FollowUpController extends Controller
     }
 
     /**
+     * Murid aktif dengan sisa token menipis (<= ambang), untuk diingatkan via WA.
+     */
+    public function lowToken()
+    {
+        $lowTokenStudents = Student::active()
+            ->withSum('payments', 'remaining_sessions')
+            ->withCount(['attendances as token_debt_count' => fn ($query) => $query->whereNull('payment_id')])
+            ->with('latestSessionPayment')
+            ->get()
+            ->filter(fn (Student $student) => (int) ($student->payments_sum_remaining_sessions ?? 0) <= Student::LOW_SESSION_THRESHOLD)
+            ->sortBy(fn (Student $student) => (int) ($student->payments_sum_remaining_sessions ?? 0))
+            ->values();
+
+        return view('follow-up.low-token', compact('lowTokenStudents'));
+    }
+
+    /**
      * Murid non-aktif (sudah keluar) untuk diminta pesan, kesan & saran.
      */
     public function inactive()

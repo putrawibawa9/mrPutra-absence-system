@@ -33,6 +33,7 @@
                 [
                     'label' => 'Teaching',
                     'items' => [
+                        ['label' => 'Kelas Hari Ini', 'route' => 'classes.today', 'pattern' => 'classes.today'],
                         ['label' => 'Kelas', 'route' => 'classrooms.index', 'pattern' => 'classrooms.*'],
                         ['label' => 'Attendances', 'route' => 'attendances.index', 'pattern' => 'attendances.*'],
                         ['label' => 'Teachers', 'route' => 'teachers.index', 'pattern' => 'teachers.*'],
@@ -43,6 +44,7 @@
                 [
                     'label' => 'Tindak Lanjut',
                     'items' => [
+                        ['label' => 'Token Menipis', 'route' => 'follow-up.low-token', 'pattern' => 'follow-up.low-token'],
                         ['label' => 'Murid Sering Absen', 'route' => 'follow-up.absent', 'pattern' => 'follow-up.absent'],
                         ['label' => 'Murid Non-aktif', 'route' => 'follow-up.inactive', 'pattern' => 'follow-up.inactive'],
                         ['label' => 'Feedback Murid', 'route' => 'follow-up.feedback', 'pattern' => 'follow-up.feedback'],

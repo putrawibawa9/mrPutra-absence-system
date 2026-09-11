@@ -146,6 +146,27 @@ class TeacherScheduleController extends Controller
         ];
     }
 
+    /**
+     * Kelas yang les hari ini (dari jadwal mingguan), untuk admin remind manual
+     * lewat WA grup. Diurutkan dari jam paling awal.
+     */
+    public function today()
+    {
+        $todayKey = strtolower(now()->englishDayOfWeek);
+
+        $schedules = TeacherSchedule::query()
+            ->with(['teacher', 'classroom.students'])
+            ->where('is_active', true)
+            ->where('day_of_week', $todayKey)
+            ->orderBy('start_time')
+            ->get();
+
+        return view('teacher-schedules.today', [
+            'schedules' => $schedules,
+            'dayLabel' => WeeklyDay::label($todayKey),
+        ]);
+    }
+
     public function create()
     {
         return view('teacher-schedules.create', array_merge(

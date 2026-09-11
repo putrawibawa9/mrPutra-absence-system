@@ -71,6 +71,9 @@ Route::middleware('auth')->group(function () {
         Route::post('/registrations/{registration}/accept', [RegistrationController::class, 'accept'])->name('registrations.accept');
         Route::post('/registrations/{registration}/reject', [RegistrationController::class, 'reject'])->name('registrations.reject');
 
+        Route::get('/classes-today', [TeacherScheduleController::class, 'today'])->name('classes.today');
+
+        Route::get('/follow-up/low-token', [FollowUpController::class, 'lowToken'])->name('follow-up.low-token');
         Route::get('/follow-up/absent', [FollowUpController::class, 'absent'])->name('follow-up.absent');
         Route::get('/follow-up/inactive', [FollowUpController::class, 'inactive'])->name('follow-up.inactive');
         Route::get('/follow-up/feedback', [FollowUpController::class, 'feedback'])->name('follow-up.feedback');
