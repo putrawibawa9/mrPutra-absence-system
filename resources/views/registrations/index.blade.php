@@ -30,19 +30,9 @@
 
                 <div class="mt-4 space-y-2 text-sm">
                     <p><span class="text-slate-500">WhatsApp:</span> <span class="font-medium text-slate-800">{{ $reg->phone }}</span> &middot; <span class="text-slate-500">Umur:</span> {{ $reg->age ? $reg->age.' tahun' : '-' }}</p>
-                    <p><span class="text-slate-500">Wali:</span> {{ $reg->guardian_name ?: '-' }} &middot; <span class="text-slate-500">Email:</span> {{ $reg->email ?: '-' }}</p>
-                    <p><span class="text-slate-500">Format:</span> {{ $reg->formatLabel() }} &middot; <span class="text-slate-500">Level:</span> {{ $reg->level_note ?: '-' }}</p>
+                    <p><span class="text-slate-500">Format:</span> {{ $reg->formatLabel() }} &middot; <span class="text-slate-500">Tujuan:</span> {{ $reg->goalLabel() }}</p>
                     <p><span class="text-slate-500">Hari bisa:</span> {{ $reg->availableDayLabels() }}</p>
                     <p><span class="text-slate-500">Waktu:</span> {{ $reg->timePreferenceLabels() }}</p>
-                    @if ($reg->goal)
-                        <p><span class="text-slate-500">Tujuan:</span> {{ $reg->goal }}</p>
-                    @endif
-                    @if ($reg->referral_source)
-                        <p><span class="text-slate-500">Sumber:</span> {{ $reg->referral_source }}</p>
-                    @endif
-                    @if ($reg->notes)
-                        <p><span class="text-slate-500">Catatan:</span> {{ $reg->notes }}</p>
-                    @endif
                 </div>
 
                 <div class="mt-4 flex flex-wrap items-center gap-3">

@@ -16,8 +16,8 @@ class RegistrationController extends Controller
     public function create()
     {
         return view('registrations.create', [
-            'programOptions' => Registration::programOptions(),
             'formatOptions' => Registration::formatOptions(),
+            'goalOptions' => Registration::goalOptions(),
             'timeOptions' => Registration::timeOptions(),
             'dayOptions' => WeeklyDay::options(),
         ]);
@@ -27,27 +27,28 @@ class RegistrationController extends Controller
     {
         $data = $request->validate([
             'student_name' => ['required', 'string', 'max:255'],
-            'guardian_name' => ['nullable', 'string', 'max:255'],
             'phone' => ['required', 'string', 'max:40'],
-            'email' => ['nullable', 'email', 'max:255'],
-            'age' => ['nullable', 'integer', 'min:1', 'max:120'],
-            'program' => ['required', Rule::in(array_keys(Registration::programOptions()))],
-            'format_preference' => ['nullable', Rule::in(array_keys(Registration::formatOptions()))],
-            'goal' => ['nullable', 'string', 'max:2000'],
-            'level_note' => ['nullable', 'string', 'max:255'],
-            'available_days' => ['nullable', 'array'],
+            'age' => ['required', 'integer', 'min:1', 'max:120'],
+            'format_preference' => ['required', Rule::in(array_keys(Registration::formatOptions()))],
+            'goal' => ['required', Rule::in(array_keys(Registration::goalOptions()))],
+            'available_days' => ['required', 'array', 'min:1'],
             'available_days.*' => [Rule::in(WeeklyDay::values())],
-            'time_preferences' => ['nullable', 'array'],
+            'time_preferences' => ['required', 'array', 'min:1'],
             'time_preferences.*' => [Rule::in(array_keys(Registration::timeOptions()))],
-            'referral_source' => ['nullable', 'string', 'max:255'],
-            'notes' => ['nullable', 'string', 'max:2000'],
         ], [
             'student_name.required' => 'Nama murid wajib diisi.',
             'phone.required' => 'Nomor WhatsApp wajib diisi.',
-            'program.required' => 'Pilih program yang diminati.',
+            'age.required' => 'Umur wajib diisi.',
+            'format_preference.required' => 'Pilih format les.',
+            'goal.required' => 'Pilih tujuan les.',
+            'available_days.required' => 'Pilih minimal satu hari yang bisa.',
+            'time_preferences.required' => 'Pilih minimal satu preferensi waktu.',
         ]);
 
+        // Form ini khusus English course.
+        $data['program'] = 'english';
         $data['status'] = Registration::STATUS_PENDING;
+
         Registration::create($data);
 
         return view('registrations.thanks', ['name' => $data['student_name']]);

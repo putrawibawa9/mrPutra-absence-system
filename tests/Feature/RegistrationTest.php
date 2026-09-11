@@ -28,9 +28,8 @@ class RegistrationTest extends TestCase
             'student_name' => 'Budi Santoso',
             'phone' => '081234567890',
             'age' => 10,
-            'program' => 'english',
             'format_preference' => 'private',
-            'goal' => 'Persiapan percakapan.',
+            'goal' => 'conversation',
             'available_days' => ['monday', 'wednesday'],
             'time_preferences' => ['sore'],
         ])->assertOk()->assertSee('Terima kasih');
@@ -38,7 +37,8 @@ class RegistrationTest extends TestCase
         $this->assertDatabaseHas('registrations', [
             'student_name' => 'Budi Santoso',
             'phone' => '081234567890',
-            'program' => 'english',
+            'program' => 'english', // form khusus English
+            'goal' => 'conversation',
             'status' => Registration::STATUS_PENDING,
         ]);
 
@@ -52,8 +52,8 @@ class RegistrationTest extends TestCase
     public function test_registration_validates_required_fields(): void
     {
         $this->from(route('registrations.create'))
-            ->post(route('registrations.store'), ['student_name' => '', 'phone' => '', 'program' => ''])
-            ->assertSessionHasErrors(['student_name', 'phone', 'program']);
+            ->post(route('registrations.store'), ['student_name' => '', 'phone' => ''])
+            ->assertSessionHasErrors(['student_name', 'phone', 'age', 'format_preference', 'goal', 'available_days', 'time_preferences']);
 
         $this->assertDatabaseCount('registrations', 0);
     }

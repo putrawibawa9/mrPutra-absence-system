@@ -58,9 +58,27 @@ class Registration extends Model
     {
         return [
             'private' => 'Private (1-on-1)',
-            'semi' => 'Semi (grup)',
-            'unsure' => 'Belum yakin',
+            'semi' => 'Grup',
         ];
+    }
+
+    /** Pilihan tujuan les (dropdown) supaya jawabannya terarah. */
+    public static function goalOptions(): array
+    {
+        return [
+            'conversation' => 'Percakapan sehari-hari',
+            'exam' => 'Persiapan ujian (IELTS/TOEFL/sekolah)',
+            'academic' => 'Akademik / nilai sekolah',
+            'career' => 'Karier / dunia kerja',
+            'basic' => 'Dasar / grammar',
+            'kids' => 'English untuk anak',
+            'other' => 'Lainnya',
+        ];
+    }
+
+    public function goalLabel(): string
+    {
+        return self::goalOptions()[$this->goal] ?? ($this->goal ?: '-');
     }
 
     public static function timeOptions(): array
