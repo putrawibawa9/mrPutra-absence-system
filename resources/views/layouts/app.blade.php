@@ -27,6 +27,7 @@
                     'label' => 'Students',
                     'items' => [
                         ['label' => 'All Students', 'route' => 'students.index', 'pattern' => 'students.*'],
+                        ['label' => 'Pendaftaran', 'route' => 'registrations.index', 'pattern' => 'registrations.index'],
                     ],
                 ],
                 [

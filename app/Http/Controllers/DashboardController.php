@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Registration;
 use App\Models\Student;
 use App\Http\Controllers\TeacherAvailabilityController;
 use App\Http\Controllers\TeacherScheduleController;
@@ -85,6 +86,10 @@ class DashboardController extends Controller
             );
         }
 
+        $pendingRegistrations = Registration::query()
+            ->where('status', Registration::STATUS_PENDING)
+            ->count();
+
         return view('dashboard', compact(
             'newRegistrationsThisMonth',
             'studentsExitedThisMonth',
@@ -92,6 +97,7 @@ class DashboardController extends Controller
             'codingStudents',
             'englishStudents',
             'lowTokenStudents',
+            'pendingRegistrations',
             'mySchedule',
             'myAvailability',
         ));

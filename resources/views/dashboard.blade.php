@@ -46,6 +46,16 @@
         </div>
     </div>
 
+    @if (! empty($pendingRegistrations) && $pendingRegistrations > 0)
+        <a href="{{ route('registrations.index') }}" class="mt-6 flex items-center justify-between gap-4 rounded-3xl bg-slate-900 px-6 py-4 text-white shadow-sm transition hover:bg-slate-800">
+            <div>
+                <p class="text-sm font-semibold">{{ $pendingRegistrations }} pendaftaran murid baru menunggu</p>
+                <p class="mt-1 text-sm text-slate-300">Klik untuk meninjau &amp; menerima calon murid.</p>
+            </div>
+            <span class="text-sm font-medium">Lihat &rarr;</span>
+        </a>
+    @endif
+
     <div class="mt-6 rounded-3xl bg-white shadow-sm ring-1 ring-amber-100">
         <div class="flex flex-col gap-1 border-b border-slate-100 px-6 py-4 sm:flex-row sm:items-center sm:justify-between">
             <div>

@@ -12,6 +12,7 @@ use App\Http\Controllers\LearningModuleController;
 use App\Http\Controllers\MaterialLinkController;
 use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\RegistrationController;
 use App\Http\Controllers\StudentController;
 use App\Http\Controllers\TeacherAvailabilityController;
 use App\Http\Controllers\TeacherController;
@@ -20,6 +21,12 @@ use App\Models\User;
 use Illuminate\Support\Facades\Route;
 
 Route::redirect('/', '/login');
+
+// Form pendaftaran murid baru — publik (tanpa login), bisa disebar linknya.
+Route::get('/daftar', [RegistrationController::class, 'create'])->name('registrations.create');
+Route::post('/daftar', [RegistrationController::class, 'store'])
+    ->middleware('throttle:10,1')
+    ->name('registrations.store');
 
 Route::get('/receipts/{payment}/public', [PaymentController::class, 'publicReceipt'])
     ->middleware('signed')
@@ -60,6 +67,10 @@ Route::middleware('auth')->group(function () {
         Route::resource('teacher-availabilities', TeacherAvailabilityController::class)->except(['show']);
         Route::resource('expense-categories', ExpenseCategoryController::class)->except(['show']);
         Route::resource('expenses', ExpenseController::class)->except(['show']);
+        Route::get('/registrations', [RegistrationController::class, 'index'])->name('registrations.index');
+        Route::post('/registrations/{registration}/accept', [RegistrationController::class, 'accept'])->name('registrations.accept');
+        Route::post('/registrations/{registration}/reject', [RegistrationController::class, 'reject'])->name('registrations.reject');
+
         Route::get('/follow-up/absent', [FollowUpController::class, 'absent'])->name('follow-up.absent');
         Route::get('/follow-up/inactive', [FollowUpController::class, 'inactive'])->name('follow-up.inactive');
         Route::get('/follow-up/feedback', [FollowUpController::class, 'feedback'])->name('follow-up.feedback');
