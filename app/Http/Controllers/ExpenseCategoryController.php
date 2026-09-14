@@ -28,6 +28,7 @@ class ExpenseCategoryController extends Controller
             'name' => $request->string('name')->toString(),
             'notes' => $request->string('notes')->toString(),
             'is_active' => $request->boolean('is_active', true),
+            'cost_behavior' => $request->input('cost_behavior') ?: null,
         ]);
 
         return redirect()->route('expense-categories.index')->with('status', 'Kategori expense berhasil ditambahkan.');
@@ -44,6 +45,7 @@ class ExpenseCategoryController extends Controller
             'name' => $request->string('name')->toString(),
             'notes' => $request->string('notes')->toString(),
             'is_active' => $request->boolean('is_active', false),
+            'cost_behavior' => $request->input('cost_behavior') ?: null,
         ]);
 
         return redirect()->route('expense-categories.index')->with('status', 'Kategori expense berhasil diperbarui.');

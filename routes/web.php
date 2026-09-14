@@ -81,6 +81,7 @@ Route::middleware('auth')->group(function () {
 
         Route::get('/cash-flow', CashFlowController::class)->name('cash-flow.index');
         Route::get('/reports/ltv', [ReportController::class, 'ltv'])->name('reports.ltv');
+        Route::get('/reports/opex', [ReportController::class, 'opex'])->name('reports.opex');
         Route::get('/payments', [PaymentController::class, 'index'])->name('payments.index');
         Route::get('/payments/create', [PaymentController::class, 'create'])->name('payments.create');
         Route::post('/payments', [PaymentController::class, 'store'])->name('payments.store');

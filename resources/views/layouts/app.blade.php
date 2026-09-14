@@ -64,6 +64,7 @@
                         ['label' => 'Expenses', 'route' => 'expenses.index', 'pattern' => 'expenses.*'],
                         ['label' => 'Expense Categories', 'route' => 'expense-categories.index', 'pattern' => 'expense-categories.*'],
                         ['label' => 'Cash Flow', 'route' => 'cash-flow.index', 'pattern' => 'cash-flow.*'],
+                        ['label' => 'Monitoring OpEx', 'route' => 'reports.opex', 'pattern' => 'reports.opex'],
                         ['label' => 'LTV Murid', 'route' => 'reports.ltv', 'pattern' => 'reports.ltv'],
                     ],
                 ],

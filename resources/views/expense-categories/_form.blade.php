@@ -8,6 +8,18 @@
         <x-input-error :messages="$errors->get('name')" class="mt-2" />
     </div>
 
+    <div>
+        <x-input-label for="cost_behavior" value="Perilaku Biaya (untuk OpEx)" />
+        <select id="cost_behavior" name="cost_behavior" class="mt-1 block w-full rounded-xl border-slate-300">
+            <option value="">— Belum ditandai —</option>
+            @foreach (\App\Models\ExpenseCategory::costBehaviorOptions() as $value => $label)
+                <option value="{{ $value }}" @selected(old('cost_behavior', $expense_category->cost_behavior ?? '') === $value)>{{ $label }}</option>
+            @endforeach
+        </select>
+        <p class="mt-1 text-sm text-slate-500">Tetap = dibagi rata ke tiap kelas sebagai overhead. Variabel = biaya yang ikut naik-turun dengan aktivitas.</p>
+        <x-input-error :messages="$errors->get('cost_behavior')" class="mt-2" />
+    </div>
+
     <div class="md:col-span-2">
         <x-input-label for="notes" value="Notes (optional)" />
         <textarea id="notes" name="notes" rows="4" class="mt-1 block w-full rounded-xl border-slate-300">{{ old('notes', $expense_category->notes ?? '') }}</textarea>

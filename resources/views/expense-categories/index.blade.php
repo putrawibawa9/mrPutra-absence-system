@@ -16,6 +16,7 @@
                     <div>
                         <h3 class="font-semibold text-slate-900">{{ $expenseCategory->name }}</h3>
                         <p class="mt-1 text-sm text-slate-500">{{ $expenseCategory->expenses_count }} expense(s)</p>
+                        <span class="mt-2 inline-flex rounded-full px-2 py-0.5 text-xs font-medium {{ $expenseCategory->isFixedCost() ? 'bg-indigo-50 text-indigo-700' : ($expenseCategory->isVariableCost() ? 'bg-sky-50 text-sky-700' : 'bg-amber-50 text-amber-700') }}">{{ $expenseCategory->costBehaviorLabel() }}</span>
                     </div>
                     <span class="rounded-full px-3 py-1 text-xs font-semibold {{ $expenseCategory->is_active ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-600' }}">
                         {{ $expenseCategory->is_active ? 'Active' : 'Inactive' }}
@@ -43,6 +44,7 @@
             <thead class="bg-slate-50 text-left text-slate-500">
                 <tr>
                     <th class="px-6 py-3 font-medium">Category</th>
+                    <th class="px-6 py-3 font-medium">Perilaku</th>
                     <th class="px-6 py-3 font-medium">Status</th>
                     <th class="px-6 py-3 font-medium">Expenses</th>
                     <th class="px-6 py-3 font-medium">Notes</th>
@@ -53,6 +55,11 @@
                 @forelse ($expenseCategories as $expenseCategory)
                     <tr>
                         <td class="px-6 py-4 font-medium text-slate-900">{{ $expenseCategory->name }}</td>
+                        <td class="px-6 py-4">
+                            <span class="rounded-full px-3 py-1 text-xs font-medium {{ $expenseCategory->isFixedCost() ? 'bg-indigo-50 text-indigo-700' : ($expenseCategory->isVariableCost() ? 'bg-sky-50 text-sky-700' : 'bg-amber-50 text-amber-700') }}">
+                                {{ $expenseCategory->costBehaviorLabel() }}
+                            </span>
+                        </td>
                         <td class="px-6 py-4">
                             <span class="rounded-full px-3 py-1 text-xs font-semibold {{ $expenseCategory->is_active ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-600' }}">
                                 {{ $expenseCategory->is_active ? 'Active' : 'Inactive' }}
@@ -73,7 +80,7 @@
                     </tr>
                 @empty
                     <tr>
-                        <td colspan="5" class="px-6 py-8 text-center text-slate-500">No expense category added yet.</td>
+                        <td colspan="6" class="px-6 py-8 text-center text-slate-500">No expense category added yet.</td>
                     </tr>
                 @endforelse
             </tbody>
