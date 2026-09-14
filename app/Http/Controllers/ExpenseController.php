@@ -6,6 +6,8 @@ use App\Http\Requests\ExpenseRequest;
 use App\Models\Expense;
 use App\Models\ExpenseCategory;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 
 class ExpenseController extends Controller
 {
@@ -56,16 +58,47 @@ class ExpenseController extends Controller
 
     public function store(ExpenseRequest $request)
     {
-        Expense::create([
+        $months = max(1, (int) $request->integer('installment_months'));
+        $total = $request->integer('amount');
+        $date = $request->date('expense_date');
+
+        $base = [
             'expense_category_id' => $request->integer('expense_category_id'),
             'created_by_user_id' => $request->user()->id,
             'title' => $request->string('title')->toString(),
-            'amount' => $request->integer('amount'),
-            'expense_date' => $request->date('expense_date'),
             'notes' => $request->string('notes')->toString(),
-        ]);
+        ];
 
-        return redirect()->route('expenses.index')->with('status', 'Expense berhasil ditambahkan.');
+        if ($months <= 1) {
+            Expense::create(array_merge($base, [
+                'amount' => $total,
+                'expense_date' => $date,
+            ]));
+
+            return redirect()->route('expenses.index')->with('status', 'Expense berhasil ditambahkan.');
+        }
+
+        // Cicilan: pecah total jadi porsi bulanan (sisa pembagian ditaruh di
+        // bulan-bulan awal supaya jumlahnya tetap sama persis dengan total).
+        $per = intdiv($total, $months);
+        $remainder = $total % $months;
+        $group = (string) Str::uuid();
+
+        DB::transaction(function () use ($base, $months, $per, $remainder, $date, $group): void {
+            for ($i = 0; $i < $months; $i++) {
+                Expense::create(array_merge($base, [
+                    'title' => $base['title'].' (Cicilan '.($i + 1).'/'.$months.')',
+                    'amount' => $per + ($i < $remainder ? 1 : 0),
+                    'expense_date' => $date->copy()->addMonthsNoOverflow($i),
+                    'amortization_group' => $group,
+                    'amortization_index' => $i + 1,
+                    'amortization_total' => $months,
+                ]));
+            }
+        });
+
+        return redirect()->route('expenses.index')
+            ->with('status', 'Expense dibagi jadi '.$months.' cicilan bulanan.');
     }
 
     public function edit(Expense $expense)

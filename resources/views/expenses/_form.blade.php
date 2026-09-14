@@ -31,6 +31,15 @@
         <x-input-error :messages="$errors->get('amount')" class="mt-2" />
     </div>
 
+    @if ($expense === null)
+        <div class="md:col-span-2">
+            <x-input-label for="installment_months" value="Bagi jadi cicilan bulanan (opsional)" />
+            <x-text-input id="installment_months" name="installment_months" type="number" min="1" max="60" class="mt-1 block w-full rounded-xl border-slate-300" :value="old('installment_months', 1)" />
+            <p class="mt-1 text-xs text-slate-500">Isi jumlah bulan untuk memecah biaya tahunan/paket jadi cicilan otomatis (mis. 12 untuk langganan setahun). <span class="font-medium">Amount</span> di atas = total; nanti dibagi rata per bulan. Isi 1 untuk pengeluaran biasa.</p>
+            <x-input-error :messages="$errors->get('installment_months')" class="mt-2" />
+        </div>
+    @endif
+
     <div class="md:col-span-2">
         <x-input-label for="notes" value="Notes (optional)" />
         <textarea id="notes" name="notes" rows="4" class="mt-1 block w-full rounded-xl border-slate-300">{{ old('notes', $expense->notes ?? '') }}</textarea>

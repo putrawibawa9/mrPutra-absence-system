@@ -19,6 +19,7 @@ class ExpenseRequest extends FormRequest
             'amount' => ['required', 'integer', 'min:1'],
             'expense_date' => ['required', 'date'],
             'notes' => ['nullable', 'string'],
+            'installment_months' => ['nullable', 'integer', 'min:1', 'max:60'],
         ];
     }
 }

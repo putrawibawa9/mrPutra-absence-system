@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-#[Fillable(['expense_category_id', 'created_by_user_id', 'teacher_user_id', 'attendance_id', 'attendance_batch_id', 'title', 'amount', 'expense_date', 'notes'])]
+#[Fillable(['expense_category_id', 'created_by_user_id', 'teacher_user_id', 'attendance_id', 'attendance_batch_id', 'title', 'amount', 'expense_date', 'notes', 'amortization_group', 'amortization_index', 'amortization_total'])]
 class Expense extends Model
 {
     use HasFactory;
@@ -17,7 +17,21 @@ class Expense extends Model
         return [
             'amount' => 'integer',
             'expense_date' => 'date',
+            'amortization_index' => 'integer',
+            'amortization_total' => 'integer',
         ];
+    }
+
+    public function isInstallment(): bool
+    {
+        return (int) $this->amortization_total > 1;
+    }
+
+    public function installmentLabel(): ?string
+    {
+        return $this->isInstallment()
+            ? 'Cicilan '.$this->amortization_index.'/'.$this->amortization_total
+            : null;
     }
 
     public function category(): BelongsTo
