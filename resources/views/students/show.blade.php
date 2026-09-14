@@ -101,6 +101,34 @@
         </div>
     </div>
 
+    @php
+        $tokenPayments = $student->payments->filter(fn ($p) => $p->isTokenSource());
+        $ltvAmount = (int) $student->payments->sum('amount_paid');
+        $tokensBought = (int) $tokenPayments->sum('total_sessions');
+        $lastPaymentDate = $student->payments->max('payment_date');
+    @endphp
+    <div class="mt-6 rounded-3xl bg-white p-6 shadow-sm">
+        <h3 class="text-lg font-semibold text-slate-900">Ringkasan Pembayaran (LTV)</h3>
+        <div class="mt-4 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+            <div>
+                <p class="text-sm text-slate-500">Kali Bayar (siklus)</p>
+                <p class="mt-1 text-2xl font-semibold text-slate-900">{{ $tokenPayments->count() }}x</p>
+            </div>
+            <div>
+                <p class="text-sm text-slate-500">Token Dibeli</p>
+                <p class="mt-1 text-2xl font-semibold text-slate-900">{{ $tokensBought }}</p>
+            </div>
+            <div>
+                <p class="text-sm text-slate-500">Total Dibayar (LTV)</p>
+                <p class="mt-1 text-2xl font-semibold text-emerald-600">Rp {{ number_format($ltvAmount, 0, ',', '.') }}</p>
+            </div>
+            <div>
+                <p class="text-sm text-slate-500">Bayar Terakhir</p>
+                <p class="mt-1 text-2xl font-semibold text-slate-900">{{ $lastPaymentDate ? $lastPaymentDate->format('d M Y') : '-' }}</p>
+            </div>
+        </div>
+    </div>
+
     <div class="mt-6 grid gap-6 xl:grid-cols-2">
         <div class="overflow-hidden rounded-3xl bg-white shadow-sm">
             <div class="border-b border-slate-100 px-6 py-4">

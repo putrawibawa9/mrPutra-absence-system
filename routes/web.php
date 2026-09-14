@@ -13,6 +13,7 @@ use App\Http\Controllers\MaterialLinkController;
 use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\RegistrationController;
+use App\Http\Controllers\ReportController;
 use App\Http\Controllers\StudentController;
 use App\Http\Controllers\TeacherAvailabilityController;
 use App\Http\Controllers\TeacherController;
@@ -79,6 +80,7 @@ Route::middleware('auth')->group(function () {
         Route::get('/follow-up/feedback', [FollowUpController::class, 'feedback'])->name('follow-up.feedback');
 
         Route::get('/cash-flow', CashFlowController::class)->name('cash-flow.index');
+        Route::get('/reports/ltv', [ReportController::class, 'ltv'])->name('reports.ltv');
         Route::get('/payments', [PaymentController::class, 'index'])->name('payments.index');
         Route::get('/payments/create', [PaymentController::class, 'create'])->name('payments.create');
         Route::post('/payments', [PaymentController::class, 'store'])->name('payments.store');
