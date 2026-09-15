@@ -5,7 +5,9 @@ namespace App\Http\Controllers;
 use App\Models\Attendance;
 use App\Models\Feedback;
 use App\Models\Student;
+use App\Models\TeacherSchedule;
 use App\Models\Token;
+use App\Support\WeeklyDay;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 
@@ -76,13 +78,37 @@ class FollowUpController extends Controller
         $lowTokenStudents = Student::active()
             ->withSum('payments', 'remaining_sessions')
             ->withCount(['attendances as token_debt_count' => fn ($query) => $query->whereNull('payment_id')])
-            ->with('latestSessionPayment')
+            ->with(['latestSessionPayment', 'classrooms:id'])
             ->get()
             ->filter(fn (Student $student) => (int) ($student->payments_sum_remaining_sessions ?? 0) <= Student::LOW_SESSION_THRESHOLD)
             ->sortBy(fn (Student $student) => (int) ($student->payments_sum_remaining_sessions ?? 0))
             ->values();
 
-        return view('follow-up.low-token', compact('lowTokenStudents'));
+        // Hari les tiap murid diambil dari jadwal mingguan aktif kelasnya. Tombol WA
+        // hanya aktif di hari murid ada kelas, supaya admin tinggal klik di hari itu.
+        $todayKey = strtolower(now()->englishDayOfWeek);
+        $daysByClassroom = TeacherSchedule::query()
+            ->where('is_active', true)
+            ->whereNotNull('classroom_id')
+            ->get(['classroom_id', 'day_of_week'])
+            ->groupBy('classroom_id')
+            ->map(fn ($group) => $group->pluck('day_of_week')->unique());
+
+        $lowTokenStudents->each(function (Student $student) use ($daysByClassroom, $todayKey): void {
+            $dayKeys = $student->classrooms
+                ->flatMap(fn ($classroom) => $daysByClassroom->get($classroom->id, collect()))
+                ->unique();
+            $orderedDays = collect(WeeklyDay::values())->filter(fn ($key) => $dayKeys->contains($key))->values();
+
+            $student->setAttribute('has_schedule', $orderedDays->isNotEmpty());
+            $student->setAttribute('has_class_today', $orderedDays->contains($todayKey));
+            $student->setAttribute('class_days_label', $orderedDays->map(fn ($key) => WeeklyDay::label($key))->join(', '));
+        });
+
+        return view('follow-up.low-token', [
+            'lowTokenStudents' => $lowTokenStudents,
+            'todayLabel' => WeeklyDay::label($todayKey),
+        ]);
     }
 
     /**

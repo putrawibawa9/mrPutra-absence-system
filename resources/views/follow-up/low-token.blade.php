@@ -2,7 +2,7 @@
     <x-slot name="header">
         <div>
             <h2 class="text-2xl font-semibold text-slate-900">Token Menipis</h2>
-            <p class="text-sm text-slate-500">Murid aktif dengan sisa token ≤ {{ \App\Models\Student::LOW_SESSION_THRESHOLD }}. Ingatkan lewat WA dengan pesan otomatis.</p>
+            <p class="text-sm text-slate-500">Murid aktif dengan sisa token ≤ {{ \App\Models\Student::LOW_SESSION_THRESHOLD }}. Hari ini <span class="font-medium text-slate-700">{{ $todayLabel }}</span> — tombol WA aktif untuk murid yang <span class="font-medium text-slate-700">ada kelas hari ini</span>, jadi tinggal klik.</p>
         </div>
     </x-slot>
 
@@ -42,13 +42,31 @@
                                 </span>
                             </td>
                             <td class="px-6 py-4 text-right">
-                                @if ($waUrl)
-                                    <a href="{{ $waUrl }}" target="_blank" rel="noopener noreferrer"
-                                        class="inline-flex items-center gap-1.5 rounded-xl bg-emerald-600 px-3 py-2 text-xs font-semibold text-white hover:bg-emerald-700">
-                                        Ingatkan via WA
-                                    </a>
-                                @else
+                                @if (! $waUrl)
                                     <span class="text-xs text-slate-400">No. HP kosong</span>
+                                @elseif ($student->has_class_today)
+                                    <div class="flex flex-col items-end gap-1">
+                                        <a href="{{ $waUrl }}" target="_blank" rel="noopener noreferrer"
+                                            class="inline-flex items-center gap-1.5 rounded-xl bg-emerald-600 px-3 py-2 text-xs font-semibold text-white hover:bg-emerald-700">
+                                            Ingatkan via WA
+                                        </a>
+                                        <span class="text-xs font-medium text-emerald-600">Ada kelas hari ini</span>
+                                    </div>
+                                @elseif ($student->has_schedule)
+                                    <div class="flex flex-col items-end gap-1">
+                                        <span class="inline-flex cursor-not-allowed items-center gap-1.5 rounded-xl bg-slate-100 px-3 py-2 text-xs font-semibold text-slate-400" title="Tombol aktif saat murid ada kelas">
+                                            Ingatkan via WA
+                                        </span>
+                                        <span class="text-xs text-slate-400">Les: {{ $student->class_days_label }}</span>
+                                    </div>
+                                @else
+                                    <div class="flex flex-col items-end gap-1">
+                                        <a href="{{ $waUrl }}" target="_blank" rel="noopener noreferrer"
+                                            class="inline-flex items-center gap-1.5 rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-50">
+                                            Ingatkan via WA
+                                        </a>
+                                        <span class="text-xs text-slate-400">Jadwal belum diatur</span>
+                                    </div>
                                 @endif
                             </td>
                         </tr>

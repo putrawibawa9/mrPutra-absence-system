@@ -4,8 +4,10 @@ namespace App\Http\Controllers;
 
 use App\Models\Registration;
 use App\Models\Student;
+use App\Models\TeacherSchedule;
 use App\Http\Controllers\TeacherAvailabilityController;
 use App\Http\Controllers\TeacherScheduleController;
+use App\Support\WeeklyDay;
 use Illuminate\Support\Carbon;
 
 class DashboardController extends Controller
@@ -80,6 +82,16 @@ class DashboardController extends Controller
             ->where('status', Registration::STATUS_PENDING)
             ->count();
 
+        // Kelas yang les hari ini (dari jadwal mingguan) — tampil langsung di dashboard.
+        $todayKey = strtolower(now()->englishDayOfWeek);
+        $todaysClasses = TeacherSchedule::query()
+            ->with(['teacher', 'classroom.students'])
+            ->where('is_active', true)
+            ->where('day_of_week', $todayKey)
+            ->orderBy('start_time')
+            ->get();
+        $todayLabel = WeeklyDay::label($todayKey);
+
         return view('dashboard', compact(
             'newRegistrationsThisMonth',
             'studentsExitedThisMonth',
@@ -89,6 +101,8 @@ class DashboardController extends Controller
             'pendingRegistrations',
             'mySchedule',
             'myAvailability',
+            'todaysClasses',
+            'todayLabel',
         ));
     }
 }

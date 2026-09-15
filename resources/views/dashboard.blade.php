@@ -56,6 +56,43 @@
         </a>
     @endif
 
+    @if (auth()->user()->isAdmin())
+        <div class="mt-6 rounded-3xl bg-white p-6 shadow-sm">
+            <div class="flex items-center justify-between gap-4">
+                <div>
+                    <h3 class="text-lg font-semibold text-slate-900">Kelas Hari Ini</h3>
+                    <p class="text-sm text-slate-500">{{ $todayLabel }}, {{ now()->locale('id')->translatedFormat('d F Y') }} — {{ $todaysClasses->count() }} kelas terjadwal.</p>
+                </div>
+                <a href="{{ route('classes.today') }}" class="text-sm font-medium text-slate-700">Lihat detail</a>
+            </div>
+
+            <div class="mt-4 space-y-3">
+                @forelse ($todaysClasses as $schedule)
+                    <div class="flex flex-col gap-2 rounded-2xl border border-slate-100 bg-slate-50 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+                        <div class="min-w-0">
+                            <div class="flex flex-wrap items-center gap-2">
+                                <span class="rounded-lg bg-slate-900 px-2.5 py-1 text-sm font-bold tracking-wide text-white">{{ $schedule->timeRangeLabel() }}</span>
+                                @if ($schedule->classroom?->code)
+                                    <span class="rounded-lg bg-slate-100 px-2 py-1 text-xs font-bold tracking-wide text-slate-700">{{ $schedule->classroom->code }}</span>
+                                @endif
+                                <span class="font-semibold text-slate-900">{{ $schedule->classroom?->name ?? ($schedule->title ?: 'Kelas') }}</span>
+                                @if ($schedule->classroom)
+                                    <span class="rounded-full px-2.5 py-1 text-xs font-semibold {{ $schedule->classroom->isPrivate() ? 'bg-indigo-50 text-indigo-700' : 'bg-amber-50 text-amber-700' }}">{{ $schedule->classroom->isPrivate() ? 'Private' : 'Grup' }}</span>
+                                @endif
+                            </div>
+                            @if ($schedule->classroom && $schedule->classroom->students->isNotEmpty())
+                                <p class="mt-1 truncate text-sm text-slate-600">Murid: {{ $schedule->classroom->students->pluck('name')->join(', ') }}</p>
+                            @endif
+                        </div>
+                        <p class="text-sm text-slate-500">Guru: <span class="font-medium text-slate-700">{{ $schedule->teacher->name }}</span></p>
+                    </div>
+                @empty
+                    <p class="rounded-2xl border border-slate-100 bg-slate-50 px-4 py-6 text-center text-sm text-slate-500">Tidak ada kelas terjadwal hari ini.</p>
+                @endforelse
+            </div>
+        </div>
+    @endif
+
     @if (auth()->user()->isTeacher())
         <div class="mt-6 grid gap-6 xl:grid-cols-2">
             <div class="rounded-3xl bg-white p-6 shadow-sm">
