@@ -26,16 +26,104 @@ class ClassroomController extends Controller
     ) {
     }
 
-    public function index()
+    public function index(Request $request)
     {
+        $search = trim((string) $request->input('search', ''));
+
         $classrooms = Classroom::query()
             ->with('students:id,name')
             ->withCount('students')
+            ->when($search !== '', function ($query) use ($search): void {
+                $query->where(function ($query) use ($search): void {
+                    $query->where('name', 'like', "%{$search}%")
+                        ->orWhere('code', 'like', "%{$search}%")
+                        ->orWhereHas('students', fn ($studentQuery) => $studentQuery->where('name', 'like', "%{$search}%"));
+                });
+            })
             ->orderByDesc('is_active')
             ->orderBy('name')
             ->get();
 
-        return view('classrooms.index', compact('classrooms'));
+        return view('classrooms.index', compact('classrooms', 'search'));
+    }
+
+    /**
+     * Riwayat jurnal belajar sebuah kelas. Karena jurnal tersimpan di level sesi
+     * (Attendance untuk private, AttendanceBatch untuk grup) dan bukan langsung di
+     * kelas, riwayatnya diturunkan lewat murid anggota kelas.
+     */
+    public function journal(Classroom $classroom)
+    {
+        $entries = $this->journalEntries($classroom);
+
+        return view('classrooms.journal', compact('classroom', 'entries'));
+    }
+
+    /**
+     * Kumpulan entri jurnal kelas (terbaru dulu). $limit untuk ambil beberapa saja
+     * (mis. 1 = jurnal terakhir untuk pratinjau di form absen).
+     *
+     * @return \Illuminate\Support\Collection<int, object>
+     */
+    protected function journalEntries(Classroom $classroom, ?int $limit = null): Collection
+    {
+        $studentIds = $classroom->students()->pluck('students.id');
+
+        if ($studentIds->isEmpty()) {
+            return collect();
+        }
+
+        if ($classroom->isPrivate()) {
+            return Attendance::query()
+                ->whereIn('student_id', $studentIds)
+                ->whereNull('attendance_batch_id')
+                ->whereNotNull('learning_journal')
+                ->where('learning_journal', '!=', '')
+                ->with(['teachers:id,name', 'teacher:id,name', 'student:id,name'])
+                ->orderByDesc('date')
+                ->orderByDesc('id')
+                ->when($limit, fn ($query) => $query->limit($limit))
+                ->get()
+                ->map(fn (Attendance $attendance) => (object) [
+                    'id' => 'att-'.$attendance->id,
+                    'date' => $attendance->date,
+                    'journal' => $attendance->learning_journal,
+                    'teachers' => $attendance->teachers->isNotEmpty()
+                        ? $attendance->teachers->pluck('name')->join(', ')
+                        : ($attendance->teacher?->name ?? '-'),
+                    'students' => $attendance->student?->name,
+                ]);
+        }
+
+        // Grup: satu jurnal per sesi (batch) yang dihadiri anggota kelas.
+        $batchIds = Attendance::query()
+            ->whereIn('student_id', $studentIds)
+            ->whereNotNull('attendance_batch_id')
+            ->distinct()
+            ->pluck('attendance_batch_id');
+
+        if ($batchIds->isEmpty()) {
+            return collect();
+        }
+
+        return AttendanceBatch::query()
+            ->whereIn('id', $batchIds)
+            ->whereNotNull('learning_journal')
+            ->where('learning_journal', '!=', '')
+            ->with(['teachers:id,name', 'teacher:id,name', 'attendances.student:id,name'])
+            ->orderByDesc('date')
+            ->orderByDesc('id')
+            ->when($limit, fn ($query) => $query->limit($limit))
+            ->get()
+            ->map(fn (AttendanceBatch $batch) => (object) [
+                'id' => 'batch-'.$batch->id,
+                'date' => $batch->date,
+                'journal' => $batch->learning_journal,
+                'teachers' => $batch->teachers->isNotEmpty()
+                    ? $batch->teachers->pluck('name')->join(', ')
+                    : ($batch->teacher?->name ?? '-'),
+                'students' => $batch->attendances->pluck('student.name')->filter()->join(', '),
+            ]);
     }
 
     public function create()
@@ -119,8 +207,9 @@ class ClassroomController extends Controller
         ]);
         $teachers = User::teachers()->orderBy('name')->get();
         $materialLinks = MaterialLink::query()->where('is_active', true)->orderBy('title')->get();
+        $lastJournal = $this->journalEntries($classroom, 1)->first();
 
-        return view('classrooms.attendance', compact('classroom', 'teachers', 'materialLinks'));
+        return view('classrooms.attendance', compact('classroom', 'teachers', 'materialLinks', 'lastJournal'));
     }
 
     public function storeAttendance(Request $request, Classroom $classroom)

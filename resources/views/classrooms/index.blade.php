@@ -16,6 +16,21 @@
             <div class="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">{{ session('status') }}</div>
         @endif
 
+        <form method="GET" action="{{ route('classrooms.index') }}" class="flex flex-col gap-3 sm:flex-row">
+            <input type="text" name="search" value="{{ $search }}" placeholder="Cari nama kelas, kode, atau nama murid…"
+                class="w-full rounded-xl border-slate-300 text-sm" />
+            <div class="flex gap-2">
+                <button type="submit" class="inline-flex justify-center rounded-xl bg-slate-900 px-4 py-2 text-sm font-medium text-white">Cari</button>
+                @if ($search !== '')
+                    <a href="{{ route('classrooms.index') }}" class="inline-flex justify-center rounded-xl border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700">Reset</a>
+                @endif
+            </div>
+        </form>
+
+        @if ($search !== '')
+            <p class="text-sm text-slate-500">{{ $classrooms->count() }} kelas cocok dengan "{{ $search }}".</p>
+        @endif
+
         @forelse ($classrooms as $classroom)
             <div class="rounded-3xl bg-white p-6 shadow-sm {{ $classroom->is_active ? '' : 'opacity-60' }}">
                 <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
@@ -39,6 +54,7 @@
                         @if ($classroom->is_active)
                             <a href="{{ route('classrooms.attendances.create', $classroom) }}" class="inline-flex justify-center rounded-xl bg-emerald-600 px-4 py-2 text-sm font-medium text-white">Absen Kelas</a>
                         @endif
+                        <a href="{{ route('classrooms.journal', $classroom) }}" class="inline-flex justify-center rounded-xl border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700">Jurnal Kelas</a>
                         @if (auth()->user()->isAdmin())
                             <a href="{{ route('classrooms.edit', $classroom) }}" class="inline-flex justify-center rounded-xl border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700">Edit</a>
                             <form method="POST" action="{{ route('classrooms.toggle-status', $classroom) }}">

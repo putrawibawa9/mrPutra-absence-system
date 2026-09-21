@@ -95,6 +95,7 @@ Route::middleware('auth')->group(function () {
 
     Route::middleware('role:'.User::ROLE_ADMIN.','.User::ROLE_TEACHER)->group(function () {
         Route::get('/classrooms', [ClassroomController::class, 'index'])->name('classrooms.index');
+        Route::get('/classrooms/{classroom}/journal', [ClassroomController::class, 'journal'])->name('classrooms.journal');
         Route::get('/classrooms/{classroom}/attendances/create', [ClassroomController::class, 'createAttendance'])->name('classrooms.attendances.create');
         Route::post('/classrooms/{classroom}/attendances', [ClassroomController::class, 'storeAttendance'])->name('classrooms.attendances.store');
 

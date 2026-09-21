@@ -40,6 +40,19 @@
                 </div>
             </div>
 
+            <div class="mt-5 rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                <div class="flex items-center justify-between gap-3">
+                    <p class="text-xs font-semibold uppercase tracking-wide text-slate-400">Jurnal Terakhir</p>
+                    <a href="{{ route('classrooms.journal', $classroom) }}" class="text-xs font-medium text-emerald-700 hover:underline">Lihat jurnal lengkap &rarr;</a>
+                </div>
+                @if ($lastJournal)
+                    <p class="mt-2 text-xs text-slate-500">{{ $lastJournal->date?->format('d M Y') }} · {{ $lastJournal->teachers }}</p>
+                    <p class="mt-1 whitespace-pre-line text-sm text-slate-700">{{ $lastJournal->journal }}</p>
+                @else
+                    <p class="mt-2 text-sm text-slate-500">Belum ada jurnal untuk kelas ini.</p>
+                @endif
+            </div>
+
             <div class="mt-5">
                 <x-input-label for="learning_journal" value="Jurnal Belajar *" />
                 <textarea id="learning_journal" name="learning_journal" rows="3" required class="mt-1 block w-full rounded-xl border-slate-300">{{ old('learning_journal') }}</textarea>
