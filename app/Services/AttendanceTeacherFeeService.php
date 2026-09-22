@@ -6,6 +6,7 @@ use App\Models\Attendance;
 use App\Models\AttendanceBatch;
 use App\Models\Expense;
 use App\Models\ExpenseCategory;
+use App\Models\ExpenseItem;
 use App\Models\User;
 use Illuminate\Support\Collection;
 
@@ -17,6 +18,7 @@ class AttendanceTeacherFeeService
     public function syncAttendance(Attendance $attendance, Collection $teacherIds, int $actorId): void
     {
         $category = $this->category();
+        $item = $this->item($category);
         $teacherIds = $teacherIds
             ->filter()
             ->map(fn ($teacherId) => (int) $teacherId)
@@ -38,6 +40,7 @@ class AttendanceTeacherFeeService
                 ],
                 [
                     'expense_category_id' => $category->id,
+                    'expense_item_id' => $item->id,
                     'attendance_batch_id' => null,
                     'created_by_user_id' => $actorId,
                     'title' => 'Fee guru - '.($teacher?->name ?? 'Teacher').' - '.$attendance->student->name,
@@ -52,6 +55,7 @@ class AttendanceTeacherFeeService
     public function syncBatch(AttendanceBatch $attendanceBatch, Collection $teacherIds, int $actorId): void
     {
         $category = $this->category();
+        $item = $this->item($category);
         $teacherIds = $teacherIds
             ->filter()
             ->map(fn ($teacherId) => (int) $teacherId)
@@ -73,6 +77,7 @@ class AttendanceTeacherFeeService
                 ],
                 [
                     'expense_category_id' => $category->id,
+                    'expense_item_id' => $item->id,
                     'attendance_id' => null,
                     'created_by_user_id' => $actorId,
                     'title' => 'Fee guru - '.($teacher?->name ?? 'Teacher').' - '.($attendanceBatch->title ?: 'Group Class'),
@@ -172,10 +177,35 @@ class AttendanceTeacherFeeService
 
     protected function category(): ExpenseCategory
     {
-        return ExpenseCategory::query()->firstOrCreate(
+        $category = ExpenseCategory::query()->firstOrCreate(
             ['name' => static::CATEGORY_NAME],
             [
                 'notes' => 'Expense otomatis untuk fee guru per pertemuan.',
+                'is_active' => true,
+                'cost_behavior' => ExpenseCategory::COST_VARIABLE,
+                'is_system' => true,
+            ]
+        );
+
+        // Pastikan flag sistem menyala walau kategori sudah ada sebelumnya.
+        if (! $category->is_system) {
+            $category->forceFill(['is_system' => true])->save();
+        }
+
+        return $category;
+    }
+
+    /**
+     * Item master "Fee Guru" (di kategori sistem). Fee guru otomatis selalu
+     * memakai item ini agar konsisten dengan kategorisasi berbasis item.
+     */
+    protected function item(ExpenseCategory $category): ExpenseItem
+    {
+        return ExpenseItem::query()->firstOrCreate(
+            ['name' => static::CATEGORY_NAME],
+            [
+                'expense_category_id' => $category->id,
+                'keywords' => null,
                 'is_active' => true,
             ]
         );

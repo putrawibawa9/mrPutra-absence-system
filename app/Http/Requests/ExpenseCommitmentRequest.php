@@ -6,7 +6,7 @@ use App\Models\ExpenseItem;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Validator;
 
-class ExpenseRequest extends FormRequest
+class ExpenseCommitmentRequest extends FormRequest
 {
     public function authorize(): bool
     {
@@ -16,12 +16,11 @@ class ExpenseRequest extends FormRequest
     public function rules(): array
     {
         return [
-            // Kategori TIDAK diminta dari user — selalu diturunkan dari item.
             'expense_item_id' => ['required', 'integer', 'exists:expense_items,id'],
-            // Judul kini opsional (hanya keterangan tambahan).
-            'title' => ['nullable', 'string', 'max:255'],
-            'amount' => ['required', 'integer', 'min:1'],
-            'expense_date' => ['required', 'date'],
+            'name' => ['required', 'string', 'max:255'],
+            'total_amount' => ['required', 'integer', 'min:1'],
+            'months' => ['required', 'integer', 'min:2', 'max:60'],
+            'start_date' => ['required', 'date'],
             'notes' => ['nullable', 'string'],
         ];
     }
@@ -37,16 +36,12 @@ class ExpenseRequest extends FormRequest
 
             $item = ExpenseItem::query()->with('category')->find($itemId);
 
-            if (! $item) {
-                return; // ditangani rule exists
-            }
-
-            if (! $item->is_active) {
+            if ($item && ! $item->is_active) {
                 $validator->errors()->add('expense_item_id', 'Item ini sudah tidak aktif.');
             }
 
-            if ($item->category?->isSystem()) {
-                $validator->errors()->add('expense_item_id', 'Item kategori sistem (mis. Fee Guru) tidak bisa diinput manual.');
+            if ($item && $item->category?->isSystem()) {
+                $validator->errors()->add('expense_item_id', 'Item kategori sistem tidak bisa dibuat komitmen.');
             }
         });
     }

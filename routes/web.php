@@ -5,7 +5,9 @@ use App\Http\Controllers\CashFlowController;
 use App\Http\Controllers\ClassroomController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\ExpenseCategoryController;
+use App\Http\Controllers\ExpenseCommitmentController;
 use App\Http\Controllers\ExpenseController;
+use App\Http\Controllers\ExpenseItemController;
 use App\Http\Controllers\FeedbackController;
 use App\Http\Controllers\FollowUpController;
 use App\Http\Controllers\LearningModuleController;
@@ -67,6 +69,9 @@ Route::middleware('auth')->group(function () {
         Route::resource('teacher-schedules', TeacherScheduleController::class)->except(['show']);
         Route::resource('teacher-availabilities', TeacherAvailabilityController::class)->except(['show']);
         Route::resource('expense-categories', ExpenseCategoryController::class)->except(['show']);
+        Route::patch('/expense-items/{expense_item}/toggle-status', [ExpenseItemController::class, 'toggleStatus'])->name('expense-items.toggle-status');
+        Route::resource('expense-items', ExpenseItemController::class)->except(['show']);
+        Route::resource('expense-commitments', ExpenseCommitmentController::class)->only(['index', 'create', 'store', 'destroy']);
         Route::resource('expenses', ExpenseController::class)->except(['show']);
         Route::get('/registrations', [RegistrationController::class, 'index'])->name('registrations.index');
         Route::post('/registrations/{registration}/accept', [RegistrationController::class, 'accept'])->name('registrations.accept');
@@ -82,6 +87,7 @@ Route::middleware('auth')->group(function () {
         Route::get('/cash-flow', CashFlowController::class)->name('cash-flow.index');
         Route::get('/reports/ltv', [ReportController::class, 'ltv'])->name('reports.ltv');
         Route::get('/reports/opex', [ReportController::class, 'opex'])->name('reports.opex');
+        Route::get('/reports/review', [ReportController::class, 'review'])->name('reports.review');
         Route::get('/payments', [PaymentController::class, 'index'])->name('payments.index');
         Route::get('/payments/create', [PaymentController::class, 'create'])->name('payments.create');
         Route::post('/payments', [PaymentController::class, 'store'])->name('payments.store');

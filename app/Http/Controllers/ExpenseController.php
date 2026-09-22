@@ -5,9 +5,9 @@ namespace App\Http\Controllers;
 use App\Http\Requests\ExpenseRequest;
 use App\Models\Expense;
 use App\Models\ExpenseCategory;
+use App\Models\ExpenseItem;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Str;
+use Illuminate\Support\Carbon;
 
 class ExpenseController extends Controller
 {
@@ -23,7 +23,7 @@ class ExpenseController extends Controller
         ]);
 
         $expenses = Expense::query()
-            ->with(['category', 'creator'])
+            ->with(['category', 'creator', 'item'])
             ->when($filters['search'] ?? null, function ($query, $search) {
                 $search = trim((string) $search);
 
@@ -31,6 +31,7 @@ class ExpenseController extends Controller
                     $query->where('title', 'like', "%{$search}%")
                         ->orWhere('notes', 'like', "%{$search}%")
                         ->orWhereHas('category', fn ($categoryQuery) => $categoryQuery->where('name', 'like', "%{$search}%"))
+                        ->orWhereHas('item', fn ($itemQuery) => $itemQuery->where('name', 'like', "%{$search}%"))
                         ->orWhereHas('creator', fn ($creatorQuery) => $creatorQuery->where('name', 'like', "%{$search}%"));
                 });
             })
@@ -51,71 +52,66 @@ class ExpenseController extends Controller
 
     public function create()
     {
-        $expenseCategories = ExpenseCategory::query()->active()->orderBy('name')->get();
-
-        return view('expenses.create', compact('expenseCategories'));
+        return view('expenses.create', ['expenseItems' => $this->selectableItems()]);
     }
 
     public function store(ExpenseRequest $request)
     {
-        $months = max(1, (int) $request->integer('installment_months'));
-        $total = $request->integer('amount');
-        $date = $request->date('expense_date');
+        $item = ExpenseItem::query()->with('category')->findOrFail($request->integer('expense_item_id'));
 
-        $base = [
-            'expense_category_id' => $request->integer('expense_category_id'),
-            'created_by_user_id' => $request->user()->id,
-            'title' => $request->string('title')->toString(),
-            'notes' => $request->string('notes')->toString(),
-        ];
+        // Warning (tidak memblokir): keyword judul mengarah ke item lain, atau
+        // kemungkinan dobel untuk item kategori fixed dalam ±20 hari.
+        if (! $request->boolean('confirmed')) {
+            $warnings = $this->buildWarnings($item, $request->string('title')->toString(), $request->date('expense_date'));
 
-        if ($months <= 1) {
-            Expense::create(array_merge($base, [
-                'amount' => $total,
-                'expense_date' => $date,
-            ]));
-
-            return redirect()->route('expenses.index')->with('status', 'Expense berhasil ditambahkan.');
+            if ($warnings !== []) {
+                return redirect()->route('expenses.create')
+                    ->withInput()
+                    ->with('expense_warnings', $warnings);
+            }
         }
 
-        // Cicilan: pecah total jadi porsi bulanan (sisa pembagian ditaruh di
-        // bulan-bulan awal supaya jumlahnya tetap sama persis dengan total).
-        $per = intdiv($total, $months);
-        $remainder = $total % $months;
-        $group = (string) Str::uuid();
+        Expense::create([
+            // Kategori SELALU dari item, tidak pernah dari request.
+            'expense_category_id' => $item->expense_category_id,
+            'expense_item_id' => $item->id,
+            'created_by_user_id' => $request->user()->id,
+            'title' => $request->string('title')->toString() ?: $item->name,
+            'amount' => $request->integer('amount'),
+            'expense_date' => $request->date('expense_date'),
+            'notes' => $request->string('notes')->toString() ?: null,
+        ]);
 
-        DB::transaction(function () use ($base, $months, $per, $remainder, $date, $group): void {
-            for ($i = 0; $i < $months; $i++) {
-                Expense::create(array_merge($base, [
-                    'title' => $base['title'].' (Cicilan '.($i + 1).'/'.$months.')',
-                    'amount' => $per + ($i < $remainder ? 1 : 0),
-                    'expense_date' => $date->copy()->addMonthsNoOverflow($i),
-                    'amortization_group' => $group,
-                    'amortization_index' => $i + 1,
-                    'amortization_total' => $months,
-                ]));
-            }
-        });
-
-        return redirect()->route('expenses.index')
-            ->with('status', 'Expense dibagi jadi '.$months.' cicilan bulanan.');
+        return redirect()->route('expenses.index')->with('status', 'Expense berhasil ditambahkan.');
     }
 
     public function edit(Expense $expense)
     {
-        $expenseCategories = ExpenseCategory::query()->active()->orderBy('name')->get();
-
-        return view('expenses.edit', compact('expense', 'expenseCategories'));
+        return view('expenses.edit', [
+            'expense' => $expense->load('item.category'),
+            'expenseItems' => $this->selectableItems(),
+        ]);
     }
 
     public function update(ExpenseRequest $request, Expense $expense)
     {
+        $item = ExpenseItem::query()->with('category')->findOrFail($request->integer('expense_item_id'));
+
+        // Baris cicilan (amortization_group) tidak boleh diganti item/kategorinya
+        // satu per satu — harus lewat komitmen untuk seluruh grup.
+        if ($expense->amortization_group && (int) $expense->expense_item_id !== $item->id) {
+            return back()->withInput()->withErrors([
+                'expense_item_id' => 'Baris cicilan tidak bisa ganti item/kategori sendiri. Ubah lewat Komitmen (berlaku untuk seluruh grup).',
+            ]);
+        }
+
         $expense->update([
-            'expense_category_id' => $request->integer('expense_category_id'),
-            'title' => $request->string('title')->toString(),
+            'expense_category_id' => $item->expense_category_id,
+            'expense_item_id' => $item->id,
+            'title' => $request->string('title')->toString() ?: $item->name,
             'amount' => $request->integer('amount'),
             'expense_date' => $request->date('expense_date'),
-            'notes' => $request->string('notes')->toString(),
+            'notes' => $request->string('notes')->toString() ?: null,
         ]);
 
         return redirect()->route('expenses.index')->with('status', 'Expense berhasil diperbarui.');
@@ -126,5 +122,60 @@ class ExpenseController extends Controller
         $expense->delete();
 
         return redirect()->route('expenses.index')->with('status', 'Expense berhasil dihapus.');
+    }
+
+    /**
+     * Item yang boleh dipilih di form (aktif & kategori non-sistem), plus kategori
+     * ter-load untuk ditampilkan read-only mengikuti item.
+     */
+    protected function selectableItems()
+    {
+        return ExpenseItem::query()
+            ->selectable()
+            ->with('category:id,name,cost_behavior')
+            ->orderBy('name')
+            ->get();
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    protected function buildWarnings(ExpenseItem $item, string $title, Carbon $date): array
+    {
+        $warnings = [];
+        $title = trim($title);
+
+        // 1) Keyword item lain cocok dengan judul → mungkin salah pilih item.
+        if ($title !== '') {
+            $lowerTitle = mb_strtolower($title);
+            $others = ExpenseItem::query()
+                ->selectable()
+                ->where('id', '!=', $item->id)
+                ->get();
+
+            foreach ($others as $other) {
+                foreach ($other->keywordList() as $keyword) {
+                    if ($keyword !== '' && str_contains($lowerTitle, $keyword)) {
+                        $warnings[] = 'Judul "'.$title.'" mengandung kata "'.$keyword.'" yang biasanya milik item "'.$other->name.'". Pastikan item sudah benar.';
+                        break 2;
+                    }
+                }
+            }
+        }
+
+        // 2) Deteksi dobel: item kategori fixed sudah tercatat dalam ±20 hari.
+        if ($item->category && $item->category->cost_behavior === ExpenseCategory::COST_FIXED) {
+            $exists = Expense::query()
+                ->where('expense_item_id', $item->id)
+                ->whereDate('expense_date', '>=', $date->copy()->subDays(20)->toDateString())
+                ->whereDate('expense_date', '<=', $date->copy()->addDays(20)->toDateString())
+                ->exists();
+
+            if ($exists) {
+                $warnings[] = 'Item "'.$item->name.'" (biaya tetap) sudah tercatat dalam ±20 hari terakhir. Cek apakah ini pembayaran dobel.';
+            }
+        }
+
+        return $warnings;
     }
 }

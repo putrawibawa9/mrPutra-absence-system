@@ -135,14 +135,14 @@ class CashFlowMonitoringTest extends TestCase
             'notes' => 'Biaya cetak modul',
         ]);
 
-        Attendance::query()->create([
+        $meetingOne = Attendance::query()->create([
             'student_id' => $student->id,
             'teacher_id' => $teacher->id,
             'payment_id' => $packagePayment->id,
             'date' => '2026-04-11',
             'learning_journal' => 'Meeting one',
         ]);
-        Attendance::query()->create([
+        $meetingTwo = Attendance::query()->create([
             'student_id' => $student->id,
             'teacher_id' => $teacher->id,
             'payment_id' => $packagePayment->id,
@@ -151,18 +151,20 @@ class CashFlowMonitoringTest extends TestCase
         ]);
 
         // Fee guru otomatis untuk kedua pertemuan (Rp 40.000 per pertemuan).
+        // Fee guru selalu terkait attendance (ditegakkan di level model).
         $feeCategory = ExpenseCategory::query()->create([
             'name' => 'Fee Guru',
             'is_active' => true,
         ]);
-        foreach (['2026-04-11', '2026-04-18'] as $feeDate) {
+        foreach ([$meetingOne, $meetingTwo] as $meeting) {
             Expense::query()->create([
                 'expense_category_id' => $feeCategory->id,
                 'created_by_user_id' => $admin->id,
                 'teacher_user_id' => $teacher->id,
+                'attendance_id' => $meeting->id,
                 'title' => 'Fee guru',
                 'amount' => 40000,
-                'expense_date' => $feeDate,
+                'expense_date' => $meeting->date->toDateString(),
             ]);
         }
 

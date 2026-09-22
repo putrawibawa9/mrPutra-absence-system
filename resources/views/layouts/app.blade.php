@@ -62,9 +62,12 @@
                     'items' => [
                         ['label' => 'Payments', 'route' => 'payments.index', 'pattern' => 'payments.*'],
                         ['label' => 'Expenses', 'route' => 'expenses.index', 'pattern' => 'expenses.*'],
+                        ['label' => 'Item Expense', 'route' => 'expense-items.index', 'pattern' => 'expense-items.*'],
+                        ['label' => 'Komitmen / Cicilan', 'route' => 'expense-commitments.index', 'pattern' => 'expense-commitments.*'],
                         ['label' => 'Expense Categories', 'route' => 'expense-categories.index', 'pattern' => 'expense-categories.*'],
                         ['label' => 'Cash Flow', 'route' => 'cash-flow.index', 'pattern' => 'cash-flow.*'],
                         ['label' => 'Monitoring OpEx', 'route' => 'reports.opex', 'pattern' => 'reports.opex'],
+                        ['label' => 'Review Bulanan', 'route' => 'reports.review', 'pattern' => 'reports.review'],
                         ['label' => 'LTV Murid', 'route' => 'reports.ltv', 'pattern' => 'reports.ltv'],
                     ],
                 ],

@@ -10,6 +10,7 @@ use App\Models\Student;
 use App\Models\Token;
 use App\Services\AttendanceTeacherFeeService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 
 class ReportController extends Controller
 {
@@ -193,6 +194,100 @@ class ReportController extends Controller
             'breakEvenMeetings' => $breakEvenMeetings,
             'classEntries' => $classEntries,
             'leakCount' => $leakCount,
+        ]);
+    }
+
+    /**
+     * Review Bulanan: menyorot potensi salah kategori —
+     *  (a) expense tanpa item, (b) item yang tercatat di >1 kategori,
+     *  (c) kategori fixed yang naik >30% dari rata-rata 3 bulan sebelumnya.
+     */
+    public function review(Request $request)
+    {
+        $filters = $request->validate([
+            'date_from' => ['nullable', 'date'],
+            'date_to' => ['nullable', 'date', 'after_or_equal:date_from'],
+        ]);
+
+        $dateFrom = $filters['date_from'] ?? now()->startOfMonth()->toDateString();
+        $dateTo = $filters['date_to'] ?? now()->endOfMonth()->toDateString();
+
+        // (a) Expense tanpa item pada periode.
+        $withoutItem = Expense::query()
+            ->with('category')
+            ->whereNull('expense_item_id')
+            ->whereDate('expense_date', '>=', $dateFrom)
+            ->whereDate('expense_date', '<=', $dateTo)
+            ->orderByDesc('expense_date')
+            ->get();
+
+        // (b) Item yang tercatat di lebih dari satu kategori (seluruh riwayat).
+        $multiCategory = Expense::query()
+            ->whereNotNull('expense_item_id')
+            ->select('expense_item_id')
+            ->selectRaw('COUNT(DISTINCT expense_category_id) as category_count')
+            ->groupBy('expense_item_id')
+            ->havingRaw('COUNT(DISTINCT expense_category_id) > 1')
+            ->with('item:id,name')
+            ->get()
+            ->map(function ($row) {
+                $categories = Expense::query()
+                    ->where('expense_item_id', $row->expense_item_id)
+                    ->with('category:id,name')
+                    ->get()
+                    ->pluck('category.name')
+                    ->filter()
+                    ->unique()
+                    ->values();
+
+                return (object) [
+                    'item' => $row->item?->name ?? ('Item #'.$row->expense_item_id),
+                    'categories' => $categories->join(', '),
+                    'category_count' => (int) $row->category_count,
+                ];
+            });
+
+        // (c) Kategori fixed naik >30% dari rata-rata 3 bulan sebelumnya.
+        $periodStart = Carbon::parse($dateFrom)->startOfMonth();
+        $prevStart = $periodStart->copy()->subMonths(3);
+        $prevEnd = $periodStart->copy()->subDay();
+
+        $fixedSpikes = ExpenseCategory::query()
+            ->where('cost_behavior', ExpenseCategory::COST_FIXED)
+            ->orderBy('name')
+            ->get()
+            ->map(function (ExpenseCategory $category) use ($dateFrom, $dateTo, $prevStart, $prevEnd) {
+                $current = (int) Expense::query()
+                    ->where('expense_category_id', $category->id)
+                    ->whereDate('expense_date', '>=', $dateFrom)
+                    ->whereDate('expense_date', '<=', $dateTo)
+                    ->sum('amount');
+
+                $prevTotal = (int) Expense::query()
+                    ->where('expense_category_id', $category->id)
+                    ->whereDate('expense_date', '>=', $prevStart->toDateString())
+                    ->whereDate('expense_date', '<=', $prevEnd->toDateString())
+                    ->sum('amount');
+                $prevAvg = (int) round($prevTotal / 3);
+
+                $pct = $prevAvg > 0 ? round((($current - $prevAvg) / $prevAvg) * 100, 1) : null;
+
+                return (object) [
+                    'name' => $category->name,
+                    'current' => $current,
+                    'prev_avg' => $prevAvg,
+                    'pct' => $pct,
+                    'is_spike' => $prevAvg > 0 && $current > $prevAvg * 1.3,
+                ];
+            })
+            ->filter(fn ($row) => $row->is_spike)
+            ->values();
+
+        return view('reports.review', [
+            'filters' => ['date_from' => $dateFrom, 'date_to' => $dateTo],
+            'withoutItem' => $withoutItem,
+            'multiCategory' => $multiCategory,
+            'fixedSpikes' => $fixedSpikes,
         ]);
     }
 
