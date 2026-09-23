@@ -229,6 +229,15 @@
                 </div>
 
                 <div class="md:col-span-2">
+                    @php
+                        $coTeacherRows = old('co_teacher_id')
+                            ? collect(old('co_teacher_id'))->map(fn ($id, $i) => ['id' => $id, 'fee' => old('co_teacher_fee')[$i] ?? ''])->all()
+                            : $attendanceBatch->teachers->filter(fn ($t) => ($t->pivot->role ?? null) === 'co_teacher')->map(fn ($t) => ['id' => $t->id, 'fee' => $t->pivot->fee_amount])->values()->all();
+                    @endphp
+                    @include('attendances._co_teacher', ['teachers' => $teachers, 'coTeacherRows' => $coTeacherRows])
+                </div>
+
+                <div class="md:col-span-2">
                     <x-input-label for="group_notes" value="Notes (optional)" />
                     <textarea id="group_notes" name="notes" rows="3" class="mt-1 block w-full rounded-xl border-slate-300">{{ old('notes', $attendanceBatch->notes) }}</textarea>
                     <x-input-error :messages="$errors->get('notes')" class="mt-2" />

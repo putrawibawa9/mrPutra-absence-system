@@ -9,11 +9,13 @@ use App\Models\ExpenseCategory;
 use App\Models\ExpenseItem;
 use App\Models\User;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
 
 class AttendanceTeacherFeeService
 {
     public const FEE_PER_MEETING = 40000;
     public const CATEGORY_NAME = 'Fee Guru';
+    public const ROLE_CO_TEACHER = 'co_teacher';
 
     public function syncAttendance(Attendance $attendance, Collection $teacherIds, int $actorId): void
     {
@@ -30,8 +32,29 @@ class AttendanceTeacherFeeService
             ->whereNotIn('teacher_user_id', $teacherIds)
             ->delete();
 
+        $pivots = DB::table('attendance_teacher')
+            ->where('attendance_id', $attendance->id)
+            ->get()
+            ->keyBy('teacher_id');
+
         foreach ($teacherIds as $teacherId) {
-            $teacher = $attendance->teachers->firstWhere('id', $teacherId) ?? User::query()->find($teacherId);
+            $pivot = $pivots->get($teacherId);
+            $amount = $this->resolveFee($pivot);
+            $isCoTeacher = $pivot && $pivot->role === self::ROLE_CO_TEACHER;
+
+            // Co-teacher yang salary-nya belum ditentukan (0) tidak menghasilkan
+            // expense — tapi tetap tercatat sebagai co-teacher di pivot.
+            if ($amount <= 0) {
+                Expense::query()
+                    ->where('attendance_id', $attendance->id)
+                    ->where('teacher_user_id', $teacherId)
+                    ->delete();
+
+                continue;
+            }
+
+            $teacher = ($attendance->relationLoaded('teachers') ? $attendance->teachers->firstWhere('id', $teacherId) : null)
+                ?? User::query()->find($teacherId);
 
             Expense::query()->updateOrCreate(
                 [
@@ -43,10 +66,10 @@ class AttendanceTeacherFeeService
                     'expense_item_id' => $item->id,
                     'attendance_batch_id' => null,
                     'created_by_user_id' => $actorId,
-                    'title' => 'Fee guru - '.($teacher?->name ?? 'Teacher').' - '.$attendance->student->name,
-                    'amount' => static::FEE_PER_MEETING,
+                    'title' => ($isCoTeacher ? 'Fee co-teacher - ' : 'Fee guru - ').($teacher?->name ?? 'Teacher').' - '.$attendance->student->name,
+                    'amount' => $amount,
                     'expense_date' => $attendance->date,
-                    'notes' => 'Otomatis dari attendance siswa.',
+                    'notes' => $isCoTeacher ? 'Fee co-teacher (custom) dari attendance.' : 'Otomatis dari attendance siswa.',
                 ]
             );
         }
@@ -67,8 +90,27 @@ class AttendanceTeacherFeeService
             ->whereNotIn('teacher_user_id', $teacherIds)
             ->delete();
 
+        $pivots = DB::table('attendance_batch_teacher')
+            ->where('attendance_batch_id', $attendanceBatch->id)
+            ->get()
+            ->keyBy('teacher_id');
+
         foreach ($teacherIds as $teacherId) {
-            $teacher = $attendanceBatch->teachers->firstWhere('id', $teacherId) ?? User::query()->find($teacherId);
+            $pivot = $pivots->get($teacherId);
+            $amount = $this->resolveFee($pivot);
+            $isCoTeacher = $pivot && $pivot->role === self::ROLE_CO_TEACHER;
+
+            if ($amount <= 0) {
+                Expense::query()
+                    ->where('attendance_batch_id', $attendanceBatch->id)
+                    ->where('teacher_user_id', $teacherId)
+                    ->delete();
+
+                continue;
+            }
+
+            $teacher = ($attendanceBatch->relationLoaded('teachers') ? $attendanceBatch->teachers->firstWhere('id', $teacherId) : null)
+                ?? User::query()->find($teacherId);
 
             Expense::query()->updateOrCreate(
                 [
@@ -80,13 +122,26 @@ class AttendanceTeacherFeeService
                     'expense_item_id' => $item->id,
                     'attendance_id' => null,
                     'created_by_user_id' => $actorId,
-                    'title' => 'Fee guru - '.($teacher?->name ?? 'Teacher').' - '.($attendanceBatch->title ?: 'Group Class'),
-                    'amount' => static::FEE_PER_MEETING,
+                    'title' => ($isCoTeacher ? 'Fee co-teacher - ' : 'Fee guru - ').($teacher?->name ?? 'Teacher').' - '.($attendanceBatch->title ?: 'Group Class'),
+                    'amount' => $amount,
                     'expense_date' => $attendanceBatch->date,
-                    'notes' => 'Otomatis dari attendance batch.',
+                    'notes' => $isCoTeacher ? 'Fee co-teacher (custom) dari attendance batch.' : 'Otomatis dari attendance batch.',
                 ]
             );
         }
+    }
+
+    /**
+     * Fee efektif dari baris pivot: fee_amount NULL = fee standar; selain itu
+     * pakai nilai custom (bisa 0 = belum ada salary).
+     */
+    private function resolveFee(?object $pivot): int
+    {
+        if ($pivot && $pivot->fee_amount !== null) {
+            return (int) $pivot->fee_amount;
+        }
+
+        return static::FEE_PER_MEETING;
     }
 
     public function backfill(?int $actorId = null): array
@@ -137,7 +192,11 @@ class AttendanceTeacherFeeService
 
     public function hasCompleteAttendanceFee(Attendance $attendance): bool
     {
-        $teacherIds = $attendance->teachers->pluck('id')
+        // Guru yang MEMBUTUHKAN fee expense: fee_amount null (pakai standar) atau > 0.
+        // Co-teacher dengan fee 0 (belum ditentukan) tidak dihitung.
+        $teacherIds = $attendance->teachers
+            ->filter(fn ($teacher) => $this->pivotNeedsFee($teacher->pivot ?? null))
+            ->pluck('id')
             ->whenEmpty(fn ($teacherIds) => $attendance->teacher_id ? $teacherIds->push($attendance->teacher_id) : $teacherIds)
             ->unique()
             ->values();
@@ -155,9 +214,23 @@ class AttendanceTeacherFeeService
         return $teacherIds->diff($expenseTeacherIds)->isEmpty();
     }
 
+    /** Baris pivot butuh fee bila fee_amount null (standar) atau > 0. */
+    private function pivotNeedsFee($pivot): bool
+    {
+        if (! $pivot) {
+            return true;
+        }
+
+        $fee = $pivot->fee_amount ?? null;
+
+        return $fee === null || (int) $fee > 0;
+    }
+
     public function hasCompleteBatchFee(AttendanceBatch $attendanceBatch): bool
     {
-        $teacherIds = $attendanceBatch->teachers->pluck('id')
+        $teacherIds = $attendanceBatch->teachers
+            ->filter(fn ($teacher) => $this->pivotNeedsFee($teacher->pivot ?? null))
+            ->pluck('id')
             ->whenEmpty(fn ($teacherIds) => $attendanceBatch->teacher_id ? $teacherIds->push($attendanceBatch->teacher_id) : $teacherIds)
             ->unique()
             ->values();

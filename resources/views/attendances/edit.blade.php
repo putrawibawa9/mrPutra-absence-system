@@ -214,6 +214,15 @@
                 </div>
 
                 <div class="md:col-span-2">
+                    @php
+                        $coTeacherRows = old('co_teacher_id')
+                            ? collect(old('co_teacher_id'))->map(fn ($id, $i) => ['id' => $id, 'fee' => old('co_teacher_fee')[$i] ?? ''])->all()
+                            : $attendance->teachers->filter(fn ($t) => ($t->pivot->role ?? null) === 'co_teacher')->map(fn ($t) => ['id' => $t->id, 'fee' => $t->pivot->fee_amount])->values()->all();
+                    @endphp
+                    @include('attendances._co_teacher', ['teachers' => $teachers, 'coTeacherRows' => $coTeacherRows])
+                </div>
+
+                <div class="md:col-span-2">
                     <x-input-label for="learning_journal" value="Learning Journal" />
                     <textarea id="learning_journal" name="learning_journal" rows="5" class="mt-1 block w-full rounded-xl border-slate-300" required>{{ old('learning_journal', $attendance->learning_journal) }}</textarea>
                     <x-input-error :messages="$errors->get('learning_journal')" class="mt-2" />

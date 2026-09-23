@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Concerns\SyncsSessionTeachers;
 use App\Http\Requests\AttendanceRequest;
 use App\Http\Requests\AttendanceUpdateRequest;
 use App\Models\Attendance;
@@ -22,6 +23,8 @@ use Illuminate\Validation\ValidationException;
 
 class AttendanceController extends Controller
 {
+    use SyncsSessionTeachers;
+
     public function __construct(
         protected AttendanceTeacherFeeService $teacherFeeService,
         protected TokenService $tokenService,
@@ -90,7 +93,7 @@ class AttendanceController extends Controller
                 if ($first->attendance_batch_id) {
                     $studentNames = $group->pluck('student.name')->sort()->values();
                     $teacherNames = collect([$first->teacher->name])
-                        ->merge($first->batch?->teachers?->pluck('name') ?? collect())
+                        ->merge(($first->batch?->teachers ?? collect())->map(fn ($t) => $t->name.(($t->pivot->role ?? null) === 'co_teacher' ? ' (co)' : '')))
                         ->filter()
                         ->unique()
                         ->values();
@@ -126,7 +129,7 @@ class AttendanceController extends Controller
                 }
 
                 $teacherNames = collect([$first->teacher->name])
-                    ->merge($first->teachers->pluck('name'))
+                    ->merge($first->teachers->map(fn ($t) => $t->name.(($t->pivot->role ?? null) === 'co_teacher' ? ' (co)' : '')))
                     ->filter()
                     ->unique()
                     ->values();
@@ -268,10 +271,11 @@ class AttendanceController extends Controller
 
             $attendance = Attendance::create($attendancePayload);
 
-            $attendance->teachers()->sync($teacherIds);
+            $coTeachers = $this->parseCoTeachers($request, $teacherIds);
+            $attendance->teachers()->sync($this->teacherSyncPayload($teacherIds, $coTeachers));
             $attendance->materialLinks()->sync($materialLinkIds);
             $attendance->load(['student', 'teachers']);
-            $this->teacherFeeService->syncAttendance($attendance, $teacherIds, $request->user()->id);
+            $this->teacherFeeService->syncAttendance($attendance, $teacherIds->merge(array_keys($coTeachers))->unique()->values(), $request->user()->id);
 
             if ($payment) {
                 $this->tokenService->consume($payment, $attendance, $request->date('date'));
@@ -320,10 +324,11 @@ class AttendanceController extends Controller
 
             $attendance->update($attendancePayload);
 
-            $attendance->teachers()->sync($teacherIds);
+            $coTeachers = $this->parseCoTeachers($request, $teacherIds);
+            $attendance->teachers()->sync($this->teacherSyncPayload($teacherIds, $coTeachers));
             $attendance->materialLinks()->sync($materialLinkIds);
             $attendance->load(['student', 'teachers']);
-            $this->teacherFeeService->syncAttendance($attendance, $teacherIds, $request->user()->id);
+            $this->teacherFeeService->syncAttendance($attendance, $teacherIds->merge(array_keys($coTeachers))->unique()->values(), $request->user()->id);
 
             // Rebalance the token ledger only when the linked payment changed.
             if (($oldPayment?->id) !== ($newPayment?->id)) {
@@ -381,7 +386,9 @@ class AttendanceController extends Controller
 
             $batch = AttendanceBatch::create($batchPayload);
 
-            $batch->teachers()->sync($teacherIds);
+            $coTeachers = $this->parseCoTeachers($request, $teacherIds);
+            $allTeacherIds = $teacherIds->merge(array_keys($coTeachers))->unique()->values();
+            $batch->teachers()->sync($this->teacherSyncPayload($teacherIds, $coTeachers));
             $batch->materialLinks()->sync($groupMaterialLinkIds);
             $batch->load('teachers');
 
@@ -418,7 +425,7 @@ class AttendanceController extends Controller
                 }
             }
 
-            $this->teacherFeeService->syncBatch($batch, $teacherIds, $request->user()->id);
+            $this->teacherFeeService->syncBatch($batch, $allTeacherIds, $request->user()->id);
         });
 
         return redirect()->route('attendances.index')->with('status', 'Group attendance saved and sessions deducted for selected students.');
@@ -466,8 +473,11 @@ class AttendanceController extends Controller
                 $batchPayload['teaching_minutes'] = $request->integer('teaching_minutes');
             }
 
+            $coTeachers = $this->parseCoTeachers($request, $teacherIds);
+            $allTeacherIds = $teacherIds->merge(array_keys($coTeachers))->unique()->values();
+
             $attendanceBatch->update($batchPayload);
-            $attendanceBatch->teachers()->sync($teacherIds);
+            $attendanceBatch->teachers()->sync($this->teacherSyncPayload($teacherIds, $coTeachers));
             $attendanceBatch->materialLinks()->sync($groupMaterialLinkIds);
             $attendanceBatch->load('teachers');
 
@@ -529,7 +539,7 @@ class AttendanceController extends Controller
                 }
             }
 
-            $this->teacherFeeService->syncBatch($attendanceBatch, $teacherIds, $request->user()->id);
+            $this->teacherFeeService->syncBatch($attendanceBatch, $allTeacherIds, $request->user()->id);
         });
 
         return redirect()->route('attendances.index')->with('status', 'Group attendance updated successfully.');

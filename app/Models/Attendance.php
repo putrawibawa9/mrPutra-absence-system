@@ -40,8 +40,15 @@ class Attendance extends Model
     public function teachers(): BelongsToMany
     {
         return $this->belongsToMany(User::class, 'attendance_teacher', 'attendance_id', 'teacher_id')
+            ->withPivot(['role', 'fee_amount'])
             ->withTimestamps()
             ->orderBy('name');
+    }
+
+    /** Guru pendamping (co-teacher/trainee) pada pertemuan ini. */
+    public function coTeachers(): BelongsToMany
+    {
+        return $this->teachers()->wherePivot('role', 'co_teacher');
     }
 
     public function payment(): BelongsTo

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Concerns\SyncsSessionTeachers;
 use App\Http\Requests\ClassroomRequest;
 use App\Models\Attendance;
 use App\Models\AttendanceBatch;
@@ -20,6 +21,8 @@ use Illuminate\Validation\ValidationException;
 
 class ClassroomController extends Controller
 {
+    use SyncsSessionTeachers;
+
     public function __construct(
         protected AttendanceTeacherFeeService $teacherFeeService,
         protected TokenService $tokenService,
@@ -227,6 +230,10 @@ class ClassroomController extends Controller
             'teaching_minutes' => ['nullable', 'integer', 'min:0'],
             'material_link_ids' => ['array'],
             'material_link_ids.*' => ['integer', Rule::exists('material_links', 'id')],
+            'co_teacher_id' => ['array'],
+            'co_teacher_id.*' => ['nullable', 'integer', Rule::exists('users', 'id')->where(fn ($query) => $query->where('role', User::ROLE_TEACHER))],
+            'co_teacher_fee' => ['array'],
+            'co_teacher_fee.*' => ['nullable', 'integer', 'min:0'],
         ], [
             'learning_journal.required' => 'Jurnal belajar wajib diisi.',
         ]);
@@ -257,6 +264,11 @@ class ClassroomController extends Controller
             $request->user()->isTeacher() ? $request->user()->id : null,
         );
         $primaryTeacherId = $this->resolvePrimaryTeacherId($teacherIds);
+
+        // Co-teacher (trainee) dengan fee custom. Payload sync + daftar semua guru.
+        $coTeachers = $this->parseCoTeachers($request, $teacherIds);
+        $teacherSyncPayload = $this->teacherSyncPayload($teacherIds, $coTeachers);
+        $allTeacherIds = collect(array_keys($teacherSyncPayload))->map(fn ($id) => (int) $id)->values();
         $materialLinkIds = collect($request->input('material_link_ids', []))
             ->map(fn ($id) => (int) $id)->unique()->values();
         $date = $request->date('date');
@@ -270,7 +282,7 @@ class ClassroomController extends Controller
             ->reject(fn ($id) => $presentIds->contains($id))
             ->values();
 
-        DB::transaction(function () use ($classroom, $presentIds, $absentIds, $teacherIds, $primaryTeacherId, $materialLinkIds, $date, $journal, $notes, $minutes, $request): void {
+        DB::transaction(function () use ($classroom, $presentIds, $absentIds, $teacherIds, $primaryTeacherId, $teacherSyncPayload, $allTeacherIds, $materialLinkIds, $date, $journal, $notes, $minutes, $request): void {
             if ($classroom->isPrivate()) {
                 $studentId = (int) $presentIds->first();
                 $payment = $this->resolvePayment($studentId, $classroom->division, $classroom->format);
@@ -285,7 +297,7 @@ class ClassroomController extends Controller
                     'notes' => $notes,
                     'learning_journal' => $journal,
                 ]);
-                $attendance->teachers()->sync($teacherIds);
+                $attendance->teachers()->sync($teacherSyncPayload);
                 $attendance->materialLinks()->sync($materialLinkIds);
 
                 if ($payment) {
@@ -293,7 +305,7 @@ class ClassroomController extends Controller
                 }
 
                 $attendance->load(['teachers', 'student']);
-                $this->teacherFeeService->syncAttendance($attendance, $teacherIds, $request->user()->id);
+                $this->teacherFeeService->syncAttendance($attendance, $allTeacherIds, $request->user()->id);
 
                 return;
             }
@@ -307,7 +319,7 @@ class ClassroomController extends Controller
                 'notes' => $notes,
                 'learning_journal' => $journal,
             ]);
-            $batch->teachers()->sync($teacherIds);
+            $batch->teachers()->sync($teacherSyncPayload);
             $batch->materialLinks()->sync($materialLinkIds);
 
             foreach ($presentIds as $studentId) {
@@ -347,7 +359,7 @@ class ClassroomController extends Controller
             }
 
             $batch->load('teachers');
-            $this->teacherFeeService->syncBatch($batch, $teacherIds, $request->user()->id);
+            $this->teacherFeeService->syncBatch($batch, $allTeacherIds, $request->user()->id);
         });
 
         $statusNote = $classroom->isPrivate()

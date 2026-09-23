@@ -42,8 +42,15 @@ class AttendanceBatch extends Model
     public function teachers(): BelongsToMany
     {
         return $this->belongsToMany(User::class, 'attendance_batch_teacher', 'attendance_batch_id', 'teacher_id')
+            ->withPivot(['role', 'fee_amount'])
             ->withTimestamps()
             ->orderBy('name');
+    }
+
+    /** Guru pendamping (co-teacher/trainee) pada pertemuan grup ini. */
+    public function coTeachers(): BelongsToMany
+    {
+        return $this->teachers()->wherePivot('role', 'co_teacher');
     }
 
     public function attendances(): HasMany

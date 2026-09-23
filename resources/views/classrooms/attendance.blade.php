@@ -59,6 +59,10 @@
                 <x-input-error :messages="$errors->get('learning_journal')" class="mt-2" />
                 <p class="mt-1 text-xs text-slate-400">Wajib diisi.</p>
             </div>
+
+            <div class="mt-5">
+                @include('attendances._co_teacher', ['teachers' => $teachers, 'coTeacherRows' => []])
+            </div>
         </div>
 
         <div class="rounded-3xl bg-white p-6 shadow-sm">
