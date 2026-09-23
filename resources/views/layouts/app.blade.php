@@ -28,6 +28,7 @@
                     'items' => [
                         ['label' => 'All Students', 'route' => 'students.index', 'pattern' => 'students.*'],
                         ['label' => 'Pendaftaran', 'route' => 'registrations.index', 'pattern' => 'registrations.index'],
+                        ['label' => 'Pencocokan Jadwal', 'route' => 'schedule-match.index', 'pattern' => 'schedule-match.*'],
                     ],
                 ],
                 [

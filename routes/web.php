@@ -16,6 +16,7 @@ use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\RegistrationController;
 use App\Http\Controllers\ReportController;
+use App\Http\Controllers\ScheduleMatchController;
 use App\Http\Controllers\StudentController;
 use App\Http\Controllers\TeacherAvailabilityController;
 use App\Http\Controllers\TeacherController;
@@ -74,6 +75,7 @@ Route::middleware('auth')->group(function () {
         Route::resource('expense-commitments', ExpenseCommitmentController::class)->only(['index', 'create', 'store', 'destroy']);
         Route::resource('expenses', ExpenseController::class)->except(['show']);
         Route::get('/registrations', [RegistrationController::class, 'index'])->name('registrations.index');
+        Route::get('/schedule-match', [ScheduleMatchController::class, 'index'])->name('schedule-match.index');
         Route::post('/registrations/{registration}/accept', [RegistrationController::class, 'accept'])->name('registrations.accept');
         Route::post('/registrations/{registration}/reject', [RegistrationController::class, 'reject'])->name('registrations.reject');
 
