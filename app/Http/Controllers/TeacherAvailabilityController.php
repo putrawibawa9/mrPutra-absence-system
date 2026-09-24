@@ -14,12 +14,26 @@ class TeacherAvailabilityController extends Controller
     {
         $availabilities = TeacherAvailability::query()
             ->with('teacher')
-            ->orderBy('teacher_id')
             ->orderByRaw($this->dayOrderSql())
             ->orderBy('start_time')
-            ->paginate(15);
+            ->get();
 
-        return view('teacher-availabilities.index', compact('availabilities'));
+        // Dikelompokkan per guru supaya tampil sebagai kartu yang mudah dibaca.
+        $teacherCards = $availabilities
+            ->groupBy('teacher_id')
+            ->map(fn (Collection $items) => (object) [
+                'teacher' => $items->first()->teacher,
+                'slots' => $items->values(),
+                'available_count' => $items->where('status', TeacherAvailability::STATUS_AVAILABLE)->count(),
+                'unavailable_count' => $items->where('status', TeacherAvailability::STATUS_UNAVAILABLE)->count(),
+            ])
+            ->sortBy(fn ($card) => $card->teacher?->name ?? '')
+            ->values();
+
+        return view('teacher-availabilities.index', [
+            'teacherCards' => $teacherCards,
+            'totalSlots' => $availabilities->count(),
+        ]);
     }
 
     public function create()
