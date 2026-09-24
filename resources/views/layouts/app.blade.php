@@ -40,6 +40,7 @@
                         ['label' => 'Teachers', 'route' => 'teachers.index', 'pattern' => 'teachers.*'],
                         ['label' => 'Jadwal Guru', 'route' => 'teacher-schedules.index', 'pattern' => 'teacher-schedules.*'],
                         ['label' => 'Ketersediaan Guru', 'route' => 'teacher-availabilities.index', 'pattern' => 'teacher-availabilities.*'],
+                        ['label' => 'Pengajuan Libur', 'route' => 'teacher-leaves.index', 'pattern' => 'teacher-leaves.*'],
                     ],
                 ],
                 [
@@ -98,6 +99,12 @@
                     'label' => 'Ketersediaan',
                     'items' => [
                         ['label' => 'Ketersediaan', 'route' => 'my-availability.index', 'pattern' => 'my-availability.*'],
+                    ],
+                ],
+                [
+                    'label' => 'Libur',
+                    'items' => [
+                        ['label' => 'Ajukan Libur', 'route' => 'my-leave.index', 'pattern' => 'my-leave.*'],
                     ],
                 ],
             ];

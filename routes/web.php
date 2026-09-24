@@ -20,6 +20,7 @@ use App\Http\Controllers\ScheduleMatchController;
 use App\Http\Controllers\StudentController;
 use App\Http\Controllers\TeacherAvailabilityController;
 use App\Http\Controllers\TeacherController;
+use App\Http\Controllers\TeacherLeaveController;
 use App\Http\Controllers\TeacherScheduleController;
 use App\Models\User;
 use Illuminate\Support\Facades\Route;
@@ -81,6 +82,10 @@ Route::middleware('auth')->group(function () {
 
         Route::get('/classes-today', [TeacherScheduleController::class, 'today'])->name('classes.today');
 
+        Route::get('/teacher-leaves', [TeacherLeaveController::class, 'index'])->name('teacher-leaves.index');
+        Route::post('/teacher-leaves/{teacher_leave}/approve', [TeacherLeaveController::class, 'approve'])->name('teacher-leaves.approve');
+        Route::post('/teacher-leaves/{teacher_leave}/reject', [TeacherLeaveController::class, 'reject'])->name('teacher-leaves.reject');
+
         Route::get('/follow-up/low-token', [FollowUpController::class, 'lowToken'])->name('follow-up.low-token');
         Route::get('/follow-up/absent', [FollowUpController::class, 'absent'])->name('follow-up.absent');
         Route::get('/follow-up/inactive', [FollowUpController::class, 'inactive'])->name('follow-up.inactive');
@@ -120,6 +125,11 @@ Route::middleware('auth')->group(function () {
 
     Route::middleware('role:'.User::ROLE_TEACHER)->group(function () {
         Route::get('/my-schedule', [TeacherScheduleController::class, 'mySchedule'])->name('my-schedule.index');
+        Route::get('/my-leave', [TeacherLeaveController::class, 'myIndex'])->name('my-leave.index');
+        Route::get('/my-leave/create', [TeacherLeaveController::class, 'myCreate'])->name('my-leave.create');
+        Route::post('/my-leave', [TeacherLeaveController::class, 'myStore'])->name('my-leave.store');
+        Route::delete('/my-leave/{teacher_leave}', [TeacherLeaveController::class, 'myDestroy'])->name('my-leave.destroy');
+
         Route::get('/my-availability', [TeacherAvailabilityController::class, 'myIndex'])->name('my-availability.index');
         Route::get('/my-availability/create', [TeacherAvailabilityController::class, 'myCreate'])->name('my-availability.create');
         Route::post('/my-availability', [TeacherAvailabilityController::class, 'myStore'])->name('my-availability.store');

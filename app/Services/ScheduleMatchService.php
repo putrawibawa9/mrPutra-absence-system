@@ -123,6 +123,67 @@ class ScheduleMatchService
         );
     }
 
+    /**
+     * Cari guru yang available pada satu hari & (opsional) rentang jam tertentu —
+     * dipakai untuk merekomendasikan pengganti guru yang libur.
+     *
+     * @param  string       $dayKey            day key (mis. 'monday')
+     * @param  string|null  $start,$end        jam; null = sepanjang hari itu
+     * @param  array<int>   $excludeTeacherIds guru yang dikecualikan (yg libur / tidak tersedia)
+     * @return Collection<int, object>
+     */
+    public function matchForDayTime(string $dayKey, ?string $start, ?string $end, ?Collection $availabilities = null, array $excludeTeacherIds = []): Collection
+    {
+        $availabilities ??= $this->availableSlots();
+        $exclude = array_map('intval', $excludeTeacherIds);
+        $wholeDay = blank($start) || blank($end);
+        $windowStart = $wholeDay ? null : $this->toMinutes($start);
+        $windowEnd = $wholeDay ? null : $this->toMinutes($end);
+
+        $matchesByTeacher = [];
+
+        foreach ($availabilities as $availability) {
+            if ($availability->day_of_week !== $dayKey) {
+                continue;
+            }
+            if (in_array((int) $availability->teacher_id, $exclude, true)) {
+                continue;
+            }
+
+            $availStart = $this->toMinutes($availability->start_time);
+            $availEnd = $this->toMinutes($availability->end_time);
+
+            if (! $wholeDay && ! ($availStart < $windowEnd && $availEnd > $windowStart)) {
+                continue;
+            }
+
+            $teacherId = (int) $availability->teacher_id;
+            if (! isset($matchesByTeacher[$teacherId])) {
+                $matchesByTeacher[$teacherId] = (object) [
+                    'teacher' => $availability->teacher,
+                    'teacher_id' => $teacherId,
+                    'slots' => [],
+                ];
+            }
+
+            $matchesByTeacher[$teacherId]->slots[] = (object) [
+                'day_label' => WeeklyDay::label($availability->day_of_week),
+                'time_label' => $availability->timeRangeLabel(),
+                'sort' => $availStart,
+            ];
+        }
+
+        return collect($matchesByTeacher)
+            ->map(function (object $match) {
+                $match->slots = collect($match->slots)->sortBy('sort')->values()->all();
+                $match->slot_count = count($match->slots);
+
+                return $match;
+            })
+            ->sortByDesc('slot_count')
+            ->values();
+    }
+
     private function toMinutes($time): int
     {
         [$h, $m] = array_pad(explode(':', substr((string) $time, 0, 5)), 2, '0');

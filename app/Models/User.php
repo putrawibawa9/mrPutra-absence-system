@@ -63,6 +63,11 @@ class User extends Authenticatable
         return $this->hasMany(TeacherAvailability::class, 'teacher_id');
     }
 
+    public function teacherLeaves(): HasMany
+    {
+        return $this->hasMany(TeacherLeave::class, 'teacher_id');
+    }
+
     public function expenses(): HasMany
     {
         return $this->hasMany(Expense::class, 'created_by_user_id');
