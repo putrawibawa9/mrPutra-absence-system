@@ -3,7 +3,7 @@
         <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
                 <h2 class="text-xl font-semibold text-slate-900 sm:text-2xl">Ketersediaan Guru</h2>
-                <p class="text-sm text-slate-500">Blok waktu tiap guru — dikelompokkan per guru agar mudah dibaca. {{ $teacherCards->count() }} guru · {{ $totalSlots }} slot.</p>
+                <p class="text-sm text-slate-500">Jam kosong bersih tiap guru — sudah dikurangi jadwal mengajar yang aktif. {{ $teacherCards->count() }} guru · {{ $totalSlots }} slot.</p>
             </div>
             <a href="{{ route('teacher-availabilities.create') }}" class="inline-flex justify-center rounded-xl bg-slate-900 px-4 py-2 text-sm font-medium text-white">Tambah Ketersediaan</a>
         </div>
@@ -37,7 +37,17 @@
                         <div class="flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-slate-100 bg-slate-50 px-4 py-2.5 {{ $slot->is_active ? '' : 'opacity-60' }}">
                             <div class="flex flex-wrap items-center gap-2">
                                 <span class="inline-flex justify-center rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-xs font-semibold text-slate-700">{{ $slot->dayLabel() }}</span>
-                                <span class="text-sm font-semibold text-slate-900">{{ $slot->timeRangeLabel() }}</span>
+                                @if ($slot->status === 'available' && $slot->is_fully_booked)
+                                    <span class="text-sm font-semibold text-rose-600">Penuh (terisi ngajar)</span>
+                                    <span class="text-xs text-slate-400">dari {{ $slot->timeRangeLabel() }}</span>
+                                @elseif ($slot->status === 'available')
+                                    <span class="text-sm font-semibold text-emerald-700">{{ $slot->free_label }}</span>
+                                    @if ($slot->has_booked)
+                                        <span class="text-xs text-slate-400">dari {{ $slot->timeRangeLabel() }}</span>
+                                    @endif
+                                @else
+                                    <span class="text-sm font-semibold text-slate-900">{{ $slot->timeRangeLabel() }}</span>
+                                @endif
                                 <span class="rounded-full px-2.5 py-1 text-xs font-medium {{ $slot->status === 'available' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700' }}">{{ $slot->statusLabel() }}</span>
                                 @unless ($slot->is_active)
                                     <span class="rounded-full bg-slate-200 px-2.5 py-1 text-xs font-medium text-slate-600">Nonaktif</span>
@@ -52,6 +62,9 @@
                                 </form>
                             </div>
                         </div>
+                        @if ($slot->status === 'available' && $slot->has_booked)
+                            <p class="px-4 text-xs text-amber-600">Terpakai ngajar: {{ $slot->booked_label }}</p>
+                        @endif
                         @if ($slot->notes)
                             <p class="px-4 text-xs text-slate-400">Catatan: {{ $slot->notes }}</p>
                         @endif

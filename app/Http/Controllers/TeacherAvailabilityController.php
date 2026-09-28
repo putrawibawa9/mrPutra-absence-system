@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\TeacherAvailabilityRequest;
 use App\Models\TeacherAvailability;
+use App\Models\TeacherSchedule;
 use App\Models\User;
 use App\Support\WeeklyDay;
 use Illuminate\Support\Collection;
@@ -17,6 +18,32 @@ class TeacherAvailabilityController extends Controller
             ->orderByRaw($this->dayOrderSql())
             ->orderBy('start_time')
             ->get();
+
+        // Jam mengajar yang sudah di-assign (aktif), dikelompokkan per guru+hari,
+        // untuk dikurangkan dari ketersediaan → jam kosong bersih.
+        $bookedByTeacherDay = TeacherSchedule::query()
+            ->where('is_active', true)
+            ->get(['teacher_id', 'day_of_week', 'start_time', 'end_time'])
+            ->groupBy('teacher_id')
+            ->map(fn ($rows) => $rows->groupBy('day_of_week'));
+
+        // Anotasi tiap slot: jam terpakai ngajar & sisa jam bersih.
+        $availabilities->each(function (TeacherAvailability $slot) use ($bookedByTeacherDay): void {
+            $blocks = ($bookedByTeacherDay[$slot->teacher_id][$slot->day_of_week] ?? collect())
+                ->map(fn ($schedule) => [$this->toMinutes($schedule->start_time), $this->toMinutes($schedule->end_time)])
+                ->all();
+
+            $start = $this->toMinutes($slot->start_time);
+            $end = $this->toMinutes($slot->end_time);
+
+            $free = $this->subtractIntervals($start, $end, $blocks);
+            $booked = $this->subtractIntervals($start, $end, $free); // komplemen = jam terpakai
+
+            $slot->setAttribute('free_label', $this->labelIntervals($free));
+            $slot->setAttribute('booked_label', $this->labelIntervals($booked));
+            $slot->setAttribute('is_fully_booked', $free === []);
+            $slot->setAttribute('has_booked', $booked !== []);
+        });
 
         // Dikelompokkan per guru supaya tampil sebagai kartu yang mudah dibaca.
         $teacherCards = $availabilities
@@ -34,6 +61,60 @@ class TeacherAvailabilityController extends Controller
             'teacherCards' => $teacherCards,
             'totalSlots' => $availabilities->count(),
         ]);
+    }
+
+    /**
+     * Kurangi rentang [start,end] dengan daftar blok terpakai. Hasil: sisa interval bebas.
+     *
+     * @param  array<int, array{0:int,1:int}>  $blocks
+     * @return array<int, array{0:int,1:int}>
+     */
+    private function subtractIntervals(int $start, int $end, array $blocks): array
+    {
+        $free = [[$start, $end]];
+
+        foreach ($blocks as [$b0, $b1]) {
+            $next = [];
+            foreach ($free as [$s, $e]) {
+                if ($b1 <= $s || $b0 >= $e) {
+                    $next[] = [$s, $e]; // tidak beririsan
+
+                    continue;
+                }
+                if ($b0 > $s) {
+                    $next[] = [$s, $b0];
+                }
+                if ($b1 < $e) {
+                    $next[] = [$b1, $e];
+                }
+            }
+            $free = $next;
+        }
+
+        return array_values(array_filter($free, fn ($iv) => $iv[1] > $iv[0]));
+    }
+
+    private function labelIntervals(array $intervals): string
+    {
+        if ($intervals === []) {
+            return '-';
+        }
+
+        return collect($intervals)
+            ->map(fn ($iv) => $this->fromMinutes($iv[0]).' - '.$this->fromMinutes($iv[1]))
+            ->join(', ');
+    }
+
+    private function toMinutes($time): int
+    {
+        [$h, $m] = array_pad(explode(':', substr((string) $time, 0, 5)), 2, '0');
+
+        return ((int) $h) * 60 + (int) $m;
+    }
+
+    private function fromMinutes(int $minutes): string
+    {
+        return sprintf('%02d:%02d', intdiv($minutes, 60), $minutes % 60);
     }
 
     public function create()
