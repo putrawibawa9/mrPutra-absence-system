@@ -42,10 +42,12 @@ class DashboardController extends Controller
         $myAvailability = collect();
 
         if (auth()->user()->isTeacher()) {
+            $teacherId = auth()->id();
             $mySchedule = TeacherScheduleController::groupByDay(
-                auth()->user()->teacherSchedules()
+                TeacherSchedule::query()
                     ->with('student')
                     ->where('is_active', true)
+                    ->where(fn ($query) => $query->where('teacher_id', $teacherId)->orWhere('co_teacher_id', $teacherId))
                     ->orderByRaw("CASE day_of_week
                         WHEN 'monday' THEN 1
                         WHEN 'tuesday' THEN 2

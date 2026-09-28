@@ -18,8 +18,8 @@ class TeacherScheduleController extends Controller
         $teachers = User::teachers()->orderBy('name')->get();
 
         $base = TeacherSchedule::query()
-            ->with(['teacher', 'classroom.students'])
-            ->when($teacherId, fn ($query) => $query->where('teacher_id', $teacherId));
+            ->with(['teacher', 'coTeacher', 'classroom.students'])
+            ->when($teacherId, fn ($query) => $query->where(fn ($q) => $q->where('teacher_id', $teacherId)->orWhere('co_teacher_id', $teacherId)));
 
         $allSchedules = (clone $base)
             ->orderByRaw($this->dayOrderSql())
@@ -35,8 +35,10 @@ class TeacherScheduleController extends Controller
                 'student_hint' => $items->first()->classroom
                     ? $items->first()->classroom->studentHint()
                     : ($items->first()->title ?: 'Tanpa kelas'),
-                'teacher_names' => $items->map(fn ($schedule) => $schedule->teacher?->name)
-                    ->filter()->unique()->values()->join(', ') ?: '-',
+                'teacher_names' => $items->flatMap(fn ($schedule) => array_filter([
+                    $schedule->teacher?->name,
+                    $schedule->coTeacher ? $schedule->coTeacher->name.' (co)' : null,
+                ]))->unique()->values()->join(', ') ?: '-',
                 'slots' => $items->values(),
             ])
             ->sortBy(fn ($card) => $card->classroom?->name ?? 'zzz')
@@ -203,6 +205,8 @@ class TeacherScheduleController extends Controller
     {
         $data = $request->validated();
         $data['title'] = Classroom::whereKey($data['classroom_id'])->value('name');
+        // Normalisasi: string kosong dari select → null.
+        $data['co_teacher_id'] = $request->integer('co_teacher_id') ?: null;
 
         return $data;
     }
@@ -233,13 +237,20 @@ class TeacherScheduleController extends Controller
     {
         $teacher = auth()->user();
 
-        // Hanya jadwal milik guru yang sedang login.
-        $schedules = $teacher->teacherSchedules()
-            ->with(['classroom.students'])
+        // Jadwal di mana guru ini berperan sebagai guru utama ATAU co-teacher.
+        $schedules = TeacherSchedule::query()
+            ->with(['classroom.students', 'teacher:id,name'])
             ->where('is_active', true)
+            ->where(fn ($query) => $query->where('teacher_id', $teacher->id)->orWhere('co_teacher_id', $teacher->id))
             ->orderByRaw($this->dayOrderSql())
             ->orderBy('start_time')
             ->get();
+
+        // Tandai peran guru pada tiap slot untuk ditampilkan.
+        $schedules->each(fn (TeacherSchedule $schedule) => $schedule->setAttribute(
+            'my_role',
+            (int) $schedule->teacher_id === (int) $teacher->id ? 'teacher' : 'co_teacher',
+        ));
 
         $groupedSchedules = $this->groupByDay($schedules);
         $calendar = $this->buildCalendar($schedules, 'classroom_id');

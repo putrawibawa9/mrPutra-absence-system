@@ -40,6 +40,7 @@ class TeacherScheduleRequest extends FormRequest
     {
         return [
             'teacher_id' => ['required', Rule::exists('users', 'id')->where(fn ($query) => $query->where('role', User::ROLE_TEACHER))],
+            'co_teacher_id' => ['nullable', 'different:teacher_id', Rule::exists('users', 'id')->where(fn ($query) => $query->where('role', User::ROLE_TEACHER))],
             'classroom_id' => ['required', Rule::exists('classrooms', 'id')],
             'day_of_week' => ['required', Rule::in(WeeklyDay::values())],
             'start_time' => ['required', 'date_format:H:i'],
@@ -52,6 +53,7 @@ class TeacherScheduleRequest extends FormRequest
     {
         return [
             'classroom_id.required' => 'Pilih kelas untuk jadwal ini.',
+            'co_teacher_id.different' => 'Co-teacher tidak boleh sama dengan guru utama.',
         ];
     }
 

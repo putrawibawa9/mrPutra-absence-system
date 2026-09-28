@@ -11,6 +11,18 @@
     </div>
 
     <div>
+        <x-input-label for="co_teacher_id" value="Co-teacher (opsional)" />
+        <select id="co_teacher_id" name="co_teacher_id" class="mt-1 block w-full rounded-xl border-slate-300">
+            <option value="">— tidak ada —</option>
+            @foreach ($teachers as $teacher)
+                <option value="{{ $teacher->id }}" @selected(old('co_teacher_id', $schedule->co_teacher_id ?? '') == $teacher->id)>{{ $teacher->name }}</option>
+            @endforeach
+        </select>
+        <p class="mt-1 text-xs text-slate-500">Guru pendamping/training yang ikut di jadwal ini. Dia akan melihatnya di "Jadwal Saya".</p>
+        <x-input-error :messages="$errors->get('co_teacher_id')" class="mt-2" />
+    </div>
+
+    <div>
         <x-input-label for="classroom_id" value="Kelas" />
         <select id="classroom_id" name="classroom_id" class="mt-1 block w-full rounded-xl border-slate-300" required>
             <option value="">Pilih kelas</option>

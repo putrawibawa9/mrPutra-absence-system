@@ -2,7 +2,7 @@
     <x-slot name="header">
         <div class="flex flex-col gap-2">
             <h2 class="text-xl font-semibold text-slate-900 sm:text-2xl">Jadwal Mingguan Saya</h2>
-            <p class="text-sm text-slate-500">Lihat jadwal mengajar mingguan Anda yang sudah ditetapkan admin.</p>
+            <p class="text-sm text-slate-500">Jadwal mengajar mingguan Anda — sebagai guru utama maupun co-teacher.</p>
         </div>
     </x-slot>
 
@@ -21,8 +21,18 @@
                 <div class="mt-4 space-y-3">
                     @forelse ($day->items as $schedule)
                         <div class="rounded-2xl border border-slate-100 bg-slate-50 p-4">
-                            <p class="font-medium text-slate-900">{{ $schedule->timeRangeLabel() }}</p>
+                            <div class="flex items-center justify-between gap-2">
+                                <p class="font-medium text-slate-900">{{ $schedule->timeRangeLabel() }}</p>
+                                @if (($schedule->my_role ?? 'teacher') === 'co_teacher')
+                                    <span class="rounded-full bg-sky-50 px-2.5 py-1 text-xs font-medium text-sky-700">Co-teacher</span>
+                                @else
+                                    <span class="rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-medium text-emerald-700">Guru utama</span>
+                                @endif
+                            </div>
                             <p class="mt-1 text-sm text-slate-600">Murid: {{ $schedule->classroom?->studentHint() ?: ($schedule->title ?: '-') }}</p>
+                            @if (($schedule->my_role ?? '') === 'co_teacher')
+                                <p class="text-xs text-slate-500">Guru utama: {{ $schedule->teacher?->name }}</p>
+                            @endif
                         </div>
                     @empty
                         <p class="text-sm text-slate-500">Belum ada jadwal.</p>
