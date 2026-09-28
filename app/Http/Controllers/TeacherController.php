@@ -58,6 +58,17 @@ class TeacherController extends Controller
         return redirect()->route('teachers.index')->with('status', 'Teacher updated successfully.');
     }
 
+    public function toggleStatus(User $teacher)
+    {
+        abort_unless($teacher->isTeacher(), 404);
+
+        $teacher->update(['is_active' => ! $teacher->is_active]);
+
+        return redirect()->route('teachers.index')->with('status', $teacher->is_active
+            ? 'Guru diaktifkan kembali.'
+            : 'Guru dinonaktifkan. Ia tidak lagi muncul di pemilihan & tidak bisa login.');
+    }
+
     public function destroy(User $teacher)
     {
         abort_unless($teacher->isTeacher(), 404);

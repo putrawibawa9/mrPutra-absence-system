@@ -30,6 +30,7 @@ class ScheduleMatchService
     {
         return TeacherAvailability::query()
             ->with('teacher:id,name')
+            ->whereHas('teacher', fn ($query) => $query->where('is_active', true))
             ->where('is_active', true)
             ->where('status', TeacherAvailability::STATUS_AVAILABLE)
             ->orderByRaw($this->dayOrderSql())

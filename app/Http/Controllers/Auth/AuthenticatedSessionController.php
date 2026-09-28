@@ -26,6 +26,15 @@ class AuthenticatedSessionController extends Controller
     {
         $request->authenticate();
 
+        // Akun nonaktif tidak boleh masuk.
+        if (! $request->user()->is_active) {
+            Auth::guard('web')->logout();
+            $request->session()->invalidate();
+            $request->session()->regenerateToken();
+
+            return back()->withErrors(['username' => 'Akun ini sudah dinonaktifkan. Hubungi admin.']);
+        }
+
         $request->session()->regenerate();
 
         // Guru langsung diarahkan ke halaman absensi; admin ke dashboard.

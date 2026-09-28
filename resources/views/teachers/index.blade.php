@@ -11,11 +11,20 @@
 
     <div class="space-y-4 md:hidden">
         @forelse ($teachers as $teacher)
-            <div class="rounded-3xl bg-white p-5 shadow-sm">
-                <h3 class="font-semibold text-slate-900">{{ $teacher->name }}</h3>
-                <p class="mt-1 text-sm text-slate-500">{{ $teacher->email }}</p>
+            <div class="rounded-3xl bg-white p-5 shadow-sm {{ $teacher->is_active ? '' : 'opacity-60' }}">
+                <div class="flex items-start justify-between gap-3">
+                    <div>
+                        <h3 class="font-semibold text-slate-900">{{ $teacher->name }}</h3>
+                        <p class="mt-1 text-sm text-slate-500">{{ $teacher->email }}</p>
+                    </div>
+                    <span class="rounded-full px-3 py-1 text-xs font-semibold {{ $teacher->is_active ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-600' }}">{{ $teacher->is_active ? 'Aktif' : 'Nonaktif' }}</span>
+                </div>
                 <div class="mt-4 flex flex-wrap gap-3 text-sm font-medium">
                     <a href="{{ route('teachers.edit', $teacher) }}" class="text-slate-700">Edit</a>
+                    <form method="POST" action="{{ route('teachers.toggle-status', $teacher) }}">
+                        @csrf @method('PATCH')
+                        <button type="submit" class="text-slate-700">{{ $teacher->is_active ? 'Nonaktifkan' : 'Aktifkan' }}</button>
+                    </form>
                     <form method="POST" action="{{ route('teachers.destroy', $teacher) }}" data-confirm="Delete this teacher?">
                         @csrf
                         @method('DELETE')
@@ -34,17 +43,25 @@
                 <tr>
                     <th class="px-6 py-3 font-medium">Name</th>
                     <th class="px-6 py-3 font-medium">Email</th>
+                    <th class="px-6 py-3 font-medium">Status</th>
                     <th class="px-6 py-3 font-medium"></th>
                 </tr>
             </thead>
             <tbody class="divide-y divide-slate-100">
                 @forelse ($teachers as $teacher)
-                    <tr>
+                    <tr class="{{ $teacher->is_active ? '' : 'opacity-60' }}">
                         <td class="px-6 py-4 font-medium text-slate-900">{{ $teacher->name }}</td>
                         <td class="px-6 py-4 text-slate-600">{{ $teacher->email }}</td>
                         <td class="px-6 py-4">
+                            <span class="rounded-full px-3 py-1 text-xs font-semibold {{ $teacher->is_active ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-600' }}">{{ $teacher->is_active ? 'Aktif' : 'Nonaktif' }}</span>
+                        </td>
+                        <td class="px-6 py-4">
                             <div class="flex items-center justify-end gap-3">
                                 <a href="{{ route('teachers.edit', $teacher) }}" class="text-sm font-medium text-slate-700">Edit</a>
+                                <form method="POST" action="{{ route('teachers.toggle-status', $teacher) }}">
+                                    @csrf @method('PATCH')
+                                    <button type="submit" class="text-sm font-medium text-slate-700">{{ $teacher->is_active ? 'Nonaktifkan' : 'Aktifkan' }}</button>
+                                </form>
                                 <form method="POST" action="{{ route('teachers.destroy', $teacher) }}" data-confirm="Delete this teacher?">
                                     @csrf
                                     @method('DELETE')
@@ -55,7 +72,7 @@
                     </tr>
                 @empty
                     <tr>
-                        <td colspan="3" class="px-6 py-8 text-center text-slate-500">No teachers found.</td>
+                        <td colspan="4" class="px-6 py-8 text-center text-slate-500">No teachers found.</td>
                     </tr>
                 @endforelse
             </tbody>

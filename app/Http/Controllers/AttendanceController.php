@@ -211,7 +211,7 @@ class AttendanceController extends Controller
         $activePayments = $this->activePaymentsForStudent($selectedStudent, $attendance->payment_id);
         $activeSessions = (int) $activePayments->sum('remaining_sessions');
 
-        $teachers = User::teachers()->orderBy('name')->get();
+        $teachers = User::teachers()->active()->orderBy('name')->get();
         $materialLinks = MaterialLink::query()->where('is_active', true)->orderBy('title')->get();
 
         return view('attendances.edit', compact('attendance', 'students', 'teachers', 'materialLinks', 'activePayments', 'activeSessions', 'selectedStudent'));
@@ -227,7 +227,7 @@ class AttendanceController extends Controller
         ]);
 
         $students = $this->attendanceFormData();
-        $teachers = User::teachers()->orderBy('name')->get();
+        $teachers = User::teachers()->active()->orderBy('name')->get();
         $materialLinks = MaterialLink::query()->where('is_active', true)->orderBy('title')->get();
 
         return view('attendances.edit-batch', compact('attendanceBatch', 'students', 'teachers', 'materialLinks'));

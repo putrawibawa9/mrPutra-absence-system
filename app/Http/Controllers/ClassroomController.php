@@ -208,7 +208,7 @@ class ClassroomController extends Controller
                 ->with(['payments' => fn ($payment) => $payment->where('remaining_sessions', '>', 0)])
                 ->withCount(['attendances as token_debt_count' => fn ($debt) => $debt->whereNull('payment_id')]),
         ]);
-        $teachers = User::teachers()->orderBy('name')->get();
+        $teachers = User::teachers()->active()->orderBy('name')->get();
         $materialLinks = MaterialLink::query()->where('is_active', true)->orderBy('title')->get();
         $lastJournal = $this->journalEntries($classroom, 1)->first();
 

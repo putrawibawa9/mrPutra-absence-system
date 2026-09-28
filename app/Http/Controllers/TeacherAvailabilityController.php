@@ -238,7 +238,7 @@ class TeacherAvailabilityController extends Controller
     protected function formData(): array
     {
         return [
-            'teachers' => User::teachers()->orderBy('name')->get(),
+            'teachers' => User::teachers()->active()->orderBy('name')->get(),
             'dayOptions' => WeeklyDay::options(),
             'statusOptions' => TeacherAvailability::statusOptions(),
         ];

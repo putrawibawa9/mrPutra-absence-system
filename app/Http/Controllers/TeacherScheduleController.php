@@ -268,7 +268,7 @@ class TeacherScheduleController extends Controller
     protected function formData(): array
     {
         return [
-            'teachers' => User::teachers()->orderBy('name')->get(),
+            'teachers' => User::teachers()->active()->orderBy('name')->get(),
             'classrooms' => Classroom::query()->active()->with('students:id,name')->orderBy('name')->get(),
             'dayOptions' => WeeklyDay::options(),
         ];

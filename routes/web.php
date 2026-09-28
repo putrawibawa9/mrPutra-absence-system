@@ -67,6 +67,7 @@ Route::middleware('auth')->group(function () {
 
         Route::resource('learning-modules', LearningModuleController::class)->except(['show']);
         Route::resource('material-links', MaterialLinkController::class)->except(['show']);
+        Route::patch('/teachers/{teacher}/toggle-status', [TeacherController::class, 'toggleStatus'])->name('teachers.toggle-status');
         Route::resource('teachers', TeacherController::class)->except(['show']);
         Route::resource('teacher-schedules', TeacherScheduleController::class)->except(['show']);
         Route::resource('teacher-availabilities', TeacherAvailabilityController::class)->except(['show']);
