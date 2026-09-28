@@ -35,6 +35,8 @@ class TeacherScheduleController extends Controller
                 'student_hint' => $items->first()->classroom
                     ? $items->first()->classroom->studentHint()
                     : ($items->first()->title ?: 'Tanpa kelas'),
+                'teacher_names' => $items->map(fn ($schedule) => $schedule->teacher?->name)
+                    ->filter()->unique()->values()->join(', ') ?: '-',
                 'slots' => $items->values(),
             ])
             ->sortBy(fn ($card) => $card->classroom?->name ?? 'zzz')

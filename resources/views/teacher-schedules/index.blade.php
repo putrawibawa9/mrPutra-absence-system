@@ -48,6 +48,7 @@
                         <p class="truncate text-xs text-slate-500">
                             @if ($card->classroom?->code)<span class="font-semibold text-slate-600">{{ $card->classroom->code }}</span> · @endif{{ $card->slots->count() }} sesi/mgg
                         </p>
+                        <p class="truncate text-xs text-slate-500">Guru: <span class="font-medium text-slate-700">{{ $card->teacher_names }}</span></p>
                     </div>
                 </div>
 
