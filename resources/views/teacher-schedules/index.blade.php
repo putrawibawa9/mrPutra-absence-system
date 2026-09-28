@@ -35,41 +35,31 @@
         <span class="text-sm text-slate-500">{{ $classroomCards->count() }} grup</span>
     </div>
 
-    <div class="space-y-4">
+    {{-- Grid kartu kecil: auto-flow 1 kolom di HP, 3-4 kolom di laptop. --}}
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:0.75rem;">
         @forelse ($classroomCards as $card)
-            <div class="rounded-3xl bg-white p-6 shadow-sm">
-                <div class="flex items-center gap-3 border-b border-slate-100 pb-4">
-                    <span class="flex h-8 w-8 items-center justify-center rounded-full bg-slate-900 text-sm font-semibold text-white">
+            <div class="rounded-2xl bg-white p-4 shadow-sm">
+                <div class="flex items-center gap-2 border-b border-slate-100 pb-3">
+                    <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-slate-900 text-sm font-semibold text-white">
                         {{ strtoupper(mb_substr($card->student_hint, 0, 1)) }}
                     </span>
                     <div class="min-w-0">
-                        <h3 class="text-lg font-semibold text-slate-900">{{ $card->student_hint }}</h3>
-                        <div class="mt-1 flex flex-wrap items-center gap-2">
-                            @if ($card->classroom?->code)
-                                <span class="rounded-lg bg-slate-100 px-2 py-1 text-xs font-bold tracking-wide text-slate-700">{{ $card->classroom->code }}</span>
-                            @endif
-                            <span class="text-xs text-slate-500">{{ $card->title }}</span>
-                            @if ($card->classroom)
-                                <span class="rounded-full px-2.5 py-1 text-xs font-medium {{ $card->classroom->isPrivate() ? 'bg-indigo-50 text-indigo-700' : 'bg-amber-50 text-amber-700' }}">{{ $card->classroom->formatLabel() }}</span>
-                            @endif
-                            <span class="text-xs text-slate-400">· {{ $card->slots->count() }} sesi/minggu</span>
-                        </div>
+                        <h3 class="truncate text-sm font-semibold text-slate-900">{{ $card->student_hint }}</h3>
+                        <p class="truncate text-xs text-slate-500">
+                            @if ($card->classroom?->code)<span class="font-semibold text-slate-600">{{ $card->classroom->code }}</span> · @endif{{ $card->slots->count() }} sesi/mgg
+                        </p>
                     </div>
                 </div>
 
-                <div class="mt-4 space-y-2">
+                <div class="mt-3 space-y-1">
                     @foreach ($card->slots as $slot)
-                        <div class="flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-slate-100 bg-slate-50 px-4 py-2.5 {{ $slot->is_active ? '' : 'opacity-60' }}">
-                            <div class="flex flex-wrap items-center gap-2">
-                                <span class="inline-flex justify-center rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-xs font-semibold text-slate-700">{{ $slot->dayLabel() }}</span>
-                                <span class="text-sm font-semibold text-slate-900">{{ $slot->timeRangeLabel() }}</span>
-                                <span class="text-xs text-slate-500">{{ $slot->teacher?->name }}</span>
-                                @unless ($slot->is_active)
-                                    <span class="rounded-full bg-slate-200 px-2.5 py-1 text-xs font-medium text-slate-600">Nonaktif</span>
-                                @endunless
+                        <div class="flex items-center justify-between gap-1 rounded-xl border border-slate-100 bg-slate-50 px-2.5 py-1 text-xs {{ $slot->is_active ? '' : 'opacity-60' }}">
+                            <div class="flex min-w-0 items-center gap-1.5">
+                                <span class="shrink-0 rounded-md border border-slate-200 bg-white px-2 py-1 font-semibold text-slate-700">{{ mb_substr($slot->dayLabel(), 0, 3) }}</span>
+                                <span class="truncate font-semibold text-slate-900">{{ $slot->timeRangeLabel() }}</span>
                             </div>
-                            <div class="flex items-center gap-3 text-sm font-medium">
-                                <a href="{{ route('teacher-schedules.edit', $slot) }}" class="text-slate-700 hover:text-slate-900">Edit</a>
+                            <div class="flex shrink-0 items-center gap-2 font-medium">
+                                <a href="{{ route('teacher-schedules.edit', $slot) }}" class="text-slate-600 hover:text-slate-900">Edit</a>
                                 <form method="POST" action="{{ route('teacher-schedules.destroy', $slot) }}" data-confirm="Hapus jadwal ini?">
                                     @csrf
                                     @method('DELETE')
@@ -81,7 +71,7 @@
                 </div>
             </div>
         @empty
-            <div class="rounded-3xl border border-dashed border-slate-200 bg-white px-6 py-12 text-center text-sm text-slate-500">Belum ada jadwal guru.</div>
+            <div class="rounded-3xl border border-dashed border-slate-200 bg-white px-6 py-12 text-center text-sm text-slate-500" style="grid-column:1/-1;">Belum ada jadwal guru.</div>
         @endforelse
     </div>
 </x-app-layout>
