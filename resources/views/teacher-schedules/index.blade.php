@@ -29,80 +29,59 @@
         @include('teacher-schedules._calendar', ['mode' => 'admin'])
     </div>
 
-    <div class="space-y-4 md:hidden">
-        @forelse ($schedules as $schedule)
-            <div class="rounded-3xl bg-white p-5 shadow-sm">
-                <div class="flex items-start justify-between gap-4">
-                    <div>
-                        <h3 class="font-semibold text-slate-900">{{ $schedule->teacher->name }}</h3>
-                        <p class="mt-1 text-sm text-slate-500">{{ $schedule->dayLabel() }} | {{ $schedule->timeRangeLabel() }}</p>
-                    </div>
-                    <span class="rounded-full px-3 py-1 text-xs font-medium {{ $schedule->is_active ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-600' }}">
-                        {{ $schedule->statusLabel() }}
+    {{-- ===== Kartu per grup kelas (identitas = nama siswa) ===== --}}
+    <div class="mb-2 flex items-center justify-between">
+        <h3 class="text-lg font-semibold text-slate-900">Jadwal per Grup Kelas</h3>
+        <span class="text-sm text-slate-500">{{ $classroomCards->count() }} grup</span>
+    </div>
+
+    <div class="space-y-4">
+        @forelse ($classroomCards as $card)
+            <div class="rounded-3xl bg-white p-6 shadow-sm">
+                <div class="flex items-center gap-3 border-b border-slate-100 pb-4">
+                    <span class="flex h-8 w-8 items-center justify-center rounded-full bg-slate-900 text-sm font-semibold text-white">
+                        {{ strtoupper(mb_substr($card->student_hint, 0, 1)) }}
                     </span>
+                    <div class="min-w-0">
+                        <h3 class="text-lg font-semibold text-slate-900">{{ $card->student_hint }}</h3>
+                        <div class="mt-1 flex flex-wrap items-center gap-2">
+                            @if ($card->classroom?->code)
+                                <span class="rounded-lg bg-slate-100 px-2 py-1 text-xs font-bold tracking-wide text-slate-700">{{ $card->classroom->code }}</span>
+                            @endif
+                            <span class="text-xs text-slate-500">{{ $card->title }}</span>
+                            @if ($card->classroom)
+                                <span class="rounded-full px-2.5 py-1 text-xs font-medium {{ $card->classroom->isPrivate() ? 'bg-indigo-50 text-indigo-700' : 'bg-amber-50 text-amber-700' }}">{{ $card->classroom->formatLabel() }}</span>
+                            @endif
+                            <span class="text-xs text-slate-400">· {{ $card->slots->count() }} sesi/minggu</span>
+                        </div>
+                    </div>
                 </div>
-                <div class="mt-4 space-y-1 text-sm text-slate-600">
-                    <p>Kelas: {{ $schedule->classroom?->name ?: '-' }}</p>
-                </div>
-                <div class="mt-4 flex flex-wrap gap-3 text-sm font-medium">
-                    <a href="{{ route('teacher-schedules.edit', $schedule) }}" class="text-slate-700">Edit</a>
-                    <form method="POST" action="{{ route('teacher-schedules.destroy', $schedule) }}" data-confirm="Hapus jadwal guru ini?">
-                        @csrf
-                        @method('DELETE')
-                        <button type="submit" class="text-rose-600">Delete</button>
-                    </form>
+
+                <div class="mt-4 space-y-2">
+                    @foreach ($card->slots as $slot)
+                        <div class="flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-slate-100 bg-slate-50 px-4 py-2.5 {{ $slot->is_active ? '' : 'opacity-60' }}">
+                            <div class="flex flex-wrap items-center gap-2">
+                                <span class="inline-flex justify-center rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-xs font-semibold text-slate-700">{{ $slot->dayLabel() }}</span>
+                                <span class="text-sm font-semibold text-slate-900">{{ $slot->timeRangeLabel() }}</span>
+                                <span class="text-xs text-slate-500">{{ $slot->teacher?->name }}</span>
+                                @unless ($slot->is_active)
+                                    <span class="rounded-full bg-slate-200 px-2.5 py-1 text-xs font-medium text-slate-600">Nonaktif</span>
+                                @endunless
+                            </div>
+                            <div class="flex items-center gap-3 text-sm font-medium">
+                                <a href="{{ route('teacher-schedules.edit', $slot) }}" class="text-slate-700 hover:text-slate-900">Edit</a>
+                                <form method="POST" action="{{ route('teacher-schedules.destroy', $slot) }}" data-confirm="Hapus jadwal ini?">
+                                    @csrf
+                                    @method('DELETE')
+                                    <button type="submit" class="text-rose-600 hover:text-rose-700">Hapus</button>
+                                </form>
+                            </div>
+                        </div>
+                    @endforeach
                 </div>
             </div>
         @empty
-            <div class="rounded-3xl bg-white px-6 py-8 text-center text-slate-500 shadow-sm">Belum ada jadwal guru.</div>
+            <div class="rounded-3xl border border-dashed border-slate-200 bg-white px-6 py-12 text-center text-sm text-slate-500">Belum ada jadwal guru.</div>
         @endforelse
-    </div>
-
-    <div class="hidden overflow-hidden rounded-3xl bg-white shadow-sm md:block">
-        <table class="min-w-full divide-y divide-slate-100 text-sm">
-            <thead class="bg-slate-50 text-left text-slate-500">
-                <tr>
-                    <th class="px-6 py-3 font-medium">Guru</th>
-                    <th class="px-6 py-3 font-medium">Hari</th>
-                    <th class="px-6 py-3 font-medium">Jam</th>
-                    <th class="px-6 py-3 font-medium">Kelas</th>
-                    <th class="px-6 py-3 font-medium">Status</th>
-                    <th class="px-6 py-3 font-medium"></th>
-                </tr>
-            </thead>
-            <tbody class="divide-y divide-slate-100">
-                @forelse ($schedules as $schedule)
-                    <tr>
-                        <td class="px-6 py-4 font-medium text-slate-900">{{ $schedule->teacher->name }}</td>
-                        <td class="px-6 py-4 text-slate-600">{{ $schedule->dayLabel() }}</td>
-                        <td class="px-6 py-4 text-slate-600">{{ $schedule->timeRangeLabel() }}</td>
-                        <td class="px-6 py-4 text-slate-600">{{ $schedule->classroom?->name ?: '-' }}</td>
-                        <td class="px-6 py-4">
-                            <span class="rounded-full px-3 py-1 text-xs font-medium {{ $schedule->is_active ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-600' }}">
-                                {{ $schedule->statusLabel() }}
-                            </span>
-                        </td>
-                        <td class="px-6 py-4">
-                            <div class="flex items-center justify-end gap-3">
-                                <a href="{{ route('teacher-schedules.edit', $schedule) }}" class="text-sm font-medium text-slate-700">Edit</a>
-                                <form method="POST" action="{{ route('teacher-schedules.destroy', $schedule) }}" data-confirm="Hapus jadwal guru ini?">
-                                    @csrf
-                                    @method('DELETE')
-                                    <button type="submit" class="text-sm font-medium text-rose-600">Delete</button>
-                                </form>
-                            </div>
-                        </td>
-                    </tr>
-                @empty
-                    <tr>
-                        <td colspan="6" class="px-6 py-8 text-center text-slate-500">Belum ada jadwal guru.</td>
-                    </tr>
-                @endforelse
-            </tbody>
-        </table>
-    </div>
-
-    <div class="mt-4">
-        {{ $schedules->links() }}
     </div>
 </x-app-layout>

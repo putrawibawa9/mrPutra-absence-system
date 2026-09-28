@@ -21,12 +21,24 @@ class TeacherScheduleController extends Controller
             ->with(['teacher', 'classroom.students'])
             ->when($teacherId, fn ($query) => $query->where('teacher_id', $teacherId));
 
-        $schedules = (clone $base)
-            ->orderBy('teacher_id')
+        $allSchedules = (clone $base)
             ->orderByRaw($this->dayOrderSql())
             ->orderBy('start_time')
-            ->paginate(15)
-            ->withQueryString();
+            ->get();
+
+        // Dikelompokkan per kelas/grup (identitas = nama siswa) sebagai kartu.
+        $classroomCards = $allSchedules
+            ->groupBy(fn ($schedule) => $schedule->classroom_id ?? 'none')
+            ->map(fn ($items) => (object) [
+                'classroom' => $items->first()->classroom,
+                'title' => $items->first()->classroom?->name ?? ($items->first()->title ?: 'Tanpa kelas'),
+                'student_hint' => $items->first()->classroom
+                    ? $items->first()->classroom->studentHint()
+                    : ($items->first()->title ?: 'Tanpa kelas'),
+                'slots' => $items->values(),
+            ])
+            ->sortBy(fn ($card) => $card->classroom?->name ?? 'zzz')
+            ->values();
 
         $calendar = $this->buildCalendar(
             (clone $base)->orderBy('start_time')->get(),
@@ -34,7 +46,7 @@ class TeacherScheduleController extends Controller
         );
         $legend = $teachers->pluck('name', 'id')->all();
 
-        return view('teacher-schedules.index', compact('schedules', 'teachers', 'teacherId', 'calendar', 'legend'));
+        return view('teacher-schedules.index', compact('classroomCards', 'teachers', 'teacherId', 'calendar', 'legend'));
     }
 
     /**
