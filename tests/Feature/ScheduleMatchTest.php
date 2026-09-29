@@ -2,8 +2,10 @@
 
 namespace Tests\Feature;
 
+use App\Models\Classroom;
 use App\Models\Registration;
 use App\Models\TeacherAvailability;
+use App\Models\TeacherSchedule;
 use App\Models\User;
 use App\Services\ScheduleMatchService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -23,6 +25,41 @@ class ScheduleMatchTest extends TestCase
             'status' => TeacherAvailability::STATUS_AVAILABLE,
             'is_active' => true,
         ]);
+    }
+
+    private function teaching(User $teacher, string $day, string $start, string $end): void
+    {
+        TeacherSchedule::query()->create([
+            'teacher_id' => $teacher->id,
+            'day_of_week' => $day,
+            'start_time' => $start,
+            'end_time' => $end,
+            'title' => 'Kelas',
+            'is_active' => true,
+        ]);
+    }
+
+    public function test_teacher_already_teaching_at_that_time_is_not_available(): void
+    {
+        $teacher = User::factory()->create(['role' => User::ROLE_TEACHER]);
+        $this->availability($teacher, 'monday', '09:00', '11:00'); // pagi
+        $this->teaching($teacher, 'monday', '09:00', '11:00');      // sudah ngajar penuh
+
+        $matches = app(ScheduleMatchService::class)->matchForPreferences(['monday'], ['pagi']);
+
+        $this->assertCount(0, $matches);
+    }
+
+    public function test_only_the_free_remainder_is_offered(): void
+    {
+        $teacher = User::factory()->create(['role' => User::ROLE_TEACHER]);
+        $this->availability($teacher, 'monday', '06:00', '11:00'); // pagi
+        $this->teaching($teacher, 'monday', '09:00', '11:00');      // sisa bebas 06:00-09:00
+
+        $matches = app(ScheduleMatchService::class)->matchForPreferences(['monday'], ['pagi']);
+
+        $this->assertCount(1, $matches);
+        $this->assertSame('06:00 - 09:00', $matches->first()->slots[0]->time_label);
     }
 
     public function test_matches_teacher_when_day_and_time_bucket_overlap(): void

@@ -4,13 +4,15 @@ namespace App\Services;
 
 use App\Models\Registration;
 use App\Models\TeacherAvailability;
+use App\Models\TeacherSchedule;
 use App\Support\WeeklyDay;
 use Illuminate\Support\Collection;
 
 /**
  * Mencocokkan preferensi waktu murid (hari + slot pagi/siang/sore/malam dari
- * form pendaftaran) dengan ketersediaan guru (hari + jam konkret). Mengembalikan
- * daftar guru yang cocok beserta slot bentroknya, supaya admin tak perlu manual.
+ * form pendaftaran) dengan JAM KOSONG BERSIH guru — yaitu ketersediaan yang
+ * sudah dikurangi jadwal mengajar aktif. Guru yang sudah mengajar di jam itu
+ * tidak lagi dianggap available.
  */
 class ScheduleMatchService
 {
@@ -21,6 +23,9 @@ class ScheduleMatchService
         'sore' => ['15:00', '18:00'],
         'malam' => ['18:00', '21:00'],
     ];
+
+    /** Cache jadwal mengajar aktif per guru+hari (menit). */
+    private ?array $bookedCache = null;
 
     /**
      * Ketersediaan guru aktif & berstatus available (dipreload sekali lalu
@@ -47,6 +52,7 @@ class ScheduleMatchService
     public function matchForPreferences(array $days, array $buckets, ?Collection $availabilities = null): Collection
     {
         $availabilities ??= $this->availableSlots();
+        $booked = $this->bookedByTeacherDay();
 
         $dayFilter = ! empty($days) ? array_values($days) : WeeklyDay::values();
         $bucketFilter = ! empty($buckets) ? array_values($buckets) : array_keys(self::BUCKETS);
@@ -58,8 +64,17 @@ class ScheduleMatchService
                 continue;
             }
 
-            $availStart = $this->toMinutes($availability->start_time);
-            $availEnd = $this->toMinutes($availability->end_time);
+            // Jam kosong bersih = ketersediaan dikurangi jadwal mengajar aktif.
+            $blocks = $booked[$availability->teacher_id][$availability->day_of_week] ?? [];
+            $free = $this->subtractIntervals(
+                $this->toMinutes($availability->start_time),
+                $this->toMinutes($availability->end_time),
+                $blocks,
+            );
+
+            if ($free === []) {
+                continue; // sudah penuh mengajar
+            }
 
             $coveredBuckets = [];
             foreach ($bucketFilter as $bucketKey) {
@@ -70,9 +85,11 @@ class ScheduleMatchService
 
                 [$bucketStart, $bucketEnd] = [$this->toMinutes($range[0]), $this->toMinutes($range[1])];
 
-                // Overlap: mulai sebelum bucket selesai & selesai setelah bucket mulai.
-                if ($availStart < $bucketEnd && $availEnd > $bucketStart) {
-                    $coveredBuckets[] = $bucketKey;
+                foreach ($free as [$fs, $fe]) {
+                    if ($fs < $bucketEnd && $fe > $bucketStart) {
+                        $coveredBuckets[] = $bucketKey;
+                        break;
+                    }
                 }
             }
 
@@ -92,12 +109,12 @@ class ScheduleMatchService
             $matchesByTeacher[$teacherId]->slots[] = (object) [
                 'day' => $availability->day_of_week,
                 'day_label' => WeeklyDay::label($availability->day_of_week),
-                'time_label' => $availability->timeRangeLabel(),
+                'time_label' => $this->labelIntervals($free),
                 'buckets' => $coveredBuckets,
                 'bucket_label' => collect($coveredBuckets)
                     ->map(fn ($bucket) => Registration::timeOptions()[$bucket] ?? $bucket)
                     ->join(', '),
-                'sort' => WeeklyDay::sortOrder($availability->day_of_week) * 10000 + $availStart,
+                'sort' => WeeklyDay::sortOrder($availability->day_of_week) * 10000 + $free[0][0],
             ];
         }
 
@@ -125,8 +142,8 @@ class ScheduleMatchService
     }
 
     /**
-     * Cari guru yang available pada satu hari & (opsional) rentang jam tertentu —
-     * dipakai untuk merekomendasikan pengganti guru yang libur.
+     * Cari guru yang JAM KOSONG bersihnya menutup satu hari & (opsional) rentang
+     * jam tertentu — dipakai untuk merekomendasikan pengganti guru yang libur.
      *
      * @param  string       $dayKey            day key (mis. 'monday')
      * @param  string|null  $start,$end        jam; null = sepanjang hari itu
@@ -136,6 +153,7 @@ class ScheduleMatchService
     public function matchForDayTime(string $dayKey, ?string $start, ?string $end, ?Collection $availabilities = null, array $excludeTeacherIds = []): Collection
     {
         $availabilities ??= $this->availableSlots();
+        $booked = $this->bookedByTeacherDay();
         $exclude = array_map('intval', $excludeTeacherIds);
         $wholeDay = blank($start) || blank($end);
         $windowStart = $wholeDay ? null : $this->toMinutes($start);
@@ -151,10 +169,23 @@ class ScheduleMatchService
                 continue;
             }
 
-            $availStart = $this->toMinutes($availability->start_time);
-            $availEnd = $this->toMinutes($availability->end_time);
+            $blocks = $booked[$availability->teacher_id][$availability->day_of_week] ?? [];
+            $free = $this->subtractIntervals(
+                $this->toMinutes($availability->start_time),
+                $this->toMinutes($availability->end_time),
+                $blocks,
+            );
 
-            if (! $wholeDay && ! ($availStart < $windowEnd && $availEnd > $windowStart)) {
+            if ($free === []) {
+                continue; // sudah penuh mengajar
+            }
+
+            // Bila diminta rentang jam tertentu, hanya window bebas yang beririsan.
+            $relevant = $wholeDay
+                ? $free
+                : array_values(array_filter($free, fn ($iv) => $iv[0] < $windowEnd && $iv[1] > $windowStart));
+
+            if ($relevant === []) {
                 continue;
             }
 
@@ -169,8 +200,8 @@ class ScheduleMatchService
 
             $matchesByTeacher[$teacherId]->slots[] = (object) [
                 'day_label' => WeeklyDay::label($availability->day_of_week),
-                'time_label' => $availability->timeRangeLabel(),
-                'sort' => $availStart,
+                'time_label' => $this->labelIntervals($relevant),
+                'sort' => $relevant[0][0],
             ];
         }
 
@@ -185,11 +216,80 @@ class ScheduleMatchService
             ->values();
     }
 
+    /**
+     * Jadwal mengajar aktif per guru+hari sebagai daftar [startMin, endMin].
+     *
+     * @return array<int, array<string, array<int, array{0:int,1:int}>>>
+     */
+    private function bookedByTeacherDay(): array
+    {
+        if ($this->bookedCache !== null) {
+            return $this->bookedCache;
+        }
+
+        $this->bookedCache = [];
+
+        TeacherSchedule::query()
+            ->where('is_active', true)
+            ->get(['teacher_id', 'day_of_week', 'start_time', 'end_time'])
+            ->each(function (TeacherSchedule $schedule): void {
+                $this->bookedCache[$schedule->teacher_id][$schedule->day_of_week][] = [
+                    $this->toMinutes($schedule->start_time),
+                    $this->toMinutes($schedule->end_time),
+                ];
+            });
+
+        return $this->bookedCache;
+    }
+
+    /**
+     * Kurangi rentang [start,end] dengan blok terpakai → sisa interval bebas.
+     *
+     * @param  array<int, array{0:int,1:int}>  $blocks
+     * @return array<int, array{0:int,1:int}>
+     */
+    private function subtractIntervals(int $start, int $end, array $blocks): array
+    {
+        $free = [[$start, $end]];
+
+        foreach ($blocks as [$b0, $b1]) {
+            $next = [];
+            foreach ($free as [$s, $e]) {
+                if ($b1 <= $s || $b0 >= $e) {
+                    $next[] = [$s, $e];
+
+                    continue;
+                }
+                if ($b0 > $s) {
+                    $next[] = [$s, $b0];
+                }
+                if ($b1 < $e) {
+                    $next[] = [$b1, $e];
+                }
+            }
+            $free = $next;
+        }
+
+        return array_values(array_filter($free, fn ($iv) => $iv[1] > $iv[0]));
+    }
+
+    private function labelIntervals(array $intervals): string
+    {
+        return collect($intervals)
+            ->map(fn ($iv) => $this->fromMinutes($iv[0]).' - '.$this->fromMinutes($iv[1]))
+            ->join(', ');
+    }
+
     private function toMinutes($time): int
     {
         [$h, $m] = array_pad(explode(':', substr((string) $time, 0, 5)), 2, '0');
 
         return ((int) $h) * 60 + (int) $m;
+    }
+
+    private function fromMinutes(int $minutes): string
+    {
+        return sprintf('%02d:%02d', intdiv($minutes, 60), $minutes % 60);
     }
 
     private function dayOrderSql(): string
