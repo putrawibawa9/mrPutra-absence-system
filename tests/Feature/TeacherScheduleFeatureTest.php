@@ -24,6 +24,27 @@ class TeacherScheduleFeatureTest extends TestCase
         ]);
     }
 
+    public function test_group_cards_filter_by_category(): void
+    {
+        $admin = User::factory()->create(['role' => User::ROLE_ADMIN]);
+        $teacher = User::factory()->create(['role' => User::ROLE_TEACHER]);
+
+        $english = Classroom::create(['name' => 'English Grup', 'division' => Classroom::DIVISION_ENGLISH, 'format' => Classroom::FORMAT_SEMI, 'age_group' => Classroom::AGE_KIDS, 'is_active' => true]);
+        $coding = Classroom::create(['name' => 'Coding Private', 'division' => Classroom::DIVISION_CODING, 'format' => Classroom::FORMAT_PRIVATE, 'age_group' => Classroom::AGE_KIDS, 'is_active' => true]);
+
+        foreach ([$english, $coding] as $room) {
+            TeacherSchedule::create(['teacher_id' => $teacher->id, 'classroom_id' => $room->id, 'title' => $room->name, 'day_of_week' => 'monday', 'start_time' => '17:00', 'end_time' => '18:10', 'is_active' => true]);
+        }
+
+        $this->actingAs($admin)->get(route('teacher-schedules.index', ['division' => Classroom::DIVISION_CODING]))
+            ->assertOk()
+            ->assertViewHas('classroomCards', function ($cards) use ($coding, $english) {
+                $ids = $cards->pluck('classroom.id');
+
+                return $ids->contains($coding->id) && ! $ids->contains($english->id);
+            });
+    }
+
     public function test_index_lists_active_groups_without_a_schedule(): void
     {
         $admin = User::factory()->create(['role' => User::ROLE_ADMIN]);

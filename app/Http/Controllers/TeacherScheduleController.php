@@ -17,9 +17,17 @@ class TeacherScheduleController extends Controller
         $teacherId = $request->integer('teacher_id') ?: null;
         $teachers = User::teachers()->orderBy('name')->get();
 
+        // Filter kategori kelas.
+        $division = array_key_exists((string) $request->input('division'), Classroom::divisionOptions()) ? $request->input('division') : null;
+        $format = array_key_exists((string) $request->input('format'), Classroom::formatOptions()) ? $request->input('format') : null;
+        $ageGroup = array_key_exists((string) $request->input('age_group'), Classroom::ageOptions()) ? $request->input('age_group') : null;
+
         $base = TeacherSchedule::query()
             ->with(['teacher', 'coTeacher', 'classroom.students'])
-            ->when($teacherId, fn ($query) => $query->where(fn ($q) => $q->where('teacher_id', $teacherId)->orWhere('co_teacher_id', $teacherId)));
+            ->when($teacherId, fn ($query) => $query->where(fn ($q) => $q->where('teacher_id', $teacherId)->orWhere('co_teacher_id', $teacherId)))
+            ->when($division, fn ($query) => $query->whereHas('classroom', fn ($c) => $c->where('division', $division)))
+            ->when($format, fn ($query) => $query->whereHas('classroom', fn ($c) => $c->where('format', $format)))
+            ->when($ageGroup, fn ($query) => $query->whereHas('classroom', fn ($c) => $c->where('age_group', $ageGroup)));
 
         $allSchedules = (clone $base)
             ->orderByRaw($this->dayOrderSql())
@@ -62,10 +70,24 @@ class TeacherScheduleController extends Controller
             ->active()
             ->with('students:id,name')
             ->whereNotIn('id', $scheduledClassroomIds)
+            ->when($division, fn ($query) => $query->where('division', $division))
+            ->when($format, fn ($query) => $query->where('format', $format))
+            ->when($ageGroup, fn ($query) => $query->where('age_group', $ageGroup))
             ->orderBy('name')
             ->get();
 
-        return view('teacher-schedules.index', compact('classroomCards', 'teachers', 'teacherId', 'calendar', 'legend', 'unscheduledGroups'));
+        return view('teacher-schedules.index', [
+            'classroomCards' => $classroomCards,
+            'teachers' => $teachers,
+            'teacherId' => $teacherId,
+            'calendar' => $calendar,
+            'legend' => $legend,
+            'unscheduledGroups' => $unscheduledGroups,
+            'filters' => ['division' => $division, 'format' => $format, 'age_group' => $ageGroup],
+            'divisionOptions' => Classroom::divisionOptions(),
+            'formatOptions' => Classroom::formatOptions(),
+            'ageOptions' => Classroom::ageOptions(),
+        ]);
     }
 
     /**
