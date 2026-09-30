@@ -25,10 +25,14 @@ class RegistrationController extends Controller
 
     public function store(Request $request)
     {
+        // Satu pendaftar bisa mendaftarkan beberapa murid sekaligus (mis. bareng
+        // teman). Kontak & preferensi jadwal dipakai bersama; tiap murid jadi
+        // satu baris pendaftaran agar bisa direview & diterima terpisah.
         $data = $request->validate([
-            'student_name' => ['required', 'string', 'max:255'],
+            'students' => ['required', 'array', 'min:1', 'max:10'],
+            'students.*.name' => ['required', 'string', 'max:255'],
+            'students.*.age' => ['required', 'integer', 'min:1', 'max:120'],
             'phone' => ['required', 'string', 'max:40'],
-            'age' => ['required', 'integer', 'min:1', 'max:120'],
             'format_preference' => ['required', Rule::in(array_keys(Registration::formatOptions()))],
             'goal' => ['required', Rule::in(array_keys(Registration::goalOptions()))],
             'available_days' => ['required', 'array', 'min:1'],
@@ -36,22 +40,36 @@ class RegistrationController extends Controller
             'time_preferences' => ['required', 'array', 'min:1'],
             'time_preferences.*' => [Rule::in(array_keys(Registration::timeOptions()))],
         ], [
-            'student_name.required' => 'Nama murid wajib diisi.',
+            'students.required' => 'Isi minimal satu murid.',
+            'students.*.name.required' => 'Nama murid wajib diisi.',
+            'students.*.age.required' => 'Umur murid wajib diisi.',
             'phone.required' => 'Nomor WhatsApp wajib diisi.',
-            'age.required' => 'Umur wajib diisi.',
             'format_preference.required' => 'Pilih format les.',
             'goal.required' => 'Pilih tujuan les.',
             'available_days.required' => 'Pilih minimal satu hari yang bisa.',
             'time_preferences.required' => 'Pilih minimal satu preferensi waktu.',
         ]);
 
-        // Form ini khusus English course.
-        $data['program'] = 'english';
-        $data['status'] = Registration::STATUS_PENDING;
+        $shared = [
+            'phone' => $data['phone'],
+            'format_preference' => $data['format_preference'],
+            'goal' => $data['goal'],
+            'available_days' => $data['available_days'],
+            'time_preferences' => $data['time_preferences'],
+            'program' => 'english', // Form ini khusus English course.
+            'status' => Registration::STATUS_PENDING,
+        ];
 
-        Registration::create($data);
+        $names = [];
+        foreach ($data['students'] as $student) {
+            Registration::create(array_merge($shared, [
+                'student_name' => $student['name'],
+                'age' => $student['age'],
+            ]));
+            $names[] = $student['name'];
+        }
 
-        return view('registrations.thanks', ['name' => $data['student_name']]);
+        return view('registrations.thanks', ['names' => $names]);
     }
 
     /**

@@ -25,9 +25,8 @@ class RegistrationTest extends TestCase
     public function test_public_can_submit_registration(): void
     {
         $this->post(route('registrations.store'), [
-            'student_name' => 'Budi Santoso',
+            'students' => [['name' => 'Budi Santoso', 'age' => 10]],
             'phone' => '081234567890',
-            'age' => 10,
             'format_preference' => 'private',
             'goal' => 'conversation',
             'available_days' => ['monday', 'wednesday'],
@@ -49,11 +48,32 @@ class RegistrationTest extends TestCase
         $this->assertDatabaseCount('students', 0);
     }
 
+    public function test_public_can_register_multiple_students_at_once(): void
+    {
+        $this->post(route('registrations.store'), [
+            'students' => [
+                ['name' => 'Dina', 'age' => 12],
+                ['name' => 'Tania', 'age' => 13],
+            ],
+            'phone' => '0857',
+            'format_preference' => 'semi',
+            'goal' => 'conversation',
+            'available_days' => ['tuesday'],
+            'time_preferences' => ['malam'],
+        ])->assertOk()->assertSee('Terima kasih');
+
+        // Dua baris pendaftaran, kontak & preferensi sama.
+        $this->assertDatabaseCount('registrations', 2);
+        $this->assertDatabaseHas('registrations', ['student_name' => 'Dina', 'age' => 12, 'phone' => '0857']);
+        $this->assertDatabaseHas('registrations', ['student_name' => 'Tania', 'age' => 13, 'phone' => '0857']);
+        $this->assertSame(2, Registration::query()->where('phone', '0857')->count());
+    }
+
     public function test_registration_validates_required_fields(): void
     {
         $this->from(route('registrations.create'))
-            ->post(route('registrations.store'), ['student_name' => '', 'phone' => ''])
-            ->assertSessionHasErrors(['student_name', 'phone', 'age', 'format_preference', 'goal', 'available_days', 'time_preferences']);
+            ->post(route('registrations.store'), ['students' => [], 'phone' => ''])
+            ->assertSessionHasErrors(['students', 'phone', 'format_preference', 'goal', 'available_days', 'time_preferences']);
 
         $this->assertDatabaseCount('registrations', 0);
     }
