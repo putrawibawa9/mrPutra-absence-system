@@ -91,6 +91,30 @@ class Registration extends Model
         ];
     }
 
+    /**
+     * Rentang jam tiap slot — SELARAS dengan App\Services\ScheduleMatchService::BUCKETS.
+     * Ditampilkan di form agar tidak miskom.
+     */
+    public static function timeRanges(): array
+    {
+        return [
+            'pagi' => '06:00–11:00',
+            'siang' => '11:00–15:00',
+            'sore' => '15:00–18:00',
+            'malam' => '18:00–21:00',
+        ];
+    }
+
+    /** Label slot + rentang jam, mis. "Pagi (06:00–11:00)". */
+    public static function timeOptionsWithRange(): array
+    {
+        $ranges = self::timeRanges();
+
+        return collect(self::timeOptions())
+            ->map(fn ($label, $key) => $label.' ('.($ranges[$key] ?? '').')')
+            ->all();
+    }
+
     public function student(): BelongsTo
     {
         return $this->belongsTo(Student::class);

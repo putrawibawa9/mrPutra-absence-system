@@ -18,7 +18,7 @@ class RegistrationController extends Controller
         return view('registrations.create', [
             'formatOptions' => Registration::formatOptions(),
             'goalOptions' => Registration::goalOptions(),
-            'timeOptions' => Registration::timeOptions(),
+            'timeOptions' => Registration::timeOptionsWithRange(),
             'dayOptions' => WeeklyDay::options(),
         ]);
     }
@@ -32,7 +32,8 @@ class RegistrationController extends Controller
             'students' => ['required', 'array', 'min:1', 'max:10'],
             'students.*.name' => ['required', 'string', 'max:255'],
             'students.*.age' => ['required', 'integer', 'min:1', 'max:120'],
-            'phone' => ['required', 'string', 'max:40'],
+            // Nomor WA per murid — langsung tersimpan ke masing-masing data.
+            'students.*.phone' => ['required', 'string', 'max:40'],
             'format_preference' => ['required', Rule::in(array_keys(Registration::formatOptions()))],
             'goal' => ['required', Rule::in(array_keys(Registration::goalOptions()))],
             'available_days' => ['required', 'array', 'min:1'],
@@ -43,7 +44,7 @@ class RegistrationController extends Controller
             'students.required' => 'Isi minimal satu murid.',
             'students.*.name.required' => 'Nama murid wajib diisi.',
             'students.*.age.required' => 'Umur murid wajib diisi.',
-            'phone.required' => 'Nomor WhatsApp wajib diisi.',
+            'students.*.phone.required' => 'Nomor WhatsApp tiap murid wajib diisi.',
             'format_preference.required' => 'Pilih format les.',
             'goal.required' => 'Pilih tujuan les.',
             'available_days.required' => 'Pilih minimal satu hari yang bisa.',
@@ -51,7 +52,6 @@ class RegistrationController extends Controller
         ]);
 
         $shared = [
-            'phone' => $data['phone'],
             'format_preference' => $data['format_preference'],
             'goal' => $data['goal'],
             'available_days' => $data['available_days'],
@@ -65,6 +65,7 @@ class RegistrationController extends Controller
             Registration::create(array_merge($shared, [
                 'student_name' => $student['name'],
                 'age' => $student['age'],
+                'phone' => $student['phone'],
             ]));
             $names[] = $student['name'];
         }

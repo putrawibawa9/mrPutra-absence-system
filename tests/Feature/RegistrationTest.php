@@ -25,8 +25,7 @@ class RegistrationTest extends TestCase
     public function test_public_can_submit_registration(): void
     {
         $this->post(route('registrations.store'), [
-            'students' => [['name' => 'Budi Santoso', 'age' => 10]],
-            'phone' => '081234567890',
+            'students' => [['name' => 'Budi Santoso', 'age' => 10, 'phone' => '081234567890']],
             'format_preference' => 'private',
             'goal' => 'conversation',
             'available_days' => ['monday', 'wednesday'],
@@ -52,28 +51,41 @@ class RegistrationTest extends TestCase
     {
         $this->post(route('registrations.store'), [
             'students' => [
-                ['name' => 'Dina', 'age' => 12],
-                ['name' => 'Tania', 'age' => 13],
+                ['name' => 'Dina', 'age' => 12, 'phone' => '0857111'],
+                ['name' => 'Tania', 'age' => 13, 'phone' => '0857222'],
             ],
-            'phone' => '0857',
             'format_preference' => 'semi',
             'goal' => 'conversation',
             'available_days' => ['tuesday'],
             'time_preferences' => ['malam'],
         ])->assertOk()->assertSee('Terima kasih');
 
-        // Dua baris pendaftaran, kontak & preferensi sama.
+        // Dua baris pendaftaran, masing-masing nomor WA sendiri; preferensi sama.
         $this->assertDatabaseCount('registrations', 2);
-        $this->assertDatabaseHas('registrations', ['student_name' => 'Dina', 'age' => 12, 'phone' => '0857']);
-        $this->assertDatabaseHas('registrations', ['student_name' => 'Tania', 'age' => 13, 'phone' => '0857']);
-        $this->assertSame(2, Registration::query()->where('phone', '0857')->count());
+        $this->assertDatabaseHas('registrations', ['student_name' => 'Dina', 'age' => 12, 'phone' => '0857111']);
+        $this->assertDatabaseHas('registrations', ['student_name' => 'Tania', 'age' => 13, 'phone' => '0857222']);
+    }
+
+    public function test_registration_requires_phone_per_student(): void
+    {
+        $this->from(route('registrations.create'))
+            ->post(route('registrations.store'), [
+                'students' => [['name' => 'Tanpa Nomor', 'age' => 11]],
+                'format_preference' => 'private',
+                'goal' => 'conversation',
+                'available_days' => ['monday'],
+                'time_preferences' => ['sore'],
+            ])
+            ->assertSessionHasErrors('students.0.phone');
+
+        $this->assertDatabaseCount('registrations', 0);
     }
 
     public function test_registration_validates_required_fields(): void
     {
         $this->from(route('registrations.create'))
-            ->post(route('registrations.store'), ['students' => [], 'phone' => ''])
-            ->assertSessionHasErrors(['students', 'phone', 'format_preference', 'goal', 'available_days', 'time_preferences']);
+            ->post(route('registrations.store'), ['students' => []])
+            ->assertSessionHasErrors(['students', 'format_preference', 'goal', 'available_days', 'time_preferences']);
 
         $this->assertDatabaseCount('registrations', 0);
     }
