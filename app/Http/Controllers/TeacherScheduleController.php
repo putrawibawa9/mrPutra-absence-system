@@ -50,7 +50,22 @@ class TeacherScheduleController extends Controller
         );
         $legend = $teachers->pluck('name', 'id')->all();
 
-        return view('teacher-schedules.index', compact('classroomCards', 'teachers', 'teacherId', 'calendar', 'legend'));
+        // Grup (kelas aktif) yang belum punya jadwal aktif — untuk monitoring.
+        $scheduledClassroomIds = TeacherSchedule::query()
+            ->where('is_active', true)
+            ->whereNotNull('classroom_id')
+            ->distinct()
+            ->pluck('classroom_id')
+            ->all();
+
+        $unscheduledGroups = Classroom::query()
+            ->active()
+            ->with('students:id,name')
+            ->whereNotIn('id', $scheduledClassroomIds)
+            ->orderBy('name')
+            ->get();
+
+        return view('teacher-schedules.index', compact('classroomCards', 'teachers', 'teacherId', 'calendar', 'legend', 'unscheduledGroups'));
     }
 
     /**

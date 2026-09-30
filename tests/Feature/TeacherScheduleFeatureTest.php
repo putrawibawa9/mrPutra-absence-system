@@ -24,6 +24,28 @@ class TeacherScheduleFeatureTest extends TestCase
         ]);
     }
 
+    public function test_index_lists_active_groups_without_a_schedule(): void
+    {
+        $admin = User::factory()->create(['role' => User::ROLE_ADMIN]);
+        $teacher = User::factory()->create(['role' => User::ROLE_TEACHER]);
+
+        $scheduled = Classroom::create(['name' => 'Sudah Jadwal', 'division' => Classroom::DIVISION_ENGLISH, 'format' => Classroom::FORMAT_SEMI, 'age_group' => Classroom::AGE_KIDS, 'is_active' => true]);
+        $unscheduled = Classroom::create(['name' => 'Belum Jadwal', 'division' => Classroom::DIVISION_ENGLISH, 'format' => Classroom::FORMAT_PRIVATE, 'age_group' => Classroom::AGE_KIDS, 'is_active' => true]);
+
+        TeacherSchedule::create([
+            'teacher_id' => $teacher->id, 'classroom_id' => $scheduled->id, 'title' => $scheduled->name,
+            'day_of_week' => 'monday', 'start_time' => '17:00', 'end_time' => '18:10', 'is_active' => true,
+        ]);
+
+        $this->actingAs($admin)->get(route('teacher-schedules.index'))
+            ->assertOk()
+            ->assertViewHas('unscheduledGroups', function ($groups) use ($scheduled, $unscheduled) {
+                $ids = $groups->pluck('id');
+
+                return $ids->contains($unscheduled->id) && ! $ids->contains($scheduled->id);
+            });
+    }
+
     public function test_admin_can_create_teacher_schedule_and_teacher_can_view_it(): void
     {
         $admin = User::factory()->create(['role' => User::ROLE_ADMIN]);

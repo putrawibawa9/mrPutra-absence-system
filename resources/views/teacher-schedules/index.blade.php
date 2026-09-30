@@ -75,4 +75,34 @@
             <div class="rounded-3xl border border-dashed border-slate-200 bg-white px-6 py-12 text-center text-sm text-slate-500" style="grid-column:1/-1;">Belum ada jadwal guru.</div>
         @endforelse
     </div>
+
+    {{-- ===== Grup yang belum dijadwalkan ===== --}}
+    <div class="mb-2 mt-8 flex items-center justify-between">
+        <h3 class="text-lg font-semibold text-slate-900">Grup Belum Dijadwalkan</h3>
+        <span class="text-sm {{ $unscheduledGroups->isEmpty() ? 'text-emerald-600' : 'text-amber-600' }}">{{ $unscheduledGroups->count() }} grup</span>
+    </div>
+    <p class="mb-3 text-sm text-slate-500">Kelas aktif yang belum punya jadwal mingguan aktif — perlu dibuatkan jadwal.</p>
+
+    @if ($unscheduledGroups->isEmpty())
+        <div class="rounded-3xl border border-dashed border-emerald-200 bg-emerald-50 px-6 py-8 text-center text-sm text-emerald-700">Semua grup aktif sudah punya jadwal. 🎉</div>
+    @else
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:0.75rem;">
+            @foreach ($unscheduledGroups as $group)
+                <div class="rounded-2xl border border-amber-200 bg-white p-4 shadow-sm">
+                    <div class="flex items-center gap-2 border-b border-slate-100 pb-3">
+                        <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-amber-100 text-sm font-semibold text-amber-700">
+                            {{ strtoupper(mb_substr($group->studentHint(), 0, 1)) }}
+                        </span>
+                        <div class="min-w-0">
+                            <h3 class="truncate text-sm font-semibold text-slate-900">{{ $group->studentHint() }}</h3>
+                            <p class="truncate text-xs text-slate-500">
+                                @if ($group->code)<span class="font-semibold text-slate-600">{{ $group->code }}</span> · @endif{{ $group->formatLabel() }}
+                            </p>
+                        </div>
+                    </div>
+                    <a href="{{ route('teacher-schedules.create', ['classroom_id' => $group->id]) }}" class="mt-3 inline-flex w-full justify-center rounded-xl bg-slate-900 px-3 py-2 text-xs font-medium text-white">+ Buat Jadwal</a>
+                </div>
+            @endforeach
+        </div>
+    @endif
 </x-app-layout>
