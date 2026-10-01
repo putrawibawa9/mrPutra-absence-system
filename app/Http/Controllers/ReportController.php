@@ -8,9 +8,11 @@ use App\Models\ExpenseCategory;
 use App\Models\Payment;
 use App\Models\Student;
 use App\Models\Token;
+use App\Models\User;
 use App\Services\AttendanceTeacherFeeService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\URL;
 
 class ReportController extends Controller
 {
@@ -317,14 +319,21 @@ class ReportController extends Controller
 
         $rows = $fees
             ->groupBy('teacher_user_id')
-            ->map(function ($group) {
+            ->map(function ($group) use ($dateFrom, $dateTo) {
                 $coCount = $group->filter(fn (Expense $e) => str_contains(mb_strtolower((string) $e->title), 'co-teacher'))->count();
+                $teacher = $group->first()->teacher;
 
                 return (object) [
-                    'teacher' => $group->first()->teacher,
+                    'teacher' => $teacher,
                     'session_count' => $group->count(),
                     'co_session_count' => $coCount,
                     'total' => (int) $group->sum('amount'),
+                    // Link slip gaji bertanda-tangan (bisa dibuka tanpa login / di-SS).
+                    'slip_url' => $teacher ? URL::temporarySignedRoute('salary-slip.show', now()->addDays(30), [
+                        'teacher' => $teacher->id,
+                        'date_from' => $dateFrom,
+                        'date_to' => $dateTo,
+                    ]) : null,
                 ];
             })
             ->sortByDesc('total')
@@ -336,6 +345,53 @@ class ReportController extends Controller
             'totalPayout' => (int) $rows->sum('total'),
             'teacherCount' => $rows->count(),
             'sessionCount' => (int) $rows->sum('session_count'),
+        ]);
+    }
+
+    /**
+     * Slip gaji satu guru untuk satu periode — halaman publik (signed URL),
+     * bisa dibuka guru atau di-screenshot admin.
+     */
+    public function salarySlip(Request $request, User $teacher)
+    {
+        abort_unless($teacher->isTeacher(), 404);
+
+        $dateFrom = $request->query('date_from') ?: now()->startOfMonth()->toDateString();
+        $dateTo = $request->query('date_to') ?: now()->endOfMonth()->toDateString();
+
+        $feeGuruId = ExpenseCategory::feeGuruId();
+
+        $fees = $feeGuruId === null ? collect() : Expense::query()
+            ->where('expense_category_id', $feeGuruId)
+            ->where('teacher_user_id', $teacher->id)
+            ->whereDate('expense_date', '>=', $dateFrom)
+            ->whereDate('expense_date', '<=', $dateTo)
+            ->orderBy('expense_date')
+            ->orderBy('id')
+            ->get();
+
+        $items = $fees->map(function (Expense $fee) {
+            $title = (string) $fee->title;
+            $isCo = str_contains(mb_strtolower($title), 'co-teacher');
+            // Ambil keterangan (bagian setelah tanda "-" terakhir = murid/kelas).
+            $desc = str_contains($title, ' - ') ? trim(substr($title, strrpos($title, ' - ') + 3)) : $title;
+
+            return (object) [
+                'date' => $fee->expense_date,
+                'desc' => $desc ?: '-',
+                'is_co' => $isCo,
+                'amount' => (int) $fee->amount,
+            ];
+        });
+
+        return view('reports.salary-slip', [
+            'teacher' => $teacher,
+            'dateFrom' => $dateFrom,
+            'dateTo' => $dateTo,
+            'items' => $items,
+            'sessionCount' => $items->count(),
+            'total' => (int) $fees->sum('amount'),
+            'generatedAt' => now(),
         ]);
     }
 

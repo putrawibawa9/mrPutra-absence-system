@@ -37,6 +37,11 @@ Route::get('/receipts/{payment}/public', [PaymentController::class, 'publicRecei
     ->middleware('signed')
     ->name('payments.public-receipt');
 
+// Slip gaji guru — halaman publik diamankan signed URL (bisa dibuka guru / di-SS admin).
+Route::get('/salary-slip/{teacher}', [ReportController::class, 'salarySlip'])
+    ->middleware('signed')
+    ->name('salary-slip.show');
+
 // Form feedback publik untuk murid (tanpa login, diamankan signed URL).
 Route::get('/feedback/{student}', [FeedbackController::class, 'create'])
     ->middleware('signed')
