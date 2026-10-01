@@ -19,19 +19,24 @@ class TeacherAvailabilityController extends Controller
             ->orderBy('start_time')
             ->get();
 
-        // Jam mengajar yang sudah di-assign (aktif), dikelompokkan per guru+hari,
-        // untuk dikurangkan dari ketersediaan → jam kosong bersih.
-        $bookedByTeacherDay = TeacherSchedule::query()
+        // Jam mengajar yang sudah di-assign (aktif) per guru+hari, untuk dikurangkan
+        // dari ketersediaan → jam kosong bersih. Dihitung baik sebagai GURU UTAMA
+        // maupun CO-TEACHER (co_teacher_id), karena keduanya bikin guru itu sibuk.
+        $bookedByTeacherDay = [];
+        TeacherSchedule::query()
             ->where('is_active', true)
-            ->get(['teacher_id', 'day_of_week', 'start_time', 'end_time'])
-            ->groupBy('teacher_id')
-            ->map(fn ($rows) => $rows->groupBy('day_of_week'));
+            ->get(['teacher_id', 'co_teacher_id', 'day_of_week', 'start_time', 'end_time'])
+            ->each(function (TeacherSchedule $schedule) use (&$bookedByTeacherDay): void {
+                $block = [$this->toMinutes($schedule->start_time), $this->toMinutes($schedule->end_time)];
+                $bookedByTeacherDay[$schedule->teacher_id][$schedule->day_of_week][] = $block;
+                if ($schedule->co_teacher_id) {
+                    $bookedByTeacherDay[$schedule->co_teacher_id][$schedule->day_of_week][] = $block;
+                }
+            });
 
         // Anotasi tiap slot: jam terpakai ngajar & sisa jam bersih.
         $availabilities->each(function (TeacherAvailability $slot) use ($bookedByTeacherDay): void {
-            $blocks = ($bookedByTeacherDay[$slot->teacher_id][$slot->day_of_week] ?? collect())
-                ->map(fn ($schedule) => [$this->toMinutes($schedule->start_time), $this->toMinutes($schedule->end_time)])
-                ->all();
+            $blocks = $bookedByTeacherDay[$slot->teacher_id][$slot->day_of_week] ?? [];
 
             $start = $this->toMinutes($slot->start_time);
             $end = $this->toMinutes($slot->end_time);

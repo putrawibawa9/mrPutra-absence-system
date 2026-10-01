@@ -231,12 +231,17 @@ class ScheduleMatchService
 
         TeacherSchedule::query()
             ->where('is_active', true)
-            ->get(['teacher_id', 'day_of_week', 'start_time', 'end_time'])
+            ->get(['teacher_id', 'co_teacher_id', 'day_of_week', 'start_time', 'end_time'])
             ->each(function (TeacherSchedule $schedule): void {
-                $this->bookedCache[$schedule->teacher_id][$schedule->day_of_week][] = [
+                $block = [
                     $this->toMinutes($schedule->start_time),
                     $this->toMinutes($schedule->end_time),
                 ];
+                // Guru sibuk baik sebagai guru utama maupun co-teacher.
+                $this->bookedCache[$schedule->teacher_id][$schedule->day_of_week][] = $block;
+                if ($schedule->co_teacher_id) {
+                    $this->bookedCache[$schedule->co_teacher_id][$schedule->day_of_week][] = $block;
+                }
             });
 
         return $this->bookedCache;

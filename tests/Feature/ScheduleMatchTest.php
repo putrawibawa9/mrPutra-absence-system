@@ -50,6 +50,28 @@ class ScheduleMatchTest extends TestCase
         $this->assertCount(0, $matches);
     }
 
+    public function test_co_teaching_also_makes_teacher_unavailable(): void
+    {
+        $teacher = User::factory()->create(['role' => User::ROLE_TEACHER]);
+        $primary = User::factory()->create(['role' => User::ROLE_TEACHER]);
+        $this->availability($teacher, 'monday', '09:00', '11:00'); // pagi
+
+        // $teacher jadi co-teacher penuh di jam itu.
+        TeacherSchedule::query()->create([
+            'teacher_id' => $primary->id,
+            'co_teacher_id' => $teacher->id,
+            'day_of_week' => 'monday',
+            'start_time' => '09:00',
+            'end_time' => '11:00',
+            'title' => 'Kelas',
+            'is_active' => true,
+        ]);
+
+        $matches = app(ScheduleMatchService::class)->matchForPreferences(['monday'], ['pagi']);
+
+        $this->assertCount(0, $matches);
+    }
+
     public function test_only_the_free_remainder_is_offered(): void
     {
         $teacher = User::factory()->create(['role' => User::ROLE_TEACHER]);

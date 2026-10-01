@@ -70,6 +70,30 @@ class AvailabilityNetHoursTest extends TestCase
         $this->assertSame('-', $slot->free_label);
     }
 
+    public function test_co_teaching_hours_are_also_subtracted(): void
+    {
+        $teacher = User::factory()->create(['role' => User::ROLE_TEACHER]);
+        $primary = User::factory()->create(['role' => User::ROLE_TEACHER]);
+        $availability = $this->availability($teacher, 'monday', '17:00', '20:00');
+
+        // $teacher ditugaskan sebagai CO-TEACHER di jadwal milik $primary.
+        TeacherSchedule::query()->create([
+            'teacher_id' => $primary->id,
+            'co_teacher_id' => $teacher->id,
+            'title' => 'Kelas',
+            'day_of_week' => 'monday',
+            'start_time' => '18:20',
+            'end_time' => '19:30',
+            'is_active' => true,
+        ]);
+
+        $slot = $this->slotFor($teacher, $availability->id);
+
+        $this->assertTrue($slot->has_booked);
+        $this->assertSame('17:00 - 18:20, 19:30 - 20:00', $slot->free_label);
+        $this->assertSame('18:20 - 19:30', $slot->booked_label);
+    }
+
     public function test_schedule_on_other_day_does_not_affect_slot(): void
     {
         $teacher = User::factory()->create(['role' => User::ROLE_TEACHER]);
