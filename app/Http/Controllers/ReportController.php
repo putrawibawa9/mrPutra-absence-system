@@ -292,6 +292,54 @@ class ReportController extends Controller
     }
 
     /**
+     * Gaji guru per periode: akumulasi expense kategori Fee Guru (termasuk fee
+     * co-teacher) per guru, dengan jumlah sesi.
+     */
+    public function teacherSalary(Request $request)
+    {
+        $filters = $request->validate([
+            'date_from' => ['nullable', 'date'],
+            'date_to' => ['nullable', 'date', 'after_or_equal:date_from'],
+        ]);
+
+        $dateFrom = $filters['date_from'] ?? now()->startOfMonth()->toDateString();
+        $dateTo = $filters['date_to'] ?? now()->endOfMonth()->toDateString();
+
+        $feeGuruId = ExpenseCategory::feeGuruId();
+
+        $fees = $feeGuruId === null ? collect() : Expense::query()
+            ->where('expense_category_id', $feeGuruId)
+            ->whereNotNull('teacher_user_id')
+            ->whereDate('expense_date', '>=', $dateFrom)
+            ->whereDate('expense_date', '<=', $dateTo)
+            ->with('teacher:id,name')
+            ->get();
+
+        $rows = $fees
+            ->groupBy('teacher_user_id')
+            ->map(function ($group) {
+                $coCount = $group->filter(fn (Expense $e) => str_contains(mb_strtolower((string) $e->title), 'co-teacher'))->count();
+
+                return (object) [
+                    'teacher' => $group->first()->teacher,
+                    'session_count' => $group->count(),
+                    'co_session_count' => $coCount,
+                    'total' => (int) $group->sum('amount'),
+                ];
+            })
+            ->sortByDesc('total')
+            ->values();
+
+        return view('reports.teacher-salary', [
+            'filters' => ['date_from' => $dateFrom, 'date_to' => $dateTo],
+            'rows' => $rows,
+            'totalPayout' => (int) $rows->sum('total'),
+            'teacherCount' => $rows->count(),
+            'sessionCount' => (int) $rows->sum('session_count'),
+        ]);
+    }
+
+    /**
      * LTV per murid: berapa kali dia bayar (cycle token), total token dibeli,
      * dan total nilai yang pernah dibayar — untuk analisa retensi & LTV.
      */

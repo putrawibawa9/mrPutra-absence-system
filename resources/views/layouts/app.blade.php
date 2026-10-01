@@ -68,6 +68,7 @@
                         ['label' => 'Komitmen / Cicilan', 'route' => 'expense-commitments.index', 'pattern' => 'expense-commitments.*'],
                         ['label' => 'Expense Categories', 'route' => 'expense-categories.index', 'pattern' => 'expense-categories.*'],
                         ['label' => 'Cash Flow', 'route' => 'cash-flow.index', 'pattern' => 'cash-flow.*'],
+                        ['label' => 'Gaji Guru', 'route' => 'reports.teacher-salary', 'pattern' => 'reports.teacher-salary'],
                         ['label' => 'Monitoring OpEx', 'route' => 'reports.opex', 'pattern' => 'reports.opex'],
                         ['label' => 'Review Bulanan', 'route' => 'reports.review', 'pattern' => 'reports.review'],
                         ['label' => 'LTV Murid', 'route' => 'reports.ltv', 'pattern' => 'reports.ltv'],
