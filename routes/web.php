@@ -12,6 +12,7 @@ use App\Http\Controllers\FeedbackController;
 use App\Http\Controllers\FollowUpController;
 use App\Http\Controllers\LearningModuleController;
 use App\Http\Controllers\MaterialLinkController;
+use App\Http\Controllers\MenuController;
 use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\RegistrationController;
@@ -52,6 +53,9 @@ Route::post('/feedback/{student}', [FeedbackController::class, 'store'])
 
 Route::middleware('auth')->group(function () {
     Route::get('/dashboard', DashboardController::class)->name('dashboard');
+
+    // Halaman hub per grup menu (sidebar ramping: 1 grup = 1 link).
+    Route::get('/menu/{section}', [MenuController::class, 'show'])->name('menu.show');
 
     Route::get('/students', [StudentController::class, 'index'])->name('students.index');
 

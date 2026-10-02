@@ -15,102 +15,7 @@
         @vite(['resources/css/app.css', 'resources/js/app.js'])
     </head>
     @php
-        if (auth()->user()->isAdmin()) {
-            $navSections = [
-                [
-                    'label' => 'Overview',
-                    'items' => [
-                        ['label' => 'Dashboard', 'route' => 'dashboard', 'pattern' => 'dashboard'],
-                    ],
-                ],
-                [
-                    'label' => 'Students',
-                    'items' => [
-                        ['label' => 'All Students', 'route' => 'students.index', 'pattern' => 'students.*'],
-                        ['label' => 'Pendaftaran', 'route' => 'registrations.index', 'pattern' => 'registrations.index'],
-                        ['label' => 'Pencocokan Jadwal', 'route' => 'schedule-match.index', 'pattern' => 'schedule-match.*'],
-                    ],
-                ],
-                [
-                    'label' => 'Teaching',
-                    'items' => [
-                        ['label' => 'Kelas Hari Ini', 'route' => 'classes.today', 'pattern' => 'classes.today'],
-                        ['label' => 'Kelas', 'route' => 'classrooms.index', 'pattern' => 'classrooms.*'],
-                        ['label' => 'Attendances', 'route' => 'attendances.index', 'pattern' => 'attendances.*'],
-                        ['label' => 'Teachers', 'route' => 'teachers.index', 'pattern' => 'teachers.*'],
-                        ['label' => 'Jadwal Guru', 'route' => 'teacher-schedules.index', 'pattern' => 'teacher-schedules.*'],
-                        ['label' => 'Ketersediaan Guru', 'route' => 'teacher-availabilities.index', 'pattern' => 'teacher-availabilities.*'],
-                        ['label' => 'Pengajuan Libur', 'route' => 'teacher-leaves.index', 'pattern' => 'teacher-leaves.*'],
-                    ],
-                ],
-                [
-                    'label' => 'Tindak Lanjut',
-                    'items' => [
-                        ['label' => 'Token Menipis', 'route' => 'follow-up.low-token', 'pattern' => 'follow-up.low-token'],
-                        ['label' => 'Murid Sering Absen', 'route' => 'follow-up.absent', 'pattern' => 'follow-up.absent'],
-                        ['label' => 'Murid Non-aktif', 'route' => 'follow-up.inactive', 'pattern' => 'follow-up.inactive'],
-                        ['label' => 'Feedback Murid', 'route' => 'follow-up.feedback', 'pattern' => 'follow-up.feedback'],
-                    ],
-                ],
-                [
-                    'label' => 'Academics',
-                    'items' => [
-                        ['label' => 'Modules', 'route' => 'learning-modules.index', 'pattern' => 'learning-modules.*'],
-                        ['label' => 'Link Materi', 'route' => 'material-links.index', 'pattern' => 'material-links.*'],
-                    ],
-                ],
-                [
-                    'label' => 'Finance',
-                    'items' => [
-                        ['label' => 'Payments', 'route' => 'payments.index', 'pattern' => 'payments.*'],
-                        ['label' => 'Expenses', 'route' => 'expenses.index', 'pattern' => 'expenses.*'],
-                        ['label' => 'Item Expense', 'route' => 'expense-items.index', 'pattern' => 'expense-items.*'],
-                        ['label' => 'Komitmen / Cicilan', 'route' => 'expense-commitments.index', 'pattern' => 'expense-commitments.*'],
-                        ['label' => 'Expense Categories', 'route' => 'expense-categories.index', 'pattern' => 'expense-categories.*'],
-                        ['label' => 'Cash Flow', 'route' => 'cash-flow.index', 'pattern' => 'cash-flow.*'],
-                        ['label' => 'Gaji Guru', 'route' => 'reports.teacher-salary', 'pattern' => 'reports.teacher-salary'],
-                        ['label' => 'Monitoring OpEx', 'route' => 'reports.opex', 'pattern' => 'reports.opex'],
-                        ['label' => 'Review Bulanan', 'route' => 'reports.review', 'pattern' => 'reports.review'],
-                        ['label' => 'LTV Murid', 'route' => 'reports.ltv', 'pattern' => 'reports.ltv'],
-                        ['label' => 'Churn Murid', 'route' => 'reports.churn', 'pattern' => 'reports.churn'],
-                    ],
-                ],
-                [
-                    'label' => 'Account',
-                    'items' => [
-                        ['label' => 'Profile', 'route' => 'profile.edit', 'pattern' => 'profile.*'],
-                    ],
-                ],
-            ];
-        } else {
-            // Guru: hanya Absensi yang aktif. Jadwal & Ketersediaan menyusul.
-            $navSections = [
-                [
-                    'label' => 'Absensi',
-                    'items' => [
-                        ['label' => 'Attendance', 'route' => 'attendances.index', 'pattern' => 'attendances.*'],
-                    ],
-                ],
-                [
-                    'label' => 'Jadwal',
-                    'items' => [
-                        ['label' => 'Jadwal Saya', 'route' => 'my-schedule.index', 'pattern' => 'my-schedule.*'],
-                    ],
-                ],
-                [
-                    'label' => 'Ketersediaan',
-                    'items' => [
-                        ['label' => 'Ketersediaan', 'route' => 'my-availability.index', 'pattern' => 'my-availability.*'],
-                    ],
-                ],
-                [
-                    'label' => 'Libur',
-                    'items' => [
-                        ['label' => 'Ajukan Libur', 'route' => 'my-leave.index', 'pattern' => 'my-leave.*'],
-                    ],
-                ],
-            ];
-        }
+        $navSections = \App\Support\Navigation::sections(auth()->user());
     @endphp
     <body class="bg-slate-100 font-sans antialiased text-slate-900">
         <div x-data="{ mobileNavOpen: false }" class="min-h-screen lg:flex">
@@ -132,49 +37,25 @@
                     </div>
                 </div>
 
-                <nav class="flex-1 space-y-5 overflow-y-auto px-4 pb-5 lg:px-5">
+                <nav class="flex-1 space-y-1 overflow-y-auto px-4 pb-5 lg:px-5">
                     @foreach ($navSections as $section)
                         @php
-                            $sectionIsActive = collect($section['items'])->contains(fn ($item) => isset($item['pattern']) && request()->routeIs($item['pattern']));
-                            $activeSectionItem = collect($section['items'])->first(fn ($item) => isset($item['pattern']) && request()->routeIs($item['pattern']));
-                            $sectionSummary = $activeSectionItem['label']
-                                ?? (count($section['items']) === 1 ? $section['items'][0]['label'] : 'Open menu');
+                            $single = count($section['items']) === 1;
+                            $target = $single
+                                ? route($section['items'][0]['route'])
+                                : route('menu.show', $section['key']);
+                            $isActive = collect($section['items'])->contains(fn ($item) => isset($item['pattern']) && request()->routeIs($item['pattern']))
+                                || (! $single && request()->routeIs('menu.show') && request()->route('section') === $section['key']);
                         @endphp
-                        <div x-data="{ open: {{ $sectionIsActive || count($section['items']) === 1 ? 'true' : 'false' }} }" class="rounded-2xl border border-white/5 bg-white/[0.03]">
-                            <button
-                                type="button"
-                                @click="open = ! open"
-                                class="flex w-full items-center justify-between gap-3 rounded-2xl px-4 py-3 text-left"
-                            >
-                                <div>
-                                    <p class="text-[11px] uppercase tracking-[0.25em] text-slate-500">{{ $section['label'] }}</p>
-                                    <p class="mt-1 text-sm font-medium text-white">
-                                        {{ $sectionSummary }}
-                                    </p>
-                                </div>
-                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-slate-400 transition-transform" :class="open ? 'rotate-180' : ''" viewBox="0 0 20 20" fill="currentColor">
-                                    <path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z" clip-rule="evenodd" />
-                                </svg>
-                            </button>
-
-                            <div x-show="open" x-transition.opacity.duration.150ms class="space-y-1 px-2 pb-2">
-                                @foreach ($section['items'] as $item)
-                                    @if (! empty($item['disabled']))
-                                        <div class="flex cursor-not-allowed items-center justify-between rounded-xl px-3 py-2.5 text-sm font-medium text-slate-500">
-                                            <span>{{ $item['label'] }}</span>
-                                            <span class="rounded-full bg-white/5 px-2 py-1 text-[11px] uppercase tracking-wide text-slate-400">Coming soon</span>
-                                        </div>
-                                    @else
-                                        <a
-                                            href="{{ route($item['route']) }}"
-                                            class="{{ request()->routeIs($item['pattern']) ? 'bg-white/10 text-white' : 'text-slate-300 hover:bg-white/5 hover:text-white' }} flex items-center rounded-xl px-3 py-2.5 text-sm font-medium transition"
-                                        >
-                                            {{ $item['label'] }}
-                                        </a>
-                                    @endif
-                                @endforeach
-                            </div>
-                        </div>
+                        <a
+                            href="{{ $target }}"
+                            class="{{ $isActive ? 'bg-white/10 text-white' : 'text-slate-300 hover:bg-white/5 hover:text-white' }} flex items-center justify-between gap-3 rounded-xl px-4 py-3 text-sm font-medium transition"
+                        >
+                            <span>{{ $single ? $section['items'][0]['label'] : $section['label'] }}</span>
+                            @unless ($single)
+                                <span class="rounded-full px-2 py-1 text-xs text-slate-400" style="background-color:rgba(255,255,255,0.08);">{{ count($section['items']) }}</span>
+                            @endunless
+                        </a>
                     @endforeach
                 </nav>
 
