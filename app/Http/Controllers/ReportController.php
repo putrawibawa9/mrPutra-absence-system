@@ -396,6 +396,64 @@ class ReportController extends Controller
     }
 
     /**
+     * Churn rate murid per bulan + rata-ratanya.
+     * Churn bulan = (murid keluar pada bulan itu) / (murid aktif di awal bulan) x 100%.
+     */
+    public function churn(Request $request)
+    {
+        $months = (int) $request->input('months', 12);
+        $months = max(3, min(24, $months));
+
+        $firstOfThisMonth = now()->startOfMonth();
+        $rows = collect();
+
+        for ($i = $months - 1; $i >= 0; $i--) {
+            $monthStart = $firstOfThisMonth->copy()->subMonths($i);
+            $monthEnd = $monthStart->copy()->endOfMonth();
+
+            // Aktif di awal bulan: sudah terdaftar sebelum bulan ini & belum keluar
+            // sampai awal bulan. registration_date null dianggap sudah lama bergabung.
+            $activeAtStart = Student::query()
+                ->where(fn ($q) => $q->whereNull('registration_date')->orWhereDate('registration_date', '<', $monthStart->toDateString()))
+                ->where(fn ($q) => $q->whereNull('deactivated_at')->orWhere('deactivated_at', '>=', $monthStart))
+                ->count();
+
+            $churned = Student::query()
+                ->whereNotNull('deactivated_at')
+                ->whereBetween('deactivated_at', [$monthStart, $monthEnd->copy()->endOfDay()])
+                ->count();
+
+            $joined = Student::query()
+                ->whereNotNull('registration_date')
+                ->whereDate('registration_date', '>=', $monthStart->toDateString())
+                ->whereDate('registration_date', '<=', $monthEnd->toDateString())
+                ->count();
+
+            $rate = $activeAtStart > 0 ? round($churned / $activeAtStart * 100, 1) : null;
+
+            $rows->push((object) [
+                'label' => $monthStart->locale('id')->translatedFormat('M Y'),
+                'active_start' => $activeAtStart,
+                'joined' => $joined,
+                'churned' => $churned,
+                'rate' => $rate,
+            ]);
+        }
+
+        $ratedMonths = $rows->whereNotNull('rate');
+        $avgChurn = $ratedMonths->isNotEmpty() ? round($ratedMonths->avg('rate'), 1) : 0;
+        $totalChurned = (int) $rows->sum('churned');
+
+        return view('reports.churn', [
+            'rows' => $rows->reverse()->values(), // terbaru di atas
+            'months' => $months,
+            'avgChurn' => $avgChurn,
+            'totalChurned' => $totalChurned,
+            'activeNow' => Student::query()->where('is_active', true)->count(),
+        ]);
+    }
+
+    /**
      * LTV per murid: berapa kali dia bayar (cycle token), total token dibeli,
      * dan total nilai yang pernah dibayar — untuk analisa retensi & LTV.
      */

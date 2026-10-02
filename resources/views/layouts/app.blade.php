@@ -72,6 +72,7 @@
                         ['label' => 'Monitoring OpEx', 'route' => 'reports.opex', 'pattern' => 'reports.opex'],
                         ['label' => 'Review Bulanan', 'route' => 'reports.review', 'pattern' => 'reports.review'],
                         ['label' => 'LTV Murid', 'route' => 'reports.ltv', 'pattern' => 'reports.ltv'],
+                        ['label' => 'Churn Murid', 'route' => 'reports.churn', 'pattern' => 'reports.churn'],
                     ],
                 ],
                 [
