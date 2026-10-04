@@ -37,9 +37,9 @@ class AuthenticatedSessionController extends Controller
 
         $request->session()->regenerate();
 
-        // Guru langsung diarahkan ke halaman absensi; admin ke dashboard.
+        // Guru langsung diarahkan ke form Catat Absensi; admin ke dashboard.
         $home = $request->user()->isTeacher()
-            ? route('attendances.index', absolute: false)
+            ? route('attendances.create', absolute: false)
             : route('dashboard', absolute: false);
 
         return redirect()->intended($home);

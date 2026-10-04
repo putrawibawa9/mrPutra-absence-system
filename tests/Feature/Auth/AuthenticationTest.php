@@ -29,7 +29,7 @@ class AuthenticationTest extends TestCase
         $response->assertRedirect(route('dashboard', absolute: false));
     }
 
-    public function test_teachers_are_redirected_to_attendance_after_login(): void
+    public function test_teachers_are_redirected_to_attendance_create_after_login(): void
     {
         $user = User::factory()->create(['role' => User::ROLE_TEACHER]);
 
@@ -38,7 +38,7 @@ class AuthenticationTest extends TestCase
         ]);
 
         $this->assertAuthenticated();
-        $response->assertRedirect(route('attendances.index', absolute: false));
+        $response->assertRedirect(route('attendances.create', absolute: false));
     }
 
     public function test_users_can_not_authenticate_with_invalid_username(): void
