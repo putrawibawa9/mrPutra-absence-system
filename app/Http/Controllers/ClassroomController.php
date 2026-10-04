@@ -148,6 +148,7 @@ class ClassroomController extends Controller
             'learning_mode' => $data['learning_mode'] ?? null,
             'age_group' => $data['age_group'],
             'level' => $data['level'] ?? null,
+            'book_title' => $data['book_title'] ?? null,
             'is_active' => (bool) $data['is_active'],
         ]);
         $classroom->students()->sync(collect($data['student_ids'])->unique()->values());
@@ -176,6 +177,7 @@ class ClassroomController extends Controller
             'learning_mode' => $data['learning_mode'] ?? null,
             'age_group' => $data['age_group'],
             'level' => $data['level'] ?? null,
+            'book_title' => $data['book_title'] ?? null,
             'is_active' => (bool) $data['is_active'],
         ]);
         $classroom->students()->sync(collect($data['student_ids'])->unique()->values());

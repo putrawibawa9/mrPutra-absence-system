@@ -71,10 +71,6 @@
                     <dt class="text-sm text-slate-500">Saldo Token</dt>
                     <dd class="mt-1 font-medium {{ $student->getNetTokenBalance() < 0 ? 'text-rose-700' : 'text-slate-900' }}">{{ $student->getNetTokenBalance() }} token</dd>
                 </div>
-                <div class="md:col-span-2">
-                    <dt class="text-sm text-slate-500">Book Info</dt>
-                    <dd class="mt-1 whitespace-pre-line font-medium text-slate-900">{{ $student->book_info ?: '-' }}</dd>
-                </div>
             </dl>
             @if (auth()->user()->isAdmin())
                 <form method="POST" action="{{ route('students.toggle-status', $student) }}" class="mt-6" data-confirm="Change this student's active status?">

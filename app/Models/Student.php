@@ -287,8 +287,24 @@ class Student extends Model
         ];
     }
 
+    /**
+     * Program murid diturunkan dari divisi kelas yang dia ikuti (bukan lagi
+     * kolom program_type). Satu murid bisa ikut >1 divisi, mis. "English & Coding".
+     */
     public function programLabel(): string
     {
-        return static::programOptions()[$this->program_type] ?? 'Not Set';
+        $divisions = ($this->relationLoaded('classrooms') ? $this->classrooms : $this->classrooms()->get())
+            ->pluck('division')
+            ->filter()
+            ->unique();
+
+        if ($divisions->isEmpty()) {
+            return 'Belum ada kelas';
+        }
+
+        return $divisions
+            ->map(fn ($division) => Classroom::divisionOptions()[$division] ?? ucfirst((string) $division))
+            ->sort()
+            ->join(' & ');
     }
 }

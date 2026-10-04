@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
-#[Fillable(['name', 'code', 'division', 'format', 'learning_mode', 'age_group', 'level', 'is_active'])]
+#[Fillable(['name', 'code', 'division', 'format', 'learning_mode', 'age_group', 'level', 'book_title', 'is_active'])]
 class Classroom extends Model
 {
     use HasFactory;

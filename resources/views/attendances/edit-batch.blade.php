@@ -4,7 +4,6 @@
             'id' => (string) $student->id,
             'name' => $student->name,
             'phone' => $student->phone,
-            'book_info' => $student->book_info,
             'material_history' => $student->attendances
                 ->flatMap(function ($attendanceItem) {
                     $materialLinks = $attendanceItem->materialLinks->isNotEmpty()
@@ -290,7 +289,6 @@
                             $studentSearchIndex = strtolower(implode(' ', array_filter([
                                 $student->name,
                                 $student->phone,
-                                $student->book_info,
                             ])));
                         @endphp
                         <label
@@ -310,12 +308,6 @@
                                 <p class="mt-1 text-sm text-slate-500">{{ $student->phone }}</p>
                                 @if ($batchAttendance)
                                     <p class="mt-2 text-xs font-semibold text-sky-700">Already included in this batch</p>
-                                @endif
-                                @if ($student->book_info)
-                                    <div class="mt-3 rounded-xl bg-sky-50 p-3 text-sm text-sky-900">
-                                        <p class="text-xs font-semibold uppercase tracking-[0.18em] text-sky-700">Book Info</p>
-                                        <p class="mt-2 whitespace-pre-line">{{ $student->book_info }}</p>
-                                    </div>
                                 @endif
                                 @if ($currentSessions > 0)
                                     <p class="mt-2 text-xs text-emerald-700">{{ $currentSessions }} sessions available / reserved</p>

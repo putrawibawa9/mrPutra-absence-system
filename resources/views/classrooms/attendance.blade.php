@@ -4,6 +4,9 @@
             <a href="{{ route('classrooms.index') }}" class="text-sm text-slate-500">&larr; Kembali ke Kelas</a>
             <h2 class="text-xl font-semibold text-slate-900 sm:text-2xl">Absen Kelas — {{ $classroom->name }}</h2>
             <p class="text-sm text-slate-500">{{ $classroom->divisionLabel() }} · {{ $classroom->formatLabel() }} · {{ $classroom->ageLabel() }} — centang murid yang hadir, token mereka otomatis terpotong.</p>
+            @if ($classroom->book_title)
+                <p class="text-sm text-slate-500">Buku: <span class="font-medium text-slate-700">{{ $classroom->book_title }}</span></p>
+            @endif
         </div>
     </x-slot>
 

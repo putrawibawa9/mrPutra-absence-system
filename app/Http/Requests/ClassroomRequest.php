@@ -22,6 +22,7 @@ class ClassroomRequest extends FormRequest
             'learning_mode' => ['nullable', Rule::in(array_keys(Classroom::learningModeOptions()))],
             'age_group' => ['required', Rule::in(array_keys(Classroom::ageOptions()))],
             'level' => ['nullable', Rule::in(array_keys(Classroom::levelOptions()))],
+            'book_title' => ['nullable', 'string', 'max:255'],
             'is_active' => ['required', 'boolean'],
             'student_ids' => ['required', 'array', 'min:1'],
             'student_ids.*' => ['integer', 'exists:students,id'],

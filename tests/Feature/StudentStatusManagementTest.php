@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\Attendance;
+use App\Models\Classroom;
 use App\Models\Payment;
 use App\Models\Student;
 use App\Models\User;
@@ -13,44 +14,32 @@ class StudentStatusManagementTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_admin_can_store_optional_student_book_info(): void
+    public function test_admin_can_store_student_without_program_or_book(): void
     {
         $admin = User::factory()->create(['role' => User::ROLE_ADMIN]);
 
         $response = $this->actingAs($admin)->post(route('students.store'), [
-            'name' => 'Book Student',
+            'name' => 'Simple Student',
             'phone' => '0813333333',
-            'email' => 'book@example.com',
-            'book_info' => 'English File Elementary, Unit 4.',
-            'program_type' => Student::PROGRAM_ENGLISH,
+            'email' => 'simple@example.com',
             'registration_date' => now()->toDateString(),
             'is_active' => true,
         ]);
 
         $response->assertRedirect(route('students.index', absolute: false));
         $this->assertDatabaseHas('students', [
-            'name' => 'Book Student',
-            'book_info' => 'English File Elementary, Unit 4.',
-            'program_type' => Student::PROGRAM_ENGLISH,
+            'name' => 'Simple Student',
+            'email' => 'simple@example.com',
         ]);
-
-        $student = Student::query()->where('email', 'book@example.com')->firstOrFail();
-
-        $this->actingAs($admin)
-            ->get(route('students.show', $student))
-            ->assertOk()
-            ->assertSee('English File Elementary, Unit 4.');
     }
 
-    public function test_student_index_can_search_by_name_phone_email_or_book_info(): void
+    public function test_student_index_can_search_by_name_phone_or_email(): void
     {
         $admin = User::factory()->create(['role' => User::ROLE_ADMIN]);
         Student::query()->create([
             'name' => 'Searchable Student',
             'phone' => '0813333333',
             'email' => 'searchable@example.com',
-            'book_info' => 'Cambridge Primary 4',
-            'program_type' => Student::PROGRAM_CODING,
             'registration_date' => now()->toDateString(),
             'is_active' => true,
         ]);
@@ -58,14 +47,12 @@ class StudentStatusManagementTest extends TestCase
             'name' => 'Hidden Student',
             'phone' => '0899999999',
             'email' => 'hidden@example.com',
-            'book_info' => 'Different Book',
-            'program_type' => Student::PROGRAM_ENGLISH,
             'registration_date' => now()->toDateString(),
             'is_active' => true,
         ]);
 
         $response = $this->actingAs($admin)->get(route('students.index', [
-            'search' => 'Cambridge',
+            'search' => 'searchable@example.com',
         ]));
 
         $response->assertOk();
@@ -270,7 +257,7 @@ class StudentStatusManagementTest extends TestCase
         ]);
     }
 
-    public function test_student_pages_show_program_type_and_can_filter_by_it(): void
+    public function test_student_program_is_derived_from_class_and_can_filter_by_it(): void
     {
         $admin = User::factory()->create(['role' => User::ROLE_ADMIN]);
 
@@ -278,25 +265,39 @@ class StudentStatusManagementTest extends TestCase
             'name' => 'Coding Student',
             'phone' => '0815000001',
             'email' => 'coding@example.com',
-            'program_type' => Student::PROGRAM_CODING,
             'registration_date' => now()->toDateString(),
             'is_active' => true,
         ]);
 
-        Student::query()->create([
+        $englishStudent = Student::query()->create([
             'name' => 'English Student',
             'phone' => '0815000002',
             'email' => 'english@example.com',
-            'program_type' => Student::PROGRAM_ENGLISH,
             'registration_date' => now()->toDateString(),
             'is_active' => true,
         ]);
+
+        $codingClass = Classroom::query()->create([
+            'name' => 'Coding Private Kids',
+            'division' => Classroom::DIVISION_CODING,
+            'format' => Classroom::FORMAT_PRIVATE,
+            'age_group' => Classroom::AGE_KIDS,
+            'is_active' => true,
+        ]);
+        $englishClass = Classroom::query()->create([
+            'name' => 'English Semi Teens',
+            'division' => Classroom::DIVISION_ENGLISH,
+            'format' => Classroom::FORMAT_SEMI,
+            'age_group' => Classroom::AGE_TEENS_ADULT,
+            'is_active' => true,
+        ]);
+        $codingStudent->classrooms()->attach($codingClass);
+        $englishStudent->classrooms()->attach($englishClass);
 
         $this->actingAs($admin)
             ->get(route('students.index', ['program_type' => Student::PROGRAM_CODING]))
             ->assertOk()
             ->assertSee('Coding Student')
-            ->assertSee('Coding')
             ->assertDontSee('English Student');
 
         $this->actingAs($admin)

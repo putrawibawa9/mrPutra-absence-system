@@ -112,6 +112,13 @@
     </div>
 
     <div>
+        <x-input-label for="book_title" value="Nama Buku (opsional)" />
+        <input id="book_title" name="book_title" type="text" value="{{ old('book_title', $classroom->book_title ?? '') }}"
+            placeholder="mis. English File Elementary" class="mt-1 block w-full rounded-xl border-slate-300">
+        <p class="mt-1 text-xs text-slate-500">Judul buku yang dipakai kelas ini, biar guru lain tahu. Boleh dikosongkan dulu, diisi nanti lewat Edit kelas.</p>
+    </div>
+
+    <div>
         <div class="flex items-center justify-between gap-3">
             <x-input-label value="Daftar Murid" />
             <span class="text-xs text-slate-500" x-text="format === 'private' ? 'Pilih 1 murid' : 'Pilih murid kelas'"></span>

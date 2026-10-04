@@ -15,7 +15,7 @@
         <form method="GET" action="{{ route('students.index') }}" class="flex flex-col gap-3 xl:flex-row">
             <div class="flex-1">
                 <x-input-label for="search" value="Search Student" />
-                <x-text-input id="search" name="search" type="search" class="mt-1 block w-full rounded-xl border-slate-300" :value="$filters['search'] ?? ''" placeholder="Search by name, phone, email, book info, or program" />
+                <x-text-input id="search" name="search" type="search" class="mt-1 block w-full rounded-xl border-slate-300" :value="$filters['search'] ?? ''" placeholder="Search by name, phone, or email" />
             </div>
             <div class="xl:w-56">
                 <x-input-label for="program_type" value="Program" />

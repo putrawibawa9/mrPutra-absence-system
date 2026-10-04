@@ -18,19 +18,17 @@ class StudentController extends Controller
         ]);
 
         $students = Student::active()
-            ->with(['latestActivePayment', 'latestSessionPayment'])
+            ->with(['latestActivePayment', 'latestSessionPayment', 'classrooms:id,division'])
             ->withSum('payments', 'remaining_sessions')
             ->withCount(['attendances as token_debt_count' => fn ($query) => $query->whereNull('payment_id')])
             ->when($filters['search'] ?? null, function ($query, $search) {
                 $query->where(function ($query) use ($search) {
                     $query->where('name', 'like', '%'.$search.'%')
                         ->orWhere('phone', 'like', '%'.$search.'%')
-                        ->orWhere('email', 'like', '%'.$search.'%')
-                        ->orWhere('book_info', 'like', '%'.$search.'%')
-                        ->orWhere('program_type', 'like', '%'.$search.'%');
+                        ->orWhere('email', 'like', '%'.$search.'%');
                 });
             })
-            ->when($filters['program_type'] ?? null, fn ($query, $programType) => $query->where('program_type', $programType))
+            ->when($filters['program_type'] ?? null, fn ($query, $division) => $query->whereHas('classrooms', fn ($q) => $q->where('division', $division)))
             ->when(($filters['sort_tokens'] ?? null) === 'lowest', function ($query) {
                 $query->orderByRaw('COALESCE(payments_sum_remaining_sessions, 0) asc')
                     ->orderBy('name');
@@ -71,6 +69,7 @@ class StudentController extends Controller
             'attendances.payment',
             'latestActivePayment',
             'latestSessionPayment',
+            'classrooms:id,division',
         ]);
 
         return view('students.show', compact('student'));

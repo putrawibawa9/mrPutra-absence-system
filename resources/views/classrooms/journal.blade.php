@@ -9,6 +9,9 @@
                 <h2 class="text-xl font-semibold text-slate-900 sm:text-2xl">Jurnal Kelas — {{ $classroom->name }}</h2>
             </div>
             <p class="text-sm text-slate-500">{{ $classroom->divisionLabel() }} · {{ $classroom->formatLabel() }} · {{ $classroom->ageLabel() }} — {{ $entries->count() }} sesi tercatat.</p>
+            @if ($classroom->book_title)
+                <p class="text-sm text-slate-500">Buku: <span class="font-medium text-slate-700">{{ $classroom->book_title }}</span></p>
+            @endif
         </div>
     </x-slot>
 
