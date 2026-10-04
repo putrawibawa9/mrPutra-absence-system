@@ -40,11 +40,9 @@
                 </div>
             </div>
 
-            <div class="mt-5">
-                <x-input-label for="book_title" value="Nama Buku (opsional)" />
-                <x-text-input id="book_title" name="book_title" type="text" class="mt-1 block w-full rounded-xl border-slate-300" :value="old('book_title', $classroom->book_title)" placeholder="mis. English File Elementary - Unit 4" />
-                <p class="mt-1 text-xs text-slate-400">Buku yang dipakai hari ini. Tersimpan ke kelas, jadi guru lain ikut tahu.</p>
-                <x-input-error :messages="$errors->get('book_title')" class="mt-2" />
+            <div class="mt-5 rounded-2xl border border-sky-200 bg-sky-50 p-4">
+                <p class="text-xs font-semibold uppercase tracking-wide text-sky-700">Buku Kelas</p>
+                <p class="mt-1 text-sm font-medium {{ $classroom->book_title ? 'text-sky-900' : 'text-slate-500' }}">{{ $classroom->book_title ?: 'Belum ditentukan — set lewat Edit kelas.' }}</p>
             </div>
 
             <div class="mt-5 rounded-2xl border border-slate-200 bg-slate-50 p-4">

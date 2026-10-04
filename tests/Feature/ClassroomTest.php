@@ -152,25 +152,21 @@ class ClassroomTest extends TestCase
         $this->assertSame(AttendanceTeacherFeeService::FEE_PER_MEETING, (int) $fees->first()->amount);
     }
 
-    public function test_teacher_can_set_class_book_title_while_taking_attendance(): void
+    public function test_attendance_form_shows_class_book_title_read_only(): void
     {
         $teacher = User::factory()->create(['role' => User::ROLE_TEACHER]);
         $a = Student::query()->create(['name' => 'A', 'phone' => '0811', 'is_active' => true]);
         $this->tokenPayment($a);
 
         $classroom = $this->makeClassroom(Classroom::FORMAT_PRIVATE, [$a->id]);
-        $this->assertNull($classroom->book_title);
+        $classroom->update(['book_title' => 'English File Elementary - Unit 4']);
 
-        $response = $this->actingAs($teacher)->post(route('classrooms.attendances.store', $classroom), [
-            'date' => now()->toDateString(),
-            'teacher_ids' => [$teacher->id],
-            'present_student_ids' => [$a->id],
-            'learning_journal' => 'Private session.',
-            'book_title' => 'English File Elementary - Unit 4',
-        ]);
-
-        $response->assertRedirect(route('attendances.index'));
-        $this->assertSame('English File Elementary - Unit 4', $classroom->fresh()->book_title);
+        $this->actingAs($teacher)
+            ->get(route('classrooms.attendances.create', $classroom))
+            ->assertOk()
+            ->assertSee('Buku Kelas')
+            ->assertSee('English File Elementary - Unit 4')
+            ->assertDontSee('name="book_title"', false);
     }
 
     public function test_attendance_requires_learning_journal(): void
