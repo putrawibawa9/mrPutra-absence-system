@@ -49,7 +49,7 @@
                             <span class="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">{{ $classroom->students_count }} murid</span>
                         </div>
                         <p class="mt-2 text-sm text-slate-500">{{ $classroom->students->pluck('name')->join(', ') ?: 'Belum ada murid' }}</p>
-                        <p class="mt-1 text-sm text-slate-500">Buku: <span class="font-medium {{ $classroom->book_title ? 'text-slate-700' : 'text-slate-400' }}">{{ $classroom->book_title ?: 'Belum ditentukan' }}</span></p>
+                        <p class="mt-1 text-sm text-slate-500">Buku: <span class="font-medium {{ $classroom->bookTitle() ? 'text-slate-700' : 'text-slate-400' }}">{{ $classroom->bookTitle() ?: 'Belum ditentukan' }}</span></p>
                     </div>
                     <div class="flex flex-wrap gap-2">
                         @if ($classroom->is_active)

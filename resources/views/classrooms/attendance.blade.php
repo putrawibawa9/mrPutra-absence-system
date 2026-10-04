@@ -42,7 +42,7 @@
 
             <div class="mt-5 rounded-2xl border border-sky-200 bg-sky-50 p-4">
                 <p class="text-xs font-semibold uppercase tracking-wide text-sky-700">Buku Kelas</p>
-                <p class="mt-1 text-sm font-medium {{ $classroom->book_title ? 'text-sky-900' : 'text-slate-500' }}">{{ $classroom->book_title ?: 'Belum ditentukan — set lewat Edit kelas.' }}</p>
+                <p class="mt-1 text-sm font-medium {{ $classroom->bookTitle() ? 'text-sky-900' : 'text-slate-500' }}">{{ $classroom->bookTitle() ?: 'Belum ditentukan — set lewat Edit kelas.' }}</p>
             </div>
 
             <div class="mt-5 rounded-2xl border border-slate-200 bg-slate-50 p-4">

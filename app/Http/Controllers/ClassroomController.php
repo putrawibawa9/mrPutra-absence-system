@@ -6,6 +6,7 @@ use App\Concerns\SyncsSessionTeachers;
 use App\Http\Requests\ClassroomRequest;
 use App\Models\Attendance;
 use App\Models\AttendanceBatch;
+use App\Models\Book;
 use App\Models\Classroom;
 use App\Models\MaterialLink;
 use App\Models\Payment;
@@ -34,7 +35,7 @@ class ClassroomController extends Controller
         $search = trim((string) $request->input('search', ''));
 
         $classrooms = Classroom::query()
-            ->with('students:id,name')
+            ->with(['students:id,name', 'book:id,title'])
             ->withCount('students')
             ->when($search !== '', function ($query) use ($search): void {
                 $query->where(function ($query) use ($search): void {
@@ -133,8 +134,9 @@ class ClassroomController extends Controller
     {
         $students = Student::active()->orderBy('name')->get(['id', 'name', 'phone']);
         $takenStudents = $this->takenStudentMap();
+        $books = Book::active()->orderBy('title')->get(['id', 'title']);
 
-        return view('classrooms.create', compact('students', 'takenStudents'));
+        return view('classrooms.create', compact('students', 'takenStudents', 'books'));
     }
 
     public function store(ClassroomRequest $request)
@@ -148,7 +150,7 @@ class ClassroomController extends Controller
             'learning_mode' => $data['learning_mode'] ?? null,
             'age_group' => $data['age_group'],
             'level' => $data['level'] ?? null,
-            'book_title' => $data['book_title'] ?? null,
+            'book_id' => $data['book_id'] ?? null,
             'is_active' => (bool) $data['is_active'],
         ]);
         $classroom->students()->sync(collect($data['student_ids'])->unique()->values());
@@ -162,8 +164,14 @@ class ClassroomController extends Controller
         $students = Student::active()->orderBy('name')->get(['id', 'name', 'phone']);
         $selectedStudentIds = $classroom->students->pluck('id')->all();
         $takenStudents = $this->takenStudentMap($classroom->id);
+        // Buku aktif + buku yang sedang dipakai kelas ini (meski sudah nonaktif),
+        // supaya pilihan saat ini tetap tampil di dropdown.
+        $books = Book::query()
+            ->where(fn ($query) => $query->where('is_active', true)->orWhere('id', $classroom->book_id))
+            ->orderBy('title')
+            ->get(['id', 'title']);
 
-        return view('classrooms.edit', compact('classroom', 'students', 'selectedStudentIds', 'takenStudents'));
+        return view('classrooms.edit', compact('classroom', 'students', 'selectedStudentIds', 'takenStudents', 'books'));
     }
 
     public function update(ClassroomRequest $request, Classroom $classroom)
@@ -177,7 +185,7 @@ class ClassroomController extends Controller
             'learning_mode' => $data['learning_mode'] ?? null,
             'age_group' => $data['age_group'],
             'level' => $data['level'] ?? null,
-            'book_title' => $data['book_title'] ?? null,
+            'book_id' => $data['book_id'] ?? null,
             'is_active' => (bool) $data['is_active'],
         ]);
         $classroom->students()->sync(collect($data['student_ids'])->unique()->values());

@@ -5,9 +5,10 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
-#[Fillable(['name', 'code', 'division', 'format', 'learning_mode', 'age_group', 'level', 'book_title', 'is_active'])]
+#[Fillable(['name', 'code', 'division', 'format', 'learning_mode', 'age_group', 'level', 'book_title', 'book_id', 'is_active'])]
 class Classroom extends Model
 {
     use HasFactory;
@@ -165,6 +166,20 @@ class Classroom extends Model
         return $this->belongsToMany(Student::class, 'classroom_student')
             ->withTimestamps()
             ->orderBy('name');
+    }
+
+    public function book(): BelongsTo
+    {
+        return $this->belongsTo(Book::class);
+    }
+
+    /**
+     * Judul buku kelas: dari master buku (book_id), fallback ke kolom lama
+     * book_title bila ada data lama.
+     */
+    public function bookTitle(): ?string
+    {
+        return $this->book?->title ?: $this->book_title;
     }
 
     public function scopeActive($query)

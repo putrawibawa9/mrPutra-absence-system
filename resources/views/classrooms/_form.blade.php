@@ -112,10 +112,18 @@
     </div>
 
     <div>
-        <x-input-label for="book_title" value="Nama Buku (opsional)" />
-        <input id="book_title" name="book_title" type="text" value="{{ old('book_title', $classroom->book_title ?? '') }}"
-            placeholder="mis. English File Elementary" class="mt-1 block w-full rounded-xl border-slate-300">
-        <p class="mt-1 text-xs text-slate-500">Judul buku yang dipakai kelas ini, biar guru lain tahu. Boleh dikosongkan dulu, diisi nanti lewat Edit kelas.</p>
+        <div class="flex items-center justify-between gap-3">
+            <x-input-label for="book_id" value="Buku (opsional)" />
+            <a href="{{ route('books.index') }}" target="_blank" class="text-xs font-medium text-emerald-700 hover:underline">+ Kelola daftar buku</a>
+        </div>
+        <select id="book_id" name="book_id" class="mt-1 block w-full rounded-xl border-slate-300">
+            <option value="">— Belum ditentukan —</option>
+            @foreach (($books ?? collect()) as $bookOption)
+                <option value="{{ $bookOption->id }}" @selected((int) old('book_id', $classroom->book_id ?? 0) === (int) $bookOption->id)>{{ $bookOption->title }}</option>
+            @endforeach
+        </select>
+        <p class="mt-1 text-xs text-slate-500">Pilih dari daftar buku biar penamaan konsisten. Buku baru ditambah lewat menu Buku.</p>
+        <x-input-error :messages="$errors->get('book_id')" class="mt-2" />
     </div>
 
     <div>

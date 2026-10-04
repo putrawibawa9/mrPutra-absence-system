@@ -68,6 +68,7 @@ class Navigation
                     'description' => 'Modul belajar & link materi.',
                     'items' => [
                         ['label' => 'Modules', 'route' => 'learning-modules.index', 'pattern' => 'learning-modules.*', 'description' => 'Modul pembelajaran.'],
+                        ['label' => 'Buku', 'route' => 'books.index', 'pattern' => 'books.*', 'description' => 'Master judul buku untuk kelas.'],
                         ['label' => 'Link Materi', 'route' => 'material-links.index', 'pattern' => 'material-links.*', 'description' => 'Kumpulan link materi.'],
                     ],
                 ],

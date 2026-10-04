@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\Attendance;
 use App\Models\AttendanceBatch;
+use App\Models\Book;
 use App\Models\Classroom;
 use App\Models\Expense;
 use App\Models\Payment;
@@ -158,15 +159,41 @@ class ClassroomTest extends TestCase
         $a = Student::query()->create(['name' => 'A', 'phone' => '0811', 'is_active' => true]);
         $this->tokenPayment($a);
 
+        $book = Book::query()->create(['title' => 'English File Elementary - Unit 4', 'is_active' => true]);
         $classroom = $this->makeClassroom(Classroom::FORMAT_PRIVATE, [$a->id]);
-        $classroom->update(['book_title' => 'English File Elementary - Unit 4']);
+        $classroom->update(['book_id' => $book->id]);
 
         $this->actingAs($teacher)
             ->get(route('classrooms.attendances.create', $classroom))
             ->assertOk()
             ->assertSee('Buku Kelas')
             ->assertSee('English File Elementary - Unit 4')
+            ->assertDontSee('name="book_id"', false)
             ->assertDontSee('name="book_title"', false);
+    }
+
+    public function test_admin_can_assign_book_to_classroom_via_dropdown(): void
+    {
+        $admin = User::factory()->create(['role' => User::ROLE_ADMIN]);
+        $a = Student::query()->create(['name' => 'A', 'phone' => '0811', 'is_active' => true]);
+        $book = Book::query()->create(['title' => 'Cambridge Primary 4', 'is_active' => true]);
+        $classroom = $this->makeClassroom(Classroom::FORMAT_PRIVATE, [$a->id]);
+
+        $response = $this->actingAs($admin)->put(route('classrooms.update', $classroom), [
+            'division' => $classroom->division,
+            'format' => $classroom->format,
+            'age_group' => $classroom->age_group,
+            'is_active' => 1,
+            'book_id' => $book->id,
+            'student_ids' => [$a->id],
+        ]);
+
+        $response->assertRedirect(route('classrooms.index'));
+        $this->assertSame($book->id, $classroom->fresh()->book_id);
+
+        $this->actingAs($admin)->get(route('classrooms.index'))
+            ->assertOk()
+            ->assertSee('Cambridge Primary 4');
     }
 
     public function test_attendance_requires_learning_journal(): void
