@@ -4,9 +4,6 @@
             <a href="{{ route('classrooms.index') }}" class="text-sm text-slate-500">&larr; Kembali ke Kelas</a>
             <h2 class="text-xl font-semibold text-slate-900 sm:text-2xl">Absen Kelas — {{ $classroom->name }}</h2>
             <p class="text-sm text-slate-500">{{ $classroom->divisionLabel() }} · {{ $classroom->formatLabel() }} · {{ $classroom->ageLabel() }} — centang murid yang hadir, token mereka otomatis terpotong.</p>
-            @if ($classroom->book_title)
-                <p class="text-sm text-slate-500">Buku: <span class="font-medium text-slate-700">{{ $classroom->book_title }}</span></p>
-            @endif
         </div>
     </x-slot>
 
@@ -41,6 +38,13 @@
                         @endforeach
                     </div>
                 </div>
+            </div>
+
+            <div class="mt-5">
+                <x-input-label for="book_title" value="Nama Buku (opsional)" />
+                <x-text-input id="book_title" name="book_title" type="text" class="mt-1 block w-full rounded-xl border-slate-300" :value="old('book_title', $classroom->book_title)" placeholder="mis. English File Elementary - Unit 4" />
+                <p class="mt-1 text-xs text-slate-400">Buku yang dipakai hari ini. Tersimpan ke kelas, jadi guru lain ikut tahu.</p>
+                <x-input-error :messages="$errors->get('book_title')" class="mt-2" />
             </div>
 
             <div class="mt-5 rounded-2xl border border-slate-200 bg-slate-50 p-4">

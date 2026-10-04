@@ -229,6 +229,7 @@ class ClassroomController extends Controller
             'present_student_ids.*' => ['integer'],
             'learning_journal' => ['required', 'string'],
             'notes' => ['nullable', 'string'],
+            'book_title' => ['nullable', 'string', 'max:255'],
             'teaching_minutes' => ['nullable', 'integer', 'min:0'],
             'material_link_ids' => ['array'],
             'material_link_ids.*' => ['integer', Rule::exists('material_links', 'id')],
@@ -285,6 +286,13 @@ class ClassroomController extends Controller
             ->values();
 
         DB::transaction(function () use ($classroom, $presentIds, $absentIds, $teacherIds, $primaryTeacherId, $teacherSyncPayload, $allTeacherIds, $materialLinkIds, $date, $journal, $notes, $minutes, $request): void {
+            // Guru bisa mengisi/ubah nama buku saat absen; tersimpan ke kelas
+            // supaya guru lain ikut tahu buku yang sedang dipakai.
+            $submittedBook = $request->filled('book_title') ? (trim((string) $request->input('book_title')) ?: null) : null;
+            if ($submittedBook !== $classroom->book_title) {
+                $classroom->update(['book_title' => $submittedBook]);
+            }
+
             if ($classroom->isPrivate()) {
                 $studentId = (int) $presentIds->first();
                 $payment = $this->resolvePayment($studentId, $classroom->division, $classroom->format);
