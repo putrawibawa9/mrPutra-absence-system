@@ -232,7 +232,7 @@ class ManualTokenBalanceTest extends TestCase
         $response = $this->actingAs($admin)->get(route('payments.receipt', $payment));
 
         $response->assertOk();
-        $response->assertSee('Send Receipt');
+        $response->assertSee('Kirim via WA');
         $response->assertSee('https://wa.me/6281234567890', false);
     }
 
@@ -264,6 +264,6 @@ class ManualTokenBalanceTest extends TestCase
         $response->assertOk();
         $response->assertSee('KWT-20260414-PUBLIC');
         $response->assertSee('Public Receipt Student');
-        $response->assertDontSee('Back to Payments');
+        $response->assertDontSee('Kembali');
     }
 }
