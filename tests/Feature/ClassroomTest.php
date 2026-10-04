@@ -196,6 +196,52 @@ class ClassroomTest extends TestCase
             ->assertSee('Cambridge Primary 4');
     }
 
+    public function test_teacher_attendance_form_hides_teacher_picker(): void
+    {
+        $teacher = User::factory()->create(['role' => User::ROLE_TEACHER, 'name' => 'Guru Login']);
+        $a = Student::query()->create(['name' => 'A', 'phone' => '0811', 'is_active' => true]);
+        $classroom = $this->makeClassroom(Classroom::FORMAT_PRIVATE, [$a->id]);
+
+        $this->actingAs($teacher)
+            ->get(route('classrooms.attendances.create', $classroom))
+            ->assertOk()
+            ->assertSee('Guru Login')
+            ->assertSee('type="hidden" name="teacher_ids[]"', false)
+            ->assertDontSee('type="checkbox" name="teacher_ids[]"', false);
+    }
+
+    public function test_admin_attendance_form_still_shows_teacher_picker(): void
+    {
+        $admin = User::factory()->create(['role' => User::ROLE_ADMIN]);
+        User::factory()->create(['role' => User::ROLE_TEACHER]);
+        $a = Student::query()->create(['name' => 'A', 'phone' => '0811', 'is_active' => true]);
+        $classroom = $this->makeClassroom(Classroom::FORMAT_PRIVATE, [$a->id]);
+
+        $this->actingAs($admin)
+            ->get(route('classrooms.attendances.create', $classroom))
+            ->assertOk()
+            ->assertSee('type="checkbox" name="teacher_ids[]"', false);
+    }
+
+    public function test_logged_in_teacher_is_recorded_as_the_teacher(): void
+    {
+        $teacher = User::factory()->create(['role' => User::ROLE_TEACHER]);
+        $a = Student::query()->create(['name' => 'A', 'phone' => '0811', 'is_active' => true]);
+        $this->tokenPayment($a);
+        $classroom = $this->makeClassroom(Classroom::FORMAT_PRIVATE, [$a->id]);
+
+        $response = $this->actingAs($teacher)->post(route('classrooms.attendances.store', $classroom), [
+            'date' => now()->toDateString(),
+            'teacher_ids' => [$teacher->id],
+            'present_student_ids' => [$a->id],
+            'learning_journal' => 'Private session.',
+        ]);
+
+        $response->assertRedirect(route('attendances.index'));
+        $attendance = Attendance::query()->where('student_id', $a->id)->firstOrFail();
+        $this->assertSame($teacher->id, $attendance->teacher_id);
+    }
+
     public function test_attendance_requires_learning_journal(): void
     {
         $admin = User::factory()->create(['role' => User::ROLE_ADMIN]);

@@ -28,15 +28,21 @@
                 </div>
                 <div>
                     <x-input-label value="Guru" />
-                    <div class="mt-1 max-h-64 space-y-1 overflow-y-auto rounded-xl border border-slate-200 p-2">
-                        @foreach ($teachers as $teacher)
-                            <label class="flex items-center gap-2 rounded-lg px-2 py-1 text-sm hover:bg-slate-50">
-                                <input type="checkbox" name="teacher_ids[]" value="{{ $teacher->id }}"
-                                    @checked(collect(old('teacher_ids', [auth()->id()]))->map(fn ($id) => (int) $id)->contains($teacher->id))>
-                                {{ $teacher->name }}
-                            </label>
-                        @endforeach
-                    </div>
+                    @if (auth()->user()->isTeacher())
+                        {{-- Guru yang login otomatis tercatat sebagai pengajar; tak perlu pilih. --}}
+                        <input type="hidden" name="teacher_ids[]" value="{{ auth()->id() }}">
+                        <div class="mt-1 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm font-medium text-slate-900">{{ auth()->user()->name }}</div>
+                    @else
+                        <div class="mt-1 max-h-64 space-y-1 overflow-y-auto rounded-xl border border-slate-200 p-2">
+                            @foreach ($teachers as $teacher)
+                                <label class="flex items-center gap-2 rounded-lg px-2 py-1 text-sm hover:bg-slate-50">
+                                    <input type="checkbox" name="teacher_ids[]" value="{{ $teacher->id }}"
+                                        @checked(collect(old('teacher_ids', [auth()->id()]))->map(fn ($id) => (int) $id)->contains($teacher->id))>
+                                    {{ $teacher->name }}
+                                </label>
+                            @endforeach
+                        </div>
+                    @endif
                 </div>
             </div>
 
