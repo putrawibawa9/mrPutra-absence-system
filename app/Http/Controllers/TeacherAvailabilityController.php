@@ -15,6 +15,8 @@ class TeacherAvailabilityController extends Controller
     {
         $availabilities = TeacherAvailability::query()
             ->with('teacher')
+            // Guru nonaktif tidak ditampilkan di halaman ketersediaan.
+            ->whereHas('teacher', fn ($query) => $query->where('is_active', true))
             ->orderByRaw($this->dayOrderSql())
             ->orderBy('start_time')
             ->get();

@@ -107,4 +107,34 @@ class TeacherAvailabilityFeatureTest extends TestCase
         $response->assertRedirect(route('teacher-availabilities.create', absolute: false));
         $response->assertSessionHasErrors('start_time');
     }
+
+    public function test_availability_index_hides_inactive_teachers(): void
+    {
+        $admin = User::factory()->create(['role' => User::ROLE_ADMIN]);
+        $active = User::factory()->create(['role' => User::ROLE_TEACHER, 'name' => 'Guru Aktif', 'is_active' => true]);
+        $inactive = User::factory()->create(['role' => User::ROLE_TEACHER, 'name' => 'Guru Nonaktif', 'is_active' => false]);
+
+        TeacherAvailability::query()->create([
+            'teacher_id' => $active->id,
+            'day_of_week' => 'monday',
+            'start_time' => '18:00',
+            'end_time' => '20:00',
+            'status' => TeacherAvailability::STATUS_AVAILABLE,
+            'is_active' => true,
+        ]);
+        TeacherAvailability::query()->create([
+            'teacher_id' => $inactive->id,
+            'day_of_week' => 'tuesday',
+            'start_time' => '18:00',
+            'end_time' => '20:00',
+            'status' => TeacherAvailability::STATUS_AVAILABLE,
+            'is_active' => true,
+        ]);
+
+        $this->actingAs($admin)
+            ->get(route('teacher-availabilities.index'))
+            ->assertOk()
+            ->assertSee('Guru Aktif')
+            ->assertDontSee('Guru Nonaktif');
+    }
 }
