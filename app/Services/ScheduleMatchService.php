@@ -238,7 +238,9 @@ class ScheduleMatchService
                     $this->toMinutes($schedule->end_time),
                 ];
                 // Guru sibuk baik sebagai guru utama maupun co-teacher.
-                $this->bookedCache[$schedule->teacher_id][$schedule->day_of_week][] = $block;
+                if ($schedule->teacher_id) {
+                    $this->bookedCache[$schedule->teacher_id][$schedule->day_of_week][] = $block;
+                }
                 if ($schedule->co_teacher_id) {
                     $this->bookedCache[$schedule->co_teacher_id][$schedule->day_of_week][] = $block;
                 }

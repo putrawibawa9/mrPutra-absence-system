@@ -30,7 +30,9 @@ class TeacherAvailabilityController extends Controller
             ->get(['teacher_id', 'co_teacher_id', 'day_of_week', 'start_time', 'end_time'])
             ->each(function (TeacherSchedule $schedule) use (&$bookedByTeacherDay): void {
                 $block = [$this->toMinutes($schedule->start_time), $this->toMinutes($schedule->end_time)];
-                $bookedByTeacherDay[$schedule->teacher_id][$schedule->day_of_week][] = $block;
+                if ($schedule->teacher_id) {
+                    $bookedByTeacherDay[$schedule->teacher_id][$schedule->day_of_week][] = $block;
+                }
                 if ($schedule->co_teacher_id) {
                     $bookedByTeacherDay[$schedule->co_teacher_id][$schedule->day_of_week][] = $block;
                 }

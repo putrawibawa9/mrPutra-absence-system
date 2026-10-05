@@ -5,7 +5,10 @@
                 <h2 class="text-xl font-semibold text-slate-900 sm:text-2xl">Jadwal Guru</h2>
                 <p class="text-sm text-slate-500">Kelola jadwal mengajar mingguan untuk setiap guru.</p>
             </div>
-            <a href="{{ route('teacher-schedules.create') }}" class="inline-flex justify-center rounded-xl bg-slate-900 px-4 py-2 text-sm font-medium text-white">Tambah Jadwal</a>
+            <div class="flex flex-wrap gap-2">
+                <a href="{{ route('teacher-schedules.import') }}" class="inline-flex justify-center rounded-xl border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700">Import CSV</a>
+                <a href="{{ route('teacher-schedules.create') }}" class="inline-flex justify-center rounded-xl bg-slate-900 px-4 py-2 text-sm font-medium text-white">Tambah Jadwal</a>
+            </div>
         </div>
     </x-slot>
 

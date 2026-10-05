@@ -9,6 +9,7 @@ use App\Models\User;
 use App\Support\WeeklyDay;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
 
 class TeacherScheduleController extends Controller
 {
@@ -226,6 +227,159 @@ class TeacherScheduleController extends Controller
             $this->formData(),
             ['schedule' => null],
         ));
+    }
+
+    /** Halaman upload CSV jadwal kelas. */
+    public function importForm()
+    {
+        return view('teacher-schedules.import');
+    }
+
+    /**
+     * Import jadwal kelas dari CSV (kolom: nama_kelas, hari, jam_mulai, jam_selesai).
+     * Kelas yang belum ada dibuat otomatis; jadwal dibuat tanpa guru (di-assign nanti).
+     */
+    public function import(Request $request)
+    {
+        $request->validate([
+            'file' => ['required', 'file', 'mimes:csv,txt', 'max:2048'],
+        ], [], ['file' => 'file CSV']);
+
+        $rows = [];
+        if (($handle = fopen($request->file('file')->getRealPath(), 'r')) !== false) {
+            while (($data = fgetcsv($handle, 0, ',')) !== false) {
+                $rows[] = $data;
+            }
+            fclose($handle);
+        }
+
+        if (count($rows) < 2) {
+            return back()->withErrors(['file' => 'File kosong atau belum ada baris data.']);
+        }
+
+        $header = array_map(fn ($h) => strtolower(trim((string) $h)), $rows[0]);
+        $columns = ['nama_kelas', 'hari', 'jam_mulai', 'jam_selesai'];
+        $idx = [];
+        foreach ($columns as $col) {
+            $pos = array_search($col, $header, true);
+            if ($pos === false) {
+                return back()->withErrors(['file' => "Kolom '{$col}' tidak ditemukan di baris header."]);
+            }
+            $idx[$col] = $pos;
+        }
+
+        $parsed = [];
+        $rowErrors = [];
+        for ($i = 1; $i < count($rows); $i++) {
+            $row = $rows[$i];
+            if (count(array_filter($row, fn ($c) => trim((string) $c) !== '')) === 0) {
+                continue; // baris kosong
+            }
+
+            $line = $i + 1;
+            $name = trim((string) ($row[$idx['nama_kelas']] ?? ''));
+            $dayRaw = trim((string) ($row[$idx['hari']] ?? ''));
+            $start = $this->normalizeTime((string) ($row[$idx['jam_mulai']] ?? ''));
+            $end = $this->normalizeTime((string) ($row[$idx['jam_selesai']] ?? ''));
+            $day = WeeklyDay::fromLabel($dayRaw);
+
+            if ($name === '') {
+                $rowErrors[] = "Baris {$line}: nama_kelas kosong.";
+            } elseif (! $day) {
+                $rowErrors[] = "Baris {$line}: hari '{$dayRaw}' tidak dikenali (pakai Senin–Minggu).";
+            } elseif (! $start || ! $end) {
+                $rowErrors[] = "Baris {$line}: jam harus format HH:MM (24 jam).";
+            } elseif ($start >= $end) {
+                $rowErrors[] = "Baris {$line}: jam_mulai harus sebelum jam_selesai.";
+            } else {
+                $parsed[] = ['name' => $name, 'day' => $day, 'start' => $start, 'end' => $end];
+            }
+        }
+
+        if ($rowErrors !== []) {
+            return back()
+                ->withErrors(['file' => 'Import dibatalkan, tidak ada data yang disimpan. Perbaiki baris berikut lalu unggah ulang.'])
+                ->with('import_errors', $rowErrors);
+        }
+
+        if ($parsed === []) {
+            return back()->withErrors(['file' => 'Tidak ada baris data yang bisa diimpor.']);
+        }
+
+        $createdClasses = 0;
+        $createdSchedules = 0;
+        $skipped = 0;
+
+        DB::transaction(function () use ($parsed, &$createdClasses, &$createdSchedules, &$skipped): void {
+            $classCache = [];
+
+            foreach ($parsed as $p) {
+                $key = mb_strtolower($p['name']);
+
+                if (! isset($classCache[$key])) {
+                    $classroom = Classroom::query()->whereRaw('LOWER(name) = ?', [$key])->first();
+                    if (! $classroom) {
+                        // Default kelas baru: English · Semi · Teens/Adult (Mr Putra Speak);
+                        // bisa diubah admin lewat Edit kelas.
+                        $classroom = Classroom::create([
+                            'name' => $p['name'],
+                            'division' => Classroom::DIVISION_ENGLISH,
+                            'format' => Classroom::FORMAT_SEMI,
+                            'age_group' => Classroom::AGE_TEENS_ADULT,
+                            'is_active' => true,
+                        ]);
+                        $createdClasses++;
+                    }
+                    $classCache[$key] = $classroom;
+                }
+                $classroom = $classCache[$key];
+
+                $exists = TeacherSchedule::query()
+                    ->where('classroom_id', $classroom->id)
+                    ->where('day_of_week', $p['day'])
+                    ->where('start_time', $p['start'])
+                    ->where('end_time', $p['end'])
+                    ->exists();
+
+                if ($exists) {
+                    $skipped++;
+
+                    continue;
+                }
+
+                TeacherSchedule::create([
+                    'classroom_id' => $classroom->id,
+                    'teacher_id' => null,
+                    'title' => $p['name'],
+                    'day_of_week' => $p['day'],
+                    'start_time' => $p['start'],
+                    'end_time' => $p['end'],
+                    'is_active' => true,
+                ]);
+                $createdSchedules++;
+            }
+        });
+
+        return redirect()->route('teacher-schedules.index')->with(
+            'status',
+            "Import selesai: {$createdSchedules} jadwal dibuat, {$createdClasses} kelas baru otomatis, {$skipped} baris dilewati (sudah ada). Assign guru lewat Edit jadwal."
+        );
+    }
+
+    /** Validasi + normalisasi "H:MM"/"HH:MM" → "HH:MM"; null bila tidak valid. */
+    private function normalizeTime(string $raw): ?string
+    {
+        if (! preg_match('/^(\d{1,2}):(\d{2})$/', trim($raw), $m)) {
+            return null;
+        }
+
+        $hour = (int) $m[1];
+        $minute = (int) $m[2];
+        if ($hour > 23 || $minute > 59) {
+            return null;
+        }
+
+        return sprintf('%02d:%02d', $hour, $minute);
     }
 
     public function store(TeacherScheduleRequest $request)

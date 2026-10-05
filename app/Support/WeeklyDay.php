@@ -35,6 +35,27 @@ class WeeklyDay
         return self::options()[$value] ?? (string) $value;
     }
 
+    /**
+     * Ubah nama hari (Bahasa Indonesia "Senin".."Minggu", atau key English
+     * "monday"..) menjadi key internal. Null bila tidak dikenali.
+     */
+    public static function fromLabel(?string $input): ?string
+    {
+        $needle = strtolower(trim((string) $input));
+
+        if ($needle === '') {
+            return null;
+        }
+
+        foreach (self::options() as $key => $label) {
+            if ($needle === $key || $needle === strtolower($label)) {
+                return $key;
+            }
+        }
+
+        return null;
+    }
+
     public static function sortOrder(?string $value): int
     {
         $order = array_flip(self::values());
