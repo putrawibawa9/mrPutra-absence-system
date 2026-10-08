@@ -58,34 +58,21 @@
 
     @if (auth()->user()->isAdmin())
         <div class="mt-6 rounded-3xl bg-white p-6 shadow-sm">
-            @php
-                $isToday = $selectedDate->isToday();
-                $titleText = $isToday ? 'Kelas Hari Ini' : 'Jadwal Kelas';
-                $quickDays = [
-                    ['label' => 'Kemarin', 'date' => \Illuminate\Support\Carbon::today()->subDay()],
-                    ['label' => 'Hari Ini', 'date' => \Illuminate\Support\Carbon::today()],
-                    ['label' => 'Besok', 'date' => \Illuminate\Support\Carbon::today()->addDay()],
-                    ['label' => 'Lusa', 'date' => \Illuminate\Support\Carbon::today()->addDays(2)],
-                ];
-            @endphp
+            @php($isToday = $selectedDate->isToday())
             <div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-                <div>
-                    <h3 class="text-lg font-semibold text-slate-900">{{ $titleText }}</h3>
-                    <p class="text-sm text-slate-500">{{ $todayLabel }}, {{ $selectedDate->locale('id')->translatedFormat('d F Y') }} — {{ $todaysClasses->count() }} kelas terjadwal.</p>
+                <div class="flex items-start gap-3">
+                    <div class="flex items-center gap-2">
+                        <a href="{{ route('dashboard', ['date' => $selectedDate->copy()->subDay()->toDateString()]) }}"
+                           class="inline-flex items-center justify-center rounded-xl border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50" aria-label="Hari sebelumnya">&larr;</a>
+                        <a href="{{ route('dashboard', ['date' => $selectedDate->copy()->addDay()->toDateString()]) }}"
+                           class="inline-flex items-center justify-center rounded-xl border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50" aria-label="Hari berikutnya">&rarr;</a>
+                    </div>
+                    <div>
+                        <h3 class="text-lg font-semibold text-slate-900">{{ $isToday ? 'Kelas Hari Ini' : 'Jadwal Kelas' }}</h3>
+                        <p class="text-sm text-slate-500">{{ $todayLabel }}, {{ $selectedDate->locale('id')->translatedFormat('d F Y') }} — {{ $todaysClasses->count() }} kelas terjadwal.</p>
+                    </div>
                 </div>
                 <a href="{{ route('classes.today') }}" class="text-sm font-medium text-slate-700">Lihat detail</a>
-            </div>
-
-            <div class="mt-4 flex flex-wrap items-center gap-2">
-                <a href="{{ route('dashboard', ['date' => $selectedDate->copy()->subDay()->toDateString()]) }}"
-                   class="inline-flex items-center justify-center rounded-xl border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50" aria-label="Hari sebelumnya">&larr;</a>
-                @foreach ($quickDays as $quick)
-                    @php($active = $selectedDate->isSameDay($quick['date']))
-                    <a href="{{ route('dashboard', ['date' => $quick['date']->toDateString()]) }}"
-                       class="inline-flex items-center justify-center rounded-xl px-3 py-1.5 text-sm font-medium {{ $active ? 'bg-slate-900 text-white' : 'border border-slate-300 text-slate-700 hover:bg-slate-50' }}">{{ $quick['label'] }}</a>
-                @endforeach
-                <a href="{{ route('dashboard', ['date' => $selectedDate->copy()->addDay()->toDateString()]) }}"
-                   class="inline-flex items-center justify-center rounded-xl border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50" aria-label="Hari berikutnya">&rarr;</a>
             </div>
 
             <div class="mt-4 space-y-3">
