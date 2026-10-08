@@ -8,11 +8,12 @@ use App\Models\TeacherSchedule;
 use App\Http\Controllers\TeacherAvailabilityController;
 use App\Http\Controllers\TeacherScheduleController;
 use App\Support\WeeklyDay;
+use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 
 class DashboardController extends Controller
 {
-    public function __invoke()
+    public function __invoke(Request $request)
     {
         // Dashboard hanya untuk admin. Guru diarahkan ke halaman absensi.
         if (auth()->user()->isTeacher()) {
@@ -85,15 +86,24 @@ class DashboardController extends Controller
             ->where('status', Registration::STATUS_PENDING)
             ->count();
 
-        // Kelas yang les hari ini (dari jadwal mingguan) — tampil langsung di dashboard.
-        $todayKey = strtolower(now()->englishDayOfWeek);
+        // Kelas pada tanggal terpilih (default hari ini) — bisa dinavigasi
+        // ke kemarin/besok/lusa dll lewat ?date=YYYY-MM-DD.
+        $selectedDate = Carbon::today();
+        if ($request->filled('date')) {
+            try {
+                $selectedDate = Carbon::parse((string) $request->input('date'))->startOfDay();
+            } catch (\Exception) {
+                $selectedDate = Carbon::today();
+            }
+        }
+        $dayKey = strtolower($selectedDate->englishDayOfWeek);
         $todaysClasses = TeacherSchedule::query()
             ->with(['teacher', 'classroom.students'])
             ->where('is_active', true)
-            ->where('day_of_week', $todayKey)
+            ->where('day_of_week', $dayKey)
             ->orderBy('start_time')
             ->get();
-        $todayLabel = WeeklyDay::label($todayKey);
+        $todayLabel = WeeklyDay::label($dayKey);
 
         return view('dashboard', compact(
             'newRegistrationsThisMonth',
@@ -106,6 +116,7 @@ class DashboardController extends Controller
             'myAvailability',
             'todaysClasses',
             'todayLabel',
+            'selectedDate',
         ));
     }
 }

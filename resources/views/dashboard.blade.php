@@ -58,12 +58,34 @@
 
     @if (auth()->user()->isAdmin())
         <div class="mt-6 rounded-3xl bg-white p-6 shadow-sm">
-            <div class="flex items-center justify-between gap-4">
+            @php
+                $isToday = $selectedDate->isToday();
+                $titleText = $isToday ? 'Kelas Hari Ini' : 'Jadwal Kelas';
+                $quickDays = [
+                    ['label' => 'Kemarin', 'date' => \Illuminate\Support\Carbon::today()->subDay()],
+                    ['label' => 'Hari Ini', 'date' => \Illuminate\Support\Carbon::today()],
+                    ['label' => 'Besok', 'date' => \Illuminate\Support\Carbon::today()->addDay()],
+                    ['label' => 'Lusa', 'date' => \Illuminate\Support\Carbon::today()->addDays(2)],
+                ];
+            @endphp
+            <div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                 <div>
-                    <h3 class="text-lg font-semibold text-slate-900">Kelas Hari Ini</h3>
-                    <p class="text-sm text-slate-500">{{ $todayLabel }}, {{ now()->locale('id')->translatedFormat('d F Y') }} — {{ $todaysClasses->count() }} kelas terjadwal.</p>
+                    <h3 class="text-lg font-semibold text-slate-900">{{ $titleText }}</h3>
+                    <p class="text-sm text-slate-500">{{ $todayLabel }}, {{ $selectedDate->locale('id')->translatedFormat('d F Y') }} — {{ $todaysClasses->count() }} kelas terjadwal.</p>
                 </div>
                 <a href="{{ route('classes.today') }}" class="text-sm font-medium text-slate-700">Lihat detail</a>
+            </div>
+
+            <div class="mt-4 flex flex-wrap items-center gap-2">
+                <a href="{{ route('dashboard', ['date' => $selectedDate->copy()->subDay()->toDateString()]) }}"
+                   class="inline-flex items-center justify-center rounded-xl border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50" aria-label="Hari sebelumnya">&larr;</a>
+                @foreach ($quickDays as $quick)
+                    @php($active = $selectedDate->isSameDay($quick['date']))
+                    <a href="{{ route('dashboard', ['date' => $quick['date']->toDateString()]) }}"
+                       class="inline-flex items-center justify-center rounded-xl px-3 py-1.5 text-sm font-medium {{ $active ? 'bg-slate-900 text-white' : 'border border-slate-300 text-slate-700 hover:bg-slate-50' }}">{{ $quick['label'] }}</a>
+                @endforeach
+                <a href="{{ route('dashboard', ['date' => $selectedDate->copy()->addDay()->toDateString()]) }}"
+                   class="inline-flex items-center justify-center rounded-xl border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50" aria-label="Hari berikutnya">&rarr;</a>
             </div>
 
             <div class="mt-4 space-y-3">
@@ -84,10 +106,10 @@
                                 <p class="mt-1 truncate text-sm text-slate-600">Murid: {{ $schedule->classroom->students->pluck('name')->join(', ') }}</p>
                             @endif
                         </div>
-                        <p class="text-sm text-slate-500">Guru: <span class="font-medium text-slate-700">{{ $schedule->teacher->name }}</span></p>
+                        <p class="text-sm text-slate-500">Guru: <span class="font-medium text-slate-700">{{ $schedule->teacher?->name ?? 'Belum ada guru' }}</span></p>
                     </div>
                 @empty
-                    <p class="rounded-2xl border border-slate-100 bg-slate-50 px-4 py-6 text-center text-sm text-slate-500">Tidak ada kelas terjadwal hari ini.</p>
+                    <p class="rounded-2xl border border-slate-100 bg-slate-50 px-4 py-6 text-center text-sm text-slate-500">Tidak ada kelas terjadwal {{ $isToday ? 'hari ini' : 'pada tanggal ini' }}.</p>
                 @endforelse
             </div>
         </div>

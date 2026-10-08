@@ -3,8 +3,10 @@
 namespace Tests\Feature;
 
 use App\Models\Attendance;
+use App\Models\Classroom;
 use App\Models\Payment;
 use App\Models\Student;
+use App\Models\TeacherSchedule;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
@@ -106,5 +108,42 @@ class DashboardMetricsTest extends TestCase
         $response->assertSee('Hampir Habis');
         $response->assertSee('wa.me'); // tombol WA sekali klik tersedia
         $response->assertDontSee('Masih Banyak');
+    }
+
+    public function test_dashboard_can_show_classes_for_another_day(): void
+    {
+        Carbon::setTestNow('2026-10-08 09:00:00'); // Kamis
+        $admin = User::factory()->create(['role' => User::ROLE_ADMIN]);
+        $teacher = User::factory()->create(['role' => User::ROLE_TEACHER, 'name' => 'Pak Guru']);
+
+        $classroom = Classroom::query()->create([
+            'name' => 'Kelas Jumat',
+            'division' => Classroom::DIVISION_ENGLISH,
+            'format' => Classroom::FORMAT_SEMI,
+            'age_group' => Classroom::AGE_TEENS_ADULT,
+            'is_active' => true,
+        ]);
+        TeacherSchedule::query()->create([
+            'teacher_id' => $teacher->id,
+            'classroom_id' => $classroom->id,
+            'day_of_week' => 'friday',
+            'start_time' => '17:00',
+            'end_time' => '18:30',
+            'is_active' => true,
+        ]);
+
+        // Hari ini (Kamis) tidak ada kelas itu.
+        $this->actingAs($admin)->get(route('dashboard'))
+            ->assertOk()
+            ->assertSee('Kelas Hari Ini')
+            ->assertDontSee('Kelas Jumat');
+
+        // Besok (Jumat, 9 Okt) kelas itu muncul.
+        $this->actingAs($admin)->get(route('dashboard', ['date' => '2026-10-09']))
+            ->assertOk()
+            ->assertSee('Jadwal Kelas')
+            ->assertSee('Kelas Jumat');
+
+        Carbon::setTestNow();
     }
 }
