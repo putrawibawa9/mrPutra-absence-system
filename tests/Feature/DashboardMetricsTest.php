@@ -146,4 +146,36 @@ class DashboardMetricsTest extends TestCase
 
         Carbon::setTestNow();
     }
+
+    public function test_dashboard_hides_inactive_classroom_schedules(): void
+    {
+        Carbon::setTestNow('2026-10-08 09:00:00'); // Kamis
+        $admin = User::factory()->create(['role' => User::ROLE_ADMIN]);
+        $teacher = User::factory()->create(['role' => User::ROLE_TEACHER]);
+
+        foreach ([['Kelas Aktif', true], ['Kelas Nonaktif', false]] as [$name, $active]) {
+            $classroom = Classroom::query()->create([
+                'name' => $name,
+                'division' => Classroom::DIVISION_ENGLISH,
+                'format' => Classroom::FORMAT_SEMI,
+                'age_group' => Classroom::AGE_TEENS_ADULT,
+                'is_active' => $active,
+            ]);
+            TeacherSchedule::query()->create([
+                'teacher_id' => $teacher->id,
+                'classroom_id' => $classroom->id,
+                'day_of_week' => 'thursday',
+                'start_time' => '17:00',
+                'end_time' => '18:30',
+                'is_active' => true,
+            ]);
+        }
+
+        $this->actingAs($admin)->get(route('dashboard'))
+            ->assertOk()
+            ->assertSee('Kelas Aktif')
+            ->assertDontSee('Kelas Nonaktif');
+
+        Carbon::setTestNow();
+    }
 }

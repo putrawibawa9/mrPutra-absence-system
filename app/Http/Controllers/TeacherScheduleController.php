@@ -212,6 +212,9 @@ class TeacherScheduleController extends Controller
             ->with(['teacher', 'classroom.students'])
             ->where('is_active', true)
             ->where('day_of_week', $todayKey)
+            // Kelas nonaktif tidak ditampilkan (jadwal tanpa kelas tetap tampil).
+            ->where(fn ($q) => $q->whereNull('classroom_id')
+                ->orWhereHas('classroom', fn ($c) => $c->where('is_active', true)))
             ->orderBy('start_time')
             ->get();
 
