@@ -56,7 +56,7 @@ class Navigation
                     'label' => 'Tindak Lanjut',
                     'description' => 'Pantau murid yang perlu di-follow-up.',
                     'items' => [
-                        ['label' => 'Token Menipis', 'route' => 'follow-up.low-token', 'pattern' => 'follow-up.low-token', 'description' => 'Murid dengan sisa token sedikit.'],
+                        ['label' => 'Pertemuan Menipis', 'route' => 'follow-up.low-token', 'pattern' => 'follow-up.low-token', 'description' => 'Murid dengan sisa pertemuan sedikit.'],
                         ['label' => 'Murid Sering Absen', 'route' => 'follow-up.absent', 'pattern' => 'follow-up.absent', 'description' => 'Murid yang sering tidak hadir.'],
                         ['label' => 'Murid Non-aktif', 'route' => 'follow-up.inactive', 'pattern' => 'follow-up.inactive', 'description' => 'Murid yang sudah lama tidak les.'],
                         ['label' => 'Feedback Murid', 'route' => 'follow-up.feedback', 'pattern' => 'follow-up.feedback', 'description' => 'Minta & pantau feedback murid.'],

@@ -43,7 +43,7 @@ class PaymentRequest extends FormRequest
 
                 if ($this->input('source_type') === Payment::SOURCE_TOKEN) {
                     if (! $this->filled('total_sessions')) {
-                        $validator->errors()->add('total_sessions', 'Isi jumlah token yang dibeli.');
+                        $validator->errors()->add('total_sessions', 'Isi jumlah pertemuan yang dibeli.');
                     }
 
                     if (! $this->filled('price_amount')) {

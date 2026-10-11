@@ -373,8 +373,8 @@ class ClassroomController extends Controller
         });
 
         $statusNote = $classroom->isPrivate()
-            ? 'Token murid terpotong.'
-            : 'Token murid yang hadir & yang tidak hadir terpotong.';
+            ? 'Pertemuan murid terpotong.'
+            : 'Pertemuan murid yang hadir & yang tidak hadir terpotong.';
 
         return redirect()->route('attendances.index')
             ->with('status', 'Absensi kelas "'.$classroom->name.'" tersimpan. '.$statusNote);

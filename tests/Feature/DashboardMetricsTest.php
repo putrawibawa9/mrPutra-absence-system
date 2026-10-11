@@ -104,7 +104,7 @@ class DashboardMetricsTest extends TestCase
                 && ! $ids->contains($aman->id)
                 && (int) $students->first()->id === $habis->id; // paling mendesak (0) di atas
         });
-        $response->assertSee('Token Menipis');
+        $response->assertSee('Pertemuan Menipis');
         $response->assertSee('Hampir Habis');
         $response->assertSee('wa.me'); // tombol WA sekali klik tersedia
         $response->assertDontSee('Masih Banyak');
@@ -145,6 +145,30 @@ class DashboardMetricsTest extends TestCase
             ->assertSee('Kelas Jumat');
 
         Carbon::setTestNow();
+    }
+
+    public function test_english_coding_counts_exclude_inactive_class_students(): void
+    {
+        $admin = User::factory()->create(['role' => User::ROLE_ADMIN]);
+
+        $makeStudentInClass = function (string $name, bool $classActive): void {
+            $student = Student::query()->create(['name' => $name, 'phone' => '08'.rand(1000, 9999), 'registration_date' => now()->toDateString(), 'is_active' => true]);
+            $classroom = Classroom::query()->create([
+                'name' => $name.' Class',
+                'division' => Classroom::DIVISION_ENGLISH,
+                'format' => Classroom::FORMAT_SEMI,
+                'age_group' => Classroom::AGE_TEENS_ADULT,
+                'is_active' => $classActive,
+            ]);
+            $student->classrooms()->attach($classroom);
+        };
+
+        $makeStudentInClass('Aktif', true);
+        $makeStudentInClass('Nonaktif', false);
+
+        $this->actingAs($admin)->get(route('dashboard'))
+            ->assertOk()
+            ->assertViewHas('englishStudents', 1); // hanya murid di kelas aktif
     }
 
     public function test_dashboard_hides_inactive_classroom_schedules(): void

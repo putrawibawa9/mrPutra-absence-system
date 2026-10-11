@@ -95,7 +95,7 @@
                                 <span
                                     class="rounded-full px-2.5 py-1 text-xs font-semibold"
                                     :class="student.net > 0 ? 'bg-emerald-50 text-emerald-700' : (student.net < 0 ? 'bg-rose-50 text-rose-700' : 'bg-amber-50 text-amber-700')"
-                                    x-text="student.net + ' token'"
+                                    x-text="student.net + ' pertemuan'"
                                 ></span>
                                 <span
                                     x-show="selectedStudentId === student.id"
@@ -122,7 +122,7 @@
                             <span
                                 class="shrink-0 rounded-full px-2.5 py-1 text-xs font-semibold"
                                 :class="selectedStudent.net > 0 ? 'bg-emerald-50 text-emerald-700' : (selectedStudent.net < 0 ? 'bg-rose-50 text-rose-700' : 'bg-amber-50 text-amber-700')"
-                                x-text="'Saldo ' + selectedStudent.net + ' token'"
+                                x-text="'Saldo ' + selectedStudent.net + ' pertemuan'"
                             ></span>
                         </div>
                     </template>
@@ -136,7 +136,7 @@
             <div>
                 <x-input-label for="source_type" value="Jenis Pembayaran" />
                 <select id="source_type" name="source_type" x-model="sourceType" class="mt-1 block w-full rounded-xl border-slate-300">
-                    <option value="token">Token Kelas</option>
+                    <option value="token">Pertemuan Kelas</option>
                     <option value="book">Buku / Modul</option>
                 </select>
                 <x-input-error :messages="$errors->get('source_type')" class="mt-2" />
@@ -150,7 +150,7 @@
 
             {{-- ===== Token kelas ===== --}}
             <div x-show="sourceType === 'token'" x-cloak>
-                <x-input-label for="total_sessions" value="Jumlah Token (sesi)" />
+                <x-input-label for="total_sessions" value="Jumlah Pertemuan (sesi)" />
                 <x-text-input id="total_sessions" name="total_sessions" type="number" min="1" x-model="totalSessions" x-bind:disabled="sourceType !== 'token'" class="mt-1 block w-full rounded-xl border-slate-300" :value="old('total_sessions')" placeholder="Contoh: 8" />
                 <x-input-error :messages="$errors->get('total_sessions')" class="mt-2" />
             </div>

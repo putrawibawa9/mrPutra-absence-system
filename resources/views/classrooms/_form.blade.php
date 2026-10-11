@@ -83,7 +83,7 @@
                     <option value="{{ $value }}" @selected(old('learning_mode', $classroom->learning_mode ?? '') === $value)>{{ $label }}</option>
                 @endforeach
             </select>
-            <p class="mt-1 text-xs text-slate-500">English · Semi = Synchronous (bolos hangus). Lainnya = Self-paced (token expiry).</p>
+            <p class="mt-1 text-xs text-slate-500">English · Semi = Synchronous (bolos hangus). Lainnya = Self-paced (pertemuan kedaluwarsa).</p>
         </div>
         <div>
             <x-input-label for="level" value="Level (opsional)" />

@@ -101,7 +101,7 @@ class Payment extends Model
     {
         return match ($this->source_type) {
             self::SOURCE_BOOK => $this->learningModule?->name ?: ($this->book_title ?: 'Pembayaran Buku'),
-            default => 'Pembelian Token',
+            default => 'Pembelian Pertemuan',
         };
     }
 

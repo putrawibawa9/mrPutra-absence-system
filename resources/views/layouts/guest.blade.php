@@ -20,7 +20,7 @@
                 <div class="text-center">
                     <p class="text-xs uppercase tracking-[0.35em] text-slate-500">Attendance Platform</p>
                     <h1 class="mt-3 text-3xl font-semibold text-slate-900">Mr. Putra Absence System</h1>
-                    <p class="mt-2 text-sm text-slate-500">Student attendance and token-based payment system.</p>
+                    <p class="mt-2 text-sm text-slate-500">Student attendance and session-based payment system.</p>
                 </div>
 
                 <div class="mt-6 rounded-3xl bg-white px-6 py-6 shadow-xl shadow-slate-200/70 sm:px-8">

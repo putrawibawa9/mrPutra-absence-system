@@ -3,7 +3,7 @@
         <div class="flex flex-col gap-2">
             <a href="{{ route('classrooms.index') }}" class="text-sm text-slate-500">&larr; Kembali ke Kelas</a>
             <h2 class="text-xl font-semibold text-slate-900 sm:text-2xl">Absen Kelas — {{ $classroom->name }}</h2>
-            <p class="text-sm text-slate-500">{{ $classroom->divisionLabel() }} · {{ $classroom->formatLabel() }} · {{ $classroom->ageLabel() }} — centang murid yang hadir, token mereka otomatis terpotong.</p>
+            <p class="text-sm text-slate-500">{{ $classroom->divisionLabel() }} · {{ $classroom->formatLabel() }} · {{ $classroom->ageLabel() }} — centang murid yang hadir, pertemuan mereka otomatis terpotong.</p>
         </div>
     </x-slot>
 
@@ -92,7 +92,7 @@
                             <span class="font-medium text-slate-900">{{ $student->name }}</span>
                         </div>
                         <span class="text-sm font-medium {{ $net > 0 ? 'text-emerald-700' : ($net < 0 ? 'text-rose-700' : 'text-amber-700') }}">
-                            {{ $net }} token
+                            {{ $net }} pertemuan
                         </span>
                     </label>
                 @empty

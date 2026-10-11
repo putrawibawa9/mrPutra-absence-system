@@ -2,7 +2,7 @@
     <x-slot name="header">
         <div>
             <h2 class="text-2xl font-semibold text-slate-900">LTV Murid</h2>
-            <p class="text-sm text-slate-500">Berapa kali tiap murid membayar (siklus token), total token dibeli, dan total nilai (lifetime).</p>
+            <p class="text-sm text-slate-500">Berapa kali tiap murid membayar (siklus beli), total pertemuan dibeli, dan total nilai (lifetime).</p>
         </div>
     </x-slot>
 
@@ -32,7 +32,7 @@
                     <tr>
                         <th class="px-6 py-3 font-medium">Murid</th>
                         <th class="px-6 py-3 font-medium text-right">Kali Bayar</th>
-                        <th class="px-6 py-3 font-medium text-right">Token Dibeli</th>
+                        <th class="px-6 py-3 font-medium text-right">Pertemuan Dibeli</th>
                         <th class="px-6 py-3 font-medium text-right">Total Dibayar (LTV)</th>
                         <th class="px-6 py-3 font-medium">Bayar Pertama</th>
                         <th class="px-6 py-3 font-medium">Bayar Terakhir</th>

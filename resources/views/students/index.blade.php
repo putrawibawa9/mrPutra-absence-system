@@ -27,11 +27,11 @@
                 </select>
             </div>
             <div class="xl:w-64">
-                <x-input-label for="sort_tokens" value="Sort Token" />
+                <x-input-label for="sort_tokens" value="Urutkan Pertemuan" />
                 <select id="sort_tokens" name="sort_tokens" class="mt-1 block w-full rounded-xl border-slate-300">
                     <option value="">Newest first</option>
-                    <option value="lowest" @selected(($filters['sort_tokens'] ?? '') === 'lowest')>Token terkecil ke terbesar</option>
-                    <option value="highest" @selected(($filters['sort_tokens'] ?? '') === 'highest')>Token terbesar ke terkecil</option>
+                    <option value="lowest" @selected(($filters['sort_tokens'] ?? '') === 'lowest')>Pertemuan terkecil ke terbesar</option>
+                    <option value="highest" @selected(($filters['sort_tokens'] ?? '') === 'highest')>Pertemuan terbesar ke terkecil</option>
                 </select>
             </div>
             <div class="flex flex-col gap-3 sm:flex-row sm:items-end">
@@ -71,7 +71,7 @@
                         <p class="mt-1 text-sm text-slate-500">{{ $student->email ?: '-' }}</p>
                     </div>
                     <span class="rounded-full px-3 py-1 text-xs font-semibold {{ $remainingClass }}">
-                        {{ $netTokens }} token
+                        {{ $netTokens }} pertemuan
                     </span>
                 </div>
                 @if ($student->getOutstandingPaymentDebt() > 0)
@@ -141,7 +141,7 @@
                         <td class="px-6 py-4">
                             <div class="flex flex-wrap gap-2">
                                 <span class="rounded-full px-3 py-1 text-xs font-semibold {{ $remainingClass }}">
-                                    {{ $netTokens }} token
+                                    {{ $netTokens }} pertemuan
                                 </span>
                                 @if ($student->getOutstandingPaymentDebt() > 0)
                                     <span class="rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold text-amber-700">

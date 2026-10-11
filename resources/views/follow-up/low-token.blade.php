@@ -1,8 +1,8 @@
 <x-app-layout>
     <x-slot name="header">
         <div>
-            <h2 class="text-2xl font-semibold text-slate-900">Token Menipis</h2>
-            <p class="text-sm text-slate-500">Murid aktif dengan sisa token ≤ {{ \App\Models\Student::LOW_SESSION_THRESHOLD }}. Hari ini <span class="font-medium text-slate-700">{{ $todayLabel }}</span> — tombol WA aktif untuk murid yang <span class="font-medium text-slate-700">ada kelas hari ini</span>, jadi tinggal klik.</p>
+            <h2 class="text-2xl font-semibold text-slate-900">Pertemuan Menipis</h2>
+            <p class="text-sm text-slate-500">Murid aktif dengan sisa pertemuan ≤ {{ \App\Models\Student::LOW_SESSION_THRESHOLD }}. Hari ini <span class="font-medium text-slate-700">{{ $todayLabel }}</span> — tombol WA aktif untuk murid yang <span class="font-medium text-slate-700">ada kelas hari ini</span>, jadi tinggal klik.</p>
         </div>
     </x-slot>
 
@@ -20,7 +20,7 @@
                     <tr>
                         <th class="px-6 py-3 font-medium">Murid</th>
                         <th class="px-6 py-3 font-medium">No. HP</th>
-                        <th class="px-6 py-3 font-medium">Sisa Token</th>
+                        <th class="px-6 py-3 font-medium">Sisa Pertemuan</th>
                         <th class="px-6 py-3 font-medium text-right">Aksi</th>
                     </tr>
                 </thead>
@@ -38,7 +38,7 @@
                             <td class="px-6 py-4 text-slate-600">{{ $student->phone ?: '-' }}</td>
                             <td class="px-6 py-4">
                                 <span class="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold {{ $net > 0 ? 'bg-amber-50 text-amber-700' : ($net < 0 ? 'bg-rose-50 text-rose-700' : 'bg-slate-100 text-slate-600') }}">
-                                    {{ $net }} token
+                                    {{ $net }} pertemuan
                                 </span>
                             </td>
                             <td class="px-6 py-4 text-right">
@@ -72,7 +72,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="4" class="px-6 py-8 text-center text-slate-500">Semua murid masih punya cukup token. 🎉</td>
+                            <td colspan="4" class="px-6 py-8 text-center text-slate-500">Semua murid masih punya cukup pertemuan. 🎉</td>
                         </tr>
                     @endforelse
                 </tbody>

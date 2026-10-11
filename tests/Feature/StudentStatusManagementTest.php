@@ -127,15 +127,15 @@ class StudentStatusManagementTest extends TestCase
             ->get(route('students.index'))
             ->assertOk()
             ->assertSee('Total Debt: Rp 150.000')
-            ->assertSee('-1 token');
+            ->assertSee('-1 pertemuan');
 
         $this->actingAs($admin)
             ->get(route('students.show', $student))
             ->assertOk()
             ->assertSee('Total Debt')
             ->assertSee('Rp 150.000')
-            ->assertSee('Saldo Token')
-            ->assertSee('-1 token');
+            ->assertSee('Saldo Pertemuan')
+            ->assertSee('-1 pertemuan');
     }
 
     public function test_student_show_page_lists_meeting_journals(): void
@@ -358,7 +358,7 @@ class StudentStatusManagementTest extends TestCase
         ]));
 
         $response->assertOk();
-        $response->assertSee('Token terkecil ke terbesar');
+        $response->assertSee('Pertemuan terkecil ke terbesar');
         $response->assertSeeInOrder(['Low Token Student', 'High Token Student']);
         $response->assertSee('bg-amber-100', false);
     }

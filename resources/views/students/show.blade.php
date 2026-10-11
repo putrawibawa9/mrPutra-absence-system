@@ -19,7 +19,7 @@
                 @endif
                 @php $netTokens = $student->getNetTokenBalance(); @endphp
                 <span class="rounded-full px-3 py-1 text-xs font-semibold {{ $netTokens > 0 ? 'bg-emerald-100 text-emerald-700' : ($netTokens < 0 ? 'bg-rose-100 text-rose-700' : 'bg-amber-100 text-amber-700') }}">
-                    Saldo Token: {{ $netTokens }} token
+                    Saldo Pertemuan: {{ $netTokens }} pertemuan
                 </span>
                 @if (auth()->user()->isAdmin() && $student->getRemainingSessions() < 2 && $student->lowSessionReminderWhatsAppUrl($student->getRemainingSessions()))
                     <a
@@ -68,8 +68,8 @@
                     <dd class="mt-1 font-medium {{ $student->getOutstandingPaymentDebt() > 0 ? 'text-amber-700' : 'text-slate-900' }}">{{ $student->getOutstandingPaymentDebtLabel() }}</dd>
                 </div>
                 <div>
-                    <dt class="text-sm text-slate-500">Saldo Token</dt>
-                    <dd class="mt-1 font-medium {{ $student->getNetTokenBalance() < 0 ? 'text-rose-700' : 'text-slate-900' }}">{{ $student->getNetTokenBalance() }} token</dd>
+                    <dt class="text-sm text-slate-500">Saldo Pertemuan</dt>
+                    <dd class="mt-1 font-medium {{ $student->getNetTokenBalance() < 0 ? 'text-rose-700' : 'text-slate-900' }}">{{ $student->getNetTokenBalance() }} pertemuan</dd>
                 </div>
             </dl>
             @if (auth()->user()->isAdmin())
@@ -111,7 +111,7 @@
                 <p class="mt-1 text-2xl font-semibold text-slate-900">{{ $tokenPayments->count() }}x</p>
             </div>
             <div>
-                <p class="text-sm text-slate-500">Token Dibeli</p>
+                <p class="text-sm text-slate-500">Pertemuan Dibeli</p>
                 <p class="mt-1 text-2xl font-semibold text-slate-900">{{ $tokensBought }}</p>
             </div>
             <div>
@@ -209,7 +209,7 @@
                             <p class="text-sm text-slate-500">{{ $attendance->date->format('d M Y') }}</p>
                         </div>
                         <p class="mt-2 text-xs font-medium {{ $attendance->payment ? 'text-slate-500' : 'text-amber-700' }}">
-                            {{ $attendance->payment?->displayLabel() ?? 'Token Debt' }}
+                            {{ $attendance->payment?->displayLabel() ?? 'Utang Pertemuan' }}
                         </p>
                         <p class="mt-3 text-sm text-slate-600">{{ $attendance->notes ?: '-' }}</p>
                     </div>
@@ -231,7 +231,7 @@
                         <tr>
                             <td class="px-6 py-4 text-slate-600">{{ $attendance->date->format('d M Y') }}</td>
                             <td class="px-6 py-4 text-slate-900">{{ $attendance->teacher->name }}</td>
-                            <td class="px-6 py-4 {{ $attendance->payment ? 'text-slate-600' : 'font-medium text-amber-700' }}">{{ $attendance->payment?->displayLabel() ?? 'Token Debt' }}</td>
+                            <td class="px-6 py-4 {{ $attendance->payment ? 'text-slate-600' : 'font-medium text-amber-700' }}">{{ $attendance->payment?->displayLabel() ?? 'Utang Pertemuan' }}</td>
                             <td class="px-6 py-4 text-slate-600">{{ $attendance->notes ?: '-' }}</td>
                         </tr>
                     @empty
@@ -275,7 +275,7 @@
                                     </span>
                                 @endif
                                 <span class="rounded-full px-3 py-1 text-xs font-semibold {{ $attendance->payment ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700' }}">
-                                    {{ $attendance->payment?->displayLabel() ?? 'Token Debt' }}
+                                    {{ $attendance->payment?->displayLabel() ?? 'Utang Pertemuan' }}
                                 </span>
                             </div>
                             @if ($attendance->notes)

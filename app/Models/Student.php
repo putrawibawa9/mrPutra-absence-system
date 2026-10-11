@@ -138,7 +138,7 @@ class Student extends Model
      */
     public static function tokenBalanceLabel(int $net): string
     {
-        return $net.' token';
+        return $net.' pertemuan';
     }
 
     public function netTokenLabel(): string

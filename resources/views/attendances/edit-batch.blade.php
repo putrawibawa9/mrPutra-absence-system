@@ -247,7 +247,7 @@
                 <div class="flex items-center justify-between gap-3">
                     <div>
                         <h3 class="text-lg font-semibold text-slate-900">Students Present</h3>
-                        <p class="text-sm text-slate-500">Tambah atau hapus murid dari batch ini. Token akan disesuaikan otomatis saat disimpan.</p>
+                        <p class="text-sm text-slate-500">Tambah atau hapus murid dari batch ini. Pertemuan akan disesuaikan otomatis saat disimpan.</p>
                     </div>
                 </div>
                 <x-input-error :messages="$errors->get('student_ids')" class="mt-2" />
@@ -312,7 +312,7 @@
                                 @if ($currentSessions > 0)
                                     <p class="mt-2 text-xs text-emerald-700">{{ $currentSessions }} sessions available / reserved</p>
                                 @else
-                                    <p class="mt-2 text-xs text-amber-700">No active payment. If added, it will be recorded as token debt.</p>
+                                    <p class="mt-2 text-xs text-amber-700">Belum ada pembayaran aktif. Jika ditambah, tercatat sebagai utang pertemuan.</p>
                                 @endif
                                 <div class="mt-3 rounded-xl bg-slate-50 p-3">
                                     <p class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Current / Previous Journal</p>

@@ -3,7 +3,7 @@
         <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
                 <h2 class="text-xl font-semibold text-slate-900 sm:text-2xl">Payments</h2>
-                <p class="text-sm text-slate-500">Every payment creates tokens and automatically settles existing token debt first.</p>
+                <p class="text-sm text-slate-500">Setiap pembayaran menambah pertemuan dan otomatis melunasi utang pertemuan lebih dulu.</p>
             </div>
             <a href="{{ route('payments.create') }}" class="inline-flex justify-center rounded-xl bg-slate-900 px-4 py-2 text-sm font-medium text-white">Add Payment</a>
         </div>
@@ -27,7 +27,7 @@
                 <x-input-label for="source_type" value="Jenis Pembayaran" />
                 <select id="source_type" name="source_type" class="mt-1 block w-full rounded-xl border-slate-300">
                     <option value="">Semua jenis</option>
-                    <option value="token" @selected(($filters['source_type'] ?? null) === 'token')>Token Kelas</option>
+                    <option value="token" @selected(($filters['source_type'] ?? null) === 'token')>Pertemuan Kelas</option>
                     <option value="book" @selected(($filters['source_type'] ?? null) === 'book')>Buku / Modul</option>
                 </select>
             </div>
@@ -110,7 +110,7 @@
                     <a href="{{ route('payments.receipt', $payment) }}" class="inline-flex justify-center rounded-xl border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700">
                         View Receipt
                     </a>
-                    <form method="POST" action="{{ route('payments.destroy', $payment) }}" data-confirm="Delete this payment? The payment will be removed and linked attendances will become token debt.">
+                    <form method="POST" action="{{ route('payments.destroy', $payment) }}" data-confirm="Hapus pembayaran ini? Pembayaran dihapus dan absensi terkait menjadi utang pertemuan.">
                         @csrf
                         @method('DELETE')
                         <button type="submit" class="inline-flex justify-center rounded-xl border border-rose-200 px-4 py-2 text-sm font-medium text-rose-600">
@@ -156,7 +156,7 @@
                         <td class="px-6 py-4 text-right">
                             <div class="flex items-center justify-end gap-3">
                                 <a href="{{ route('payments.receipt', $payment) }}" class="text-sm font-medium text-slate-700">Receipt</a>
-                                <form method="POST" action="{{ route('payments.destroy', $payment) }}" data-confirm="Delete this payment? The payment will be removed and linked attendances will become token debt.">
+                                <form method="POST" action="{{ route('payments.destroy', $payment) }}" data-confirm="Hapus pembayaran ini? Pembayaran dihapus dan absensi terkait menjadi utang pertemuan.">
                                     @csrf
                                     @method('DELETE')
                                     <button type="submit" class="text-sm font-medium text-rose-600">Delete</button>

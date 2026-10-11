@@ -12,7 +12,7 @@
         <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
                 <h2 class="text-xl font-semibold text-slate-900 sm:text-2xl">Attendances</h2>
-                <p class="text-sm text-slate-500">Every saved attendance consumes exactly one session from the active token balance.</p>
+                <p class="text-sm text-slate-500">Setiap absensi tersimpan memotong tepat 1 pertemuan dari saldo aktif.</p>
             </div>
             @if (auth()->user()->isAdmin() || auth()->user()->isTeacher())
                 <a href="{{ route('attendances.create') }}" class="inline-flex justify-center rounded-xl bg-slate-900 px-4 py-2 text-sm font-medium text-white">Catat Absensi</a>
@@ -273,7 +273,7 @@
                         <a href="{{ route('attendances.batches.edit', $attendance->attendance_batch) }}" class="inline-flex justify-center rounded-xl border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700">
                             Edit Batch
                         </a>
-                        <form method="POST" action="{{ route('attendances.batches.destroy', $attendance->attendance_batch) }}" data-confirm="Hapus absensi kelas ini? Token semua murid dikembalikan & fee guru terkait dihapus.">
+                        <form method="POST" action="{{ route('attendances.batches.destroy', $attendance->attendance_batch) }}" data-confirm="Hapus absensi kelas ini? Pertemuan semua murid dikembalikan & fee guru terkait dihapus.">
                             @csrf @method('DELETE')
                             <button type="submit" class="inline-flex justify-center rounded-xl border border-rose-200 px-4 py-2 text-sm font-medium text-rose-600">Hapus</button>
                         </form>
@@ -281,7 +281,7 @@
                         <a href="{{ route('attendances.edit', $attendance->attendance) }}" class="inline-flex justify-center rounded-xl border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700">
                             Edit
                         </a>
-                        <form method="POST" action="{{ route('attendances.destroy', $attendance->attendance) }}" data-confirm="Hapus absensi ini? Token murid dikembalikan & fee guru terkait dihapus.">
+                        <form method="POST" action="{{ route('attendances.destroy', $attendance->attendance) }}" data-confirm="Hapus absensi ini? Pertemuan murid dikembalikan & fee guru terkait dihapus.">
                             @csrf @method('DELETE')
                             <button type="submit" class="inline-flex justify-center rounded-xl border border-rose-200 px-4 py-2 text-sm font-medium text-rose-600">Hapus</button>
                         </form>
@@ -355,7 +355,7 @@
                             @if ((auth()->user()->isAdmin() || auth()->user()->isTeacher()) && $attendance->type === 'batch')
                                 <div class="flex items-center justify-end gap-3">
                                     <a href="{{ route('attendances.batches.edit', $attendance->attendance_batch) }}" class="text-sm font-medium text-slate-700">Edit Batch</a>
-                                    <form method="POST" action="{{ route('attendances.batches.destroy', $attendance->attendance_batch) }}" data-confirm="Hapus absensi kelas ini? Token semua murid dikembalikan & fee guru terkait dihapus.">
+                                    <form method="POST" action="{{ route('attendances.batches.destroy', $attendance->attendance_batch) }}" data-confirm="Hapus absensi kelas ini? Pertemuan semua murid dikembalikan & fee guru terkait dihapus.">
                                         @csrf @method('DELETE')
                                         <button type="submit" class="text-sm font-medium text-rose-600">Hapus</button>
                                     </form>
@@ -363,7 +363,7 @@
                             @elseif ((auth()->user()->isAdmin() || auth()->user()->isTeacher()) && $attendance->editable)
                                 <div class="flex items-center justify-end gap-3">
                                     <a href="{{ route('attendances.edit', $attendance->attendance) }}" class="text-sm font-medium text-slate-700">Edit</a>
-                                    <form method="POST" action="{{ route('attendances.destroy', $attendance->attendance) }}" data-confirm="Hapus absensi ini? Token murid dikembalikan & fee guru terkait dihapus.">
+                                    <form method="POST" action="{{ route('attendances.destroy', $attendance->attendance) }}" data-confirm="Hapus absensi ini? Pertemuan murid dikembalikan & fee guru terkait dihapus.">
                                         @csrf @method('DELETE')
                                         <button type="submit" class="text-sm font-medium text-rose-600">Hapus</button>
                                     </form>

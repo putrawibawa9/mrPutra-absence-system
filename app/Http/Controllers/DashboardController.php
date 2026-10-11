@@ -33,12 +33,13 @@ class DashboardController extends Controller
             ->count();
 
         $activeStudents = Student::active()->count();
-        // Program murid diturunkan dari divisi kelas aktif yang dia ikuti.
+        // Program murid diturunkan dari divisi kelas AKTIF yang dia ikuti.
+        // Kelas nonaktif tidak dihitung (murid di kelas nonaktif = tidak aktif belajar).
         $codingStudents = Student::active()
-            ->whereHas('classrooms', fn ($query) => $query->where('division', Student::PROGRAM_CODING))
+            ->whereHas('classrooms', fn ($query) => $query->where('division', Student::PROGRAM_CODING)->where('is_active', true))
             ->count();
         $englishStudents = Student::active()
-            ->whereHas('classrooms', fn ($query) => $query->where('division', Student::PROGRAM_ENGLISH))
+            ->whereHas('classrooms', fn ($query) => $query->where('division', Student::PROGRAM_ENGLISH)->where('is_active', true))
             ->count();
         $mySchedule = collect();
         $myAvailability = collect();

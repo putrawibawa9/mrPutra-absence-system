@@ -110,7 +110,7 @@
                 </div>
 
                 <div>
-                    <x-input-label value="Active Tokens" />
+                    <x-input-label value="Pertemuan Aktif" />
                     <div class="mt-1 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
                         @if ($resolvedStudentId == $attendance->student_id && $attendance->payment)
                             <p class="font-medium text-emerald-700">Original payment will be kept</p>
@@ -122,8 +122,8 @@
                                 <p class="mt-2 text-xs text-slate-500">Combined from {{ $activePayments->count() }} active payments.</p>
                             @endif
                         @else
-                            <p class="font-medium text-amber-700">No active token available</p>
-                            <p class="mt-1 text-sm text-slate-500">If you switch to this student, attendance will become token debt.</p>
+                            <p class="font-medium text-amber-700">Tidak ada pertemuan aktif</p>
+                            <p class="mt-1 text-sm text-slate-500">Jika pindah ke murid ini, absensi menjadi utang pertemuan.</p>
                         @endif
                     </div>
                     <x-input-error :messages="$errors->get('payment_id')" class="mt-2" />

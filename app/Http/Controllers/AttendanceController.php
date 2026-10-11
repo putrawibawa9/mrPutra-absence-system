@@ -97,7 +97,7 @@ class AttendanceController extends Controller
                         ->filter()
                         ->unique()
                         ->values();
-                    $paymentLabels = $group->map(fn (Attendance $attendance) => $attendance->payment?->displayLabel() ?? 'Token Debt')
+                    $paymentLabels = $group->map(fn (Attendance $attendance) => $attendance->payment?->displayLabel() ?? 'Utang Pertemuan')
                         ->unique()
                         ->values();
                     $batch = $first->batch;
@@ -114,7 +114,7 @@ class AttendanceController extends Controller
                         'student_count' => $studentNames->count(),
                         'teacher_name' => $teacherNames->join(', '),
                         'payment_label' => $paymentLabels->count() === 1 ? $paymentLabels->first() : 'Mixed Payments',
-                        'payment_is_debt' => $paymentLabels->count() === 1 && $paymentLabels->first() === 'Token Debt',
+                        'payment_is_debt' => $paymentLabels->count() === 1 && $paymentLabels->first() === 'Utang Pertemuan',
                         'material_links' => $batch?->materialLinks ?? collect(),
                         'material_link_label' => $batch?->materialLinkLabels() ?? '-',
                         'teacher_fee_status' => $hasTeacherFee ? 'with_fee' : 'without_fee',
@@ -145,7 +145,7 @@ class AttendanceController extends Controller
                     'student_names' => collect([$first->student->name]),
                     'student_count' => 1,
                     'teacher_name' => $teacherNames->join(', '),
-                    'payment_label' => $first->payment?->displayLabel() ?? 'Token Debt',
+                    'payment_label' => $first->payment?->displayLabel() ?? 'Utang Pertemuan',
                     'payment_is_debt' => $first->payment === null,
                     'material_links' => $first->materialLinks,
                     'material_link_label' => $first->materialLinkLabels(),
@@ -560,7 +560,7 @@ class AttendanceController extends Controller
         });
 
         return redirect()->route('attendances.index')
-            ->with('status', 'Absensi dihapus. Token murid dikembalikan & fee guru terkait ikut dihapus.');
+            ->with('status', 'Absensi dihapus. Pertemuan murid dikembalikan & fee guru terkait ikut dihapus.');
     }
 
     public function destroyBatch(AttendanceBatch $attendanceBatch)
@@ -578,7 +578,7 @@ class AttendanceController extends Controller
         });
 
         return redirect()->route('attendances.index')
-            ->with('status', 'Absensi kelas dihapus. Token semua murid dikembalikan & fee guru terkait ikut dihapus.');
+            ->with('status', 'Absensi kelas dihapus. Pertemuan semua murid dikembalikan & fee guru terkait ikut dihapus.');
     }
 
     protected function attendanceFormData()

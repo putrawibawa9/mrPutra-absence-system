@@ -21,7 +21,7 @@
                     <button onclick="window.print()" class="inline-flex justify-center rounded-xl bg-slate-900 px-4 py-2 text-sm font-medium text-white">
                         Cetak / Simpan PDF
                     </button>
-                    <form method="POST" action="{{ route('payments.destroy', $payment) }}" data-confirm="Hapus pembayaran ini? Pembayaran dihapus dan absensi terkait menjadi utang token.">
+                    <form method="POST" action="{{ route('payments.destroy', $payment) }}" data-confirm="Hapus pembayaran ini? Pembayaran dihapus dan absensi terkait menjadi utang pertemuan.">
                         @csrf
                         @method('DELETE')
                         <button type="submit" class="inline-flex justify-center rounded-xl border border-rose-200 bg-white px-4 py-2 text-sm font-medium text-rose-600">
@@ -67,7 +67,7 @@
                     <div class="text-sm font-semibold text-slate-900">
                         {{ $payment->displayLabel() }}
                         @if ($payment->total_sessions > 0)
-                            <span class="font-normal text-slate-500">— {{ $payment->total_sessions }} sesi/token</span>
+                            <span class="font-normal text-slate-500">— {{ $payment->total_sessions }} sesi/pertemuan</span>
                         @endif
                         @if ($payment->notes)
                             <span class="block font-normal text-slate-500">{{ $payment->notes }}</span>
@@ -125,16 +125,16 @@
                         </p>
                         @php($studentNetTokens = $payment->student->getNetTokenBalance())
                         <p class="flex items-center justify-between gap-4">
-                            <span class="text-slate-500">Saldo Token Murid</span>
-                            <span class="font-medium {{ $studentNetTokens < 0 ? 'text-rose-700' : 'text-emerald-700' }}">{{ $studentNetTokens }} token</span>
+                            <span class="text-slate-500">Saldo Pertemuan Murid</span>
+                            <span class="font-medium {{ $studentNetTokens < 0 ? 'text-rose-700' : 'text-emerald-700' }}">{{ $studentNetTokens }} pertemuan</span>
                         </p>
                     </div>
 
                     @if ($payment->remaining_sessions > 0 && $payment->student->getTokenDebtCount() > 0)
-                        <form method="POST" action="{{ route('payments.reconcile-debt', $payment) }}" class="mt-4" data-confirm="Lunasi utang token murid ke pembayaran ini sekarang?">
+                        <form method="POST" action="{{ route('payments.reconcile-debt', $payment) }}" class="mt-4" data-confirm="Lunasi utang pertemuan murid ke pembayaran ini sekarang?">
                             @csrf
                             <button type="submit" class="inline-flex justify-center rounded-xl border border-amber-200 bg-white px-4 py-2 text-sm font-medium text-amber-700">
-                                Lunasi Utang Token
+                                Lunasi Utang Pertemuan
                             </button>
                         </form>
                     @endif

@@ -168,7 +168,7 @@ class PaymentController extends Controller
             return $payment->refresh();
         });
 
-        return redirect()->route('payments.receipt', $payment)->with('status', 'Pembayaran token berhasil disimpan.');
+        return redirect()->route('payments.receipt', $payment)->with('status', 'Pembayaran pertemuan berhasil disimpan.');
     }
 
     public function receipt(Payment $payment)
@@ -265,7 +265,7 @@ class PaymentController extends Controller
             }
         });
 
-        return redirect()->route('payments.index')->with('status', 'Payment deleted successfully. Related attendances were converted to token debt.');
+        return redirect()->route('payments.index')->with('status', 'Pembayaran dihapus. Absensi terkait diubah menjadi utang pertemuan.');
     }
 
     protected function generateReceiptNumber(): string
