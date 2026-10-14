@@ -100,6 +100,39 @@
                 @endforelse
             </div>
         </div>
+
+        <div class="mt-6 rounded-3xl bg-white p-6 shadow-sm">
+            <div class="flex items-center justify-between gap-4">
+                <div>
+                    <h3 class="text-lg font-semibold text-slate-900">Pertemuan Habis {{ $isToday ? 'Hari Ini' : 'Tanggal Ini' }}</h3>
+                    <p class="text-sm text-slate-500">Murid yang ada kelas {{ $isToday ? 'hari ini' : 'pada tanggal ini' }} tapi sisa pertemuannya sudah 0 — perlu ditagih / perpanjang.</p>
+                </div>
+                <span class="rounded-full bg-rose-50 px-3 py-1 text-xs font-semibold text-rose-700">{{ $habisToday->count() }} murid</span>
+            </div>
+
+            <div class="mt-4 space-y-3">
+                @forelse ($habisToday as $item)
+                    <div class="flex flex-col gap-2 rounded-2xl border border-slate-100 bg-slate-50 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+                        <div class="flex flex-wrap items-center gap-2">
+                            <span class="rounded-lg bg-slate-900 px-2.5 py-1 text-sm font-bold tracking-wide text-white">{{ $item->schedule->timeRangeLabel() }}</span>
+                            @if ($item->schedule->classroom?->code)
+                                <span class="rounded-lg bg-slate-100 px-2 py-1 text-xs font-bold tracking-wide text-slate-700">{{ $item->schedule->classroom->code }}</span>
+                            @endif
+                            <span class="text-sm font-medium text-slate-600">{{ $item->schedule->classroom?->name ?? ($item->schedule->title ?: 'Kelas') }}</span>
+                        </div>
+                        <div class="flex items-center gap-3">
+                            <span class="font-semibold text-rose-700">{{ $item->student->name }}</span>
+                            @php($waUrl = $item->student->lowSessionReminderWhatsAppUrl())
+                            @if ($waUrl)
+                                <a href="{{ $waUrl }}" target="_blank" rel="noopener noreferrer" class="inline-flex items-center rounded-xl border border-emerald-200 bg-white px-3 py-1.5 text-xs font-medium text-emerald-700">Ingatkan WA</a>
+                            @endif
+                        </div>
+                    </div>
+                @empty
+                    <p class="rounded-2xl border border-slate-100 bg-slate-50 px-4 py-6 text-center text-sm text-slate-500">Tidak ada murid dengan pertemuan habis {{ $isToday ? 'hari ini' : 'pada tanggal ini' }}. 🎉</p>
+                @endforelse
+            </div>
+        </div>
     @endif
 
     @if (auth()->user()->isTeacher())

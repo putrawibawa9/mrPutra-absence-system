@@ -109,6 +109,20 @@ class DashboardController extends Controller
             ->get();
         $todayLabel = WeeklyDay::label($dayKey);
 
+        // Murid yang les pada tanggal terpilih tapi sisa pertemuannya sudah habis
+        // (<= 0), supaya admin langsung tahu siapa yang perlu ditagih/perpanjang.
+        $habisToday = $todaysClasses
+            ->flatMap(function (TeacherSchedule $schedule) {
+                if (! $schedule->classroom) {
+                    return collect();
+                }
+
+                return $schedule->classroom->students
+                    ->filter(fn (Student $student) => $student->getNetTokenBalance() <= 0)
+                    ->map(fn (Student $student) => (object) ['schedule' => $schedule, 'student' => $student]);
+            })
+            ->values();
+
         return view('dashboard', compact(
             'newRegistrationsThisMonth',
             'studentsExitedThisMonth',
@@ -121,6 +135,7 @@ class DashboardController extends Controller
             'todaysClasses',
             'todayLabel',
             'selectedDate',
+            'habisToday',
         ));
     }
 }

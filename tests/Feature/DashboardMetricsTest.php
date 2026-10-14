@@ -171,6 +171,57 @@ class DashboardMetricsTest extends TestCase
             ->assertViewHas('englishStudents', 1); // hanya murid di kelas aktif
     }
 
+    public function test_dashboard_lists_zero_balance_students_scheduled_that_day(): void
+    {
+        Carbon::setTestNow('2026-10-15 09:00:00'); // Kamis
+        $admin = User::factory()->create(['role' => User::ROLE_ADMIN]);
+        $teacher = User::factory()->create(['role' => User::ROLE_TEACHER]);
+
+        $habis = Student::query()->create(['name' => 'Murid Habis', 'phone' => '0811', 'registration_date' => now()->toDateString(), 'is_active' => true]);
+        $aman = Student::query()->create(['name' => 'Murid Aman', 'phone' => '0812', 'registration_date' => now()->toDateString(), 'is_active' => true]);
+
+        Payment::query()->create([
+            'receipt_number' => 'KWT-HABIS-AMAN',
+            'student_id' => $aman->id,
+            'source_type' => Payment::SOURCE_TOKEN,
+            'total_sessions' => 8,
+            'remaining_sessions' => 4,
+            'price_amount' => 0,
+            'amount_paid' => 0,
+            'payment_date' => now()->toDateString(),
+            'signed_by_user_id' => $admin->id,
+        ]);
+
+        $classroom = Classroom::query()->create([
+            'name' => 'Kelas Kamis',
+            'division' => Classroom::DIVISION_ENGLISH,
+            'format' => Classroom::FORMAT_SEMI,
+            'age_group' => Classroom::AGE_TEENS_ADULT,
+            'is_active' => true,
+        ]);
+        $classroom->students()->attach([$habis->id, $aman->id]);
+
+        TeacherSchedule::query()->create([
+            'teacher_id' => $teacher->id,
+            'classroom_id' => $classroom->id,
+            'day_of_week' => 'thursday',
+            'start_time' => '10:00',
+            'end_time' => '11:10',
+            'is_active' => true,
+        ]);
+
+        $this->actingAs($admin)->get(route('dashboard'))
+            ->assertOk()
+            ->assertSee('Pertemuan Habis Hari Ini')
+            ->assertViewHas('habisToday', function ($habisToday) use ($habis, $aman) {
+                $names = collect($habisToday)->map(fn ($i) => $i->student->id);
+
+                return $names->contains($habis->id) && ! $names->contains($aman->id);
+            });
+
+        Carbon::setTestNow();
+    }
+
     public function test_dashboard_hides_inactive_classroom_schedules(): void
     {
         Carbon::setTestNow('2026-10-08 09:00:00'); // Kamis
