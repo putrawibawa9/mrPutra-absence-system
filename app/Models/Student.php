@@ -212,10 +212,15 @@ class Student extends Model
                 .'.';
         }
 
+        $paymentInfo = "Pembayaran dapat ditransfer ke salah satu rekening berikut (a.n. I Gede Putra Wibawa):\n"
+            ."• Bank Jago — 10180276877\n"
+            ."• BRI — 081501035456538";
+
         return "Halo Bapak/Ibu / Ananda, semoga sehat selalu.\n\n"
             ."Kami ingin menyampaikan bahwa sisa pertemuan untuk Ananda {$this->name} {$remainingLabel}.\n\n"
             .$continuationMessage."\n\n"
-            ."Terima kasih banyak.";
+            .$paymentInfo."\n\n"
+            ."Mohon konfirmasi bukti transfernya setelah pembayaran ya. Terima kasih banyak. 🙏";
     }
 
     public function lowSessionReminderWhatsAppUrl(?int $remainingSessions = null): ?string
