@@ -15,6 +15,7 @@ use App\Http\Controllers\LearningModuleController;
 use App\Http\Controllers\MaterialLinkController;
 use App\Http\Controllers\MenuController;
 use App\Http\Controllers\PaymentController;
+use App\Http\Controllers\PaymentInfoController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\RegistrationController;
 use App\Http\Controllers\ReportController;
@@ -43,6 +44,12 @@ Route::get('/receipts/{payment}/public', [PaymentController::class, 'publicRecei
 Route::get('/salary-slip/{teacher}', [ReportController::class, 'salarySlip'])
     ->middleware('signed')
     ->name('salary-slip.show');
+
+// Halaman "Cara Bayar" (QRIS + rekening + nominal) — publik, diamankan signed URL,
+// linknya disisipkan di pesan tagihan WhatsApp.
+Route::get('/cara-bayar/{student}', [PaymentInfoController::class, 'show'])
+    ->middleware('signed')
+    ->name('payment-info.show');
 
 // Form feedback publik untuk murid (tanpa login, diamankan signed URL).
 Route::get('/feedback/{student}', [FeedbackController::class, 'create'])

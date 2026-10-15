@@ -412,7 +412,9 @@ class StudentStatusManagementTest extends TestCase
         $indexResponse->assertOk();
         $indexResponse->assertSee('Kirim Pengingat Sisa Pertemuan');
         $indexResponse->assertSee('wa.me/62817000001', false);
-        $indexResponse->assertSee(rawurlencode("Halo Bapak/Ibu / Ananda, semoga sehat selalu.\n\nKami ingin menyampaikan bahwa sisa pertemuan untuk Ananda Reminder Student saat ini tinggal 1 kali pertemuan.\n\nApabila berkenan melanjutkan pertemuan berikutnya, kami siap membantu untuk penjadwalan dan informasi biaya les selanjutnya.\n\nPembayaran dapat ditransfer ke salah satu rekening berikut (a.n. I Gede Putra Wibawa):\n• Bank Jago — 10180276877\n• BRI — 081501035456538\n\nMohon konfirmasi bukti transfernya setelah pembayaran ya. Terima kasih banyak. 🙏"), false);
+        $indexResponse->assertSee(rawurlencode("sisa pertemuan untuk Ananda Reminder Student saat ini tinggal 1 kali pertemuan."), false);
+        $indexResponse->assertSee(rawurlencode("• Bank Jago — 10180276877\n• BRI — 081501035456538"), false);
+        $indexResponse->assertSee(rawurlencode("Untuk bayar via QRIS & rincian pembayaran, buka:"), false);
 
         $showResponse = $this->actingAs($admin)->get(route('students.show', $lowSessionStudent));
 

@@ -216,11 +216,20 @@ class Student extends Model
             ."• Bank Jago — 10180276877\n"
             ."• BRI — 081501035456538";
 
+        $payLink = "Untuk bayar via QRIS & rincian pembayaran, buka:\n".$this->caraBayarUrl();
+
         return "Halo Bapak/Ibu / Ananda, semoga sehat selalu.\n\n"
             ."Kami ingin menyampaikan bahwa sisa pertemuan untuk Ananda {$this->name} {$remainingLabel}.\n\n"
             .$continuationMessage."\n\n"
             .$paymentInfo."\n\n"
+            .$payLink."\n\n"
             ."Mohon konfirmasi bukti transfernya setelah pembayaran ya. Terima kasih banyak. 🙏";
+    }
+
+    /** Halaman publik "Cara Bayar" (QRIS + rekening + nominal), diamankan signed URL. */
+    public function caraBayarUrl(): string
+    {
+        return URL::signedRoute('payment-info.show', ['student' => $this]);
     }
 
     public function lowSessionReminderWhatsAppUrl(?int $remainingSessions = null): ?string
