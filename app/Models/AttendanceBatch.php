@@ -9,7 +9,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
-#[Fillable(['title', 'teacher_id', 'material_link_id', 'date', 'teaching_minutes', 'notes', 'learning_journal'])]
+#[Fillable(['title', 'teacher_id', 'material_link_id', 'game_id', 'materi_done', 'date', 'teaching_minutes', 'notes', 'learning_journal'])]
 class AttendanceBatch extends Model
 {
     use HasFactory;
@@ -19,6 +19,7 @@ class AttendanceBatch extends Model
         return [
             'date' => 'date',
             'teaching_minutes' => 'integer',
+            'materi_done' => 'boolean',
         ];
     }
 
@@ -30,6 +31,11 @@ class AttendanceBatch extends Model
     public function materialLink(): BelongsTo
     {
         return $this->belongsTo(MaterialLink::class);
+    }
+
+    public function game(): BelongsTo
+    {
+        return $this->belongsTo(Game::class);
     }
 
     public function materialLinks(): BelongsToMany

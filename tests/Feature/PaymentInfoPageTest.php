@@ -44,8 +44,8 @@ class PaymentInfoPageTest extends TestCase
         $response->assertSee('8 kali pertemuan');
         $response->assertSee('10180276877');
         $response->assertSee('081501035456538');
-        // QRIS belum diunggah di lingkungan test → fallback.
-        $response->assertSee('QRIS belum tersedia');
+        // QRIS sudah diunggah (public/images/qris.png) → gambar tampil.
+        $response->assertSee('images/qris.png');
     }
 
     public function test_reminder_message_contains_signed_pay_info_link(): void

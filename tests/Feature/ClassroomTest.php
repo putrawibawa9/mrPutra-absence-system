@@ -6,6 +6,7 @@ use App\Models\Attendance;
 use App\Models\AttendanceBatch;
 use App\Models\Book;
 use App\Models\Classroom;
+use App\Models\Game;
 use App\Models\Expense;
 use App\Models\Payment;
 use App\Models\Student;
@@ -240,6 +241,48 @@ class ClassroomTest extends TestCase
         $response->assertRedirect(route('attendances.index'));
         $attendance = Attendance::query()->where('student_id', $a->id)->firstOrFail();
         $this->assertSame($teacher->id, $attendance->teacher_id);
+    }
+
+    public function test_attendance_records_game_and_materi_checklist(): void
+    {
+        $teacher = User::factory()->create(['role' => User::ROLE_TEACHER]);
+        $a = Student::query()->create(['name' => 'A', 'phone' => '0811', 'is_active' => true]);
+        $this->tokenPayment($a);
+        $game = Game::query()->create(['tema' => 'Colors', 'link' => 'https://ex.com/colors', 'is_active' => true]);
+        $classroom = $this->makeClassroom(Classroom::FORMAT_PRIVATE, [$a->id]);
+
+        $response = $this->actingAs($teacher)->post(route('classrooms.attendances.store', $classroom), [
+            'date' => now()->toDateString(),
+            'teacher_ids' => [$teacher->id],
+            'present_student_ids' => [$a->id],
+            'learning_journal' => 'Private session.',
+            'game_id' => $game->id,
+            'materi_done' => '1',
+        ]);
+
+        $response->assertRedirect(route('attendances.index'));
+        $attendance = Attendance::query()->where('student_id', $a->id)->firstOrFail();
+        $this->assertSame($game->id, $attendance->game_id);
+        $this->assertTrue((bool) $attendance->materi_done);
+    }
+
+    public function test_attendance_can_be_saved_without_game(): void
+    {
+        $teacher = User::factory()->create(['role' => User::ROLE_TEACHER]);
+        $a = Student::query()->create(['name' => 'A', 'phone' => '0811', 'is_active' => true]);
+        $this->tokenPayment($a);
+        $classroom = $this->makeClassroom(Classroom::FORMAT_PRIVATE, [$a->id]);
+
+        $this->actingAs($teacher)->post(route('classrooms.attendances.store', $classroom), [
+            'date' => now()->toDateString(),
+            'teacher_ids' => [$teacher->id],
+            'present_student_ids' => [$a->id],
+            'learning_journal' => 'Private session.',
+        ])->assertRedirect(route('attendances.index'));
+
+        $attendance = Attendance::query()->where('student_id', $a->id)->firstOrFail();
+        $this->assertNull($attendance->game_id);
+        $this->assertFalse((bool) $attendance->materi_done);
     }
 
     public function test_attendance_requires_learning_journal(): void

@@ -8,6 +8,7 @@ use App\Models\Attendance;
 use App\Models\AttendanceBatch;
 use App\Models\Book;
 use App\Models\Classroom;
+use App\Models\Game;
 use App\Models\MaterialLink;
 use App\Models\Payment;
 use App\Models\Student;
@@ -220,9 +221,10 @@ class ClassroomController extends Controller
         ]);
         $teachers = User::teachers()->active()->orderBy('name')->get();
         $materialLinks = MaterialLink::query()->where('is_active', true)->orderBy('title')->get();
+        $games = Game::active()->orderBy('tema')->get(['id', 'tema', 'link']);
         $lastJournal = $this->journalEntries($classroom, 1)->first();
 
-        return view('classrooms.attendance', compact('classroom', 'teachers', 'materialLinks', 'lastJournal'));
+        return view('classrooms.attendance', compact('classroom', 'teachers', 'materialLinks', 'lastJournal', 'games'));
     }
 
     public function storeAttendance(Request $request, Classroom $classroom)
@@ -237,6 +239,8 @@ class ClassroomController extends Controller
             'present_student_ids.*' => ['integer'],
             'learning_journal' => ['required', 'string'],
             'notes' => ['nullable', 'string'],
+            'game_id' => ['nullable', 'integer', Rule::exists('games', 'id')],
+            'materi_done' => ['nullable', 'boolean'],
             'teaching_minutes' => ['nullable', 'integer', 'min:0'],
             'material_link_ids' => ['array'],
             'material_link_ids.*' => ['integer', Rule::exists('material_links', 'id')],
@@ -284,6 +288,9 @@ class ClassroomController extends Controller
         $date = $request->date('date');
         $journal = $request->string('learning_journal')->toString() ?: null;
         $notes = $request->string('notes')->toString() ?: null;
+        // Checklist sesi: game (opsional) & materi.
+        $gameId = $request->filled('game_id') ? (int) $request->integer('game_id') : null;
+        $materiDone = $request->boolean('materi_done');
         // Durasi tidak lagi diisi di form; pakai default 60 menit agar data tetap konsisten.
         $minutes = $request->filled('teaching_minutes') ? (int) $request->integer('teaching_minutes') : 60;
 
@@ -292,7 +299,7 @@ class ClassroomController extends Controller
             ->reject(fn ($id) => $presentIds->contains($id))
             ->values();
 
-        DB::transaction(function () use ($classroom, $presentIds, $absentIds, $teacherIds, $primaryTeacherId, $teacherSyncPayload, $allTeacherIds, $materialLinkIds, $date, $journal, $notes, $minutes, $request): void {
+        DB::transaction(function () use ($classroom, $presentIds, $absentIds, $teacherIds, $primaryTeacherId, $teacherSyncPayload, $allTeacherIds, $materialLinkIds, $date, $journal, $notes, $minutes, $gameId, $materiDone, $request): void {
             if ($classroom->isPrivate()) {
                 $studentId = (int) $presentIds->first();
                 $payment = $this->resolvePayment($studentId, $classroom->division, $classroom->format);
@@ -302,6 +309,8 @@ class ClassroomController extends Controller
                     'teacher_id' => $primaryTeacherId,
                     'payment_id' => $payment?->id,
                     'material_link_id' => $materialLinkIds->first(),
+                    'game_id' => $gameId,
+                    'materi_done' => $materiDone,
                     'date' => $date,
                     'teaching_minutes' => $minutes,
                     'notes' => $notes,
@@ -324,6 +333,8 @@ class ClassroomController extends Controller
                 'title' => $classroom->name,
                 'teacher_id' => $primaryTeacherId,
                 'material_link_id' => $materialLinkIds->first(),
+                'game_id' => $gameId,
+                'materi_done' => $materiDone,
                 'date' => $date,
                 'teaching_minutes' => $minutes,
                 'notes' => $notes,

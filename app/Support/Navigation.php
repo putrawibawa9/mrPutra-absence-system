@@ -69,6 +69,7 @@ class Navigation
                     'items' => [
                         ['label' => 'Modules', 'route' => 'learning-modules.index', 'pattern' => 'learning-modules.*', 'description' => 'Modul pembelajaran.'],
                         ['label' => 'Buku', 'route' => 'books.index', 'pattern' => 'books.*', 'description' => 'Master judul buku untuk kelas.'],
+                        ['label' => 'Games', 'route' => 'games.index', 'pattern' => 'games.*', 'description' => 'Master game (tema + link) untuk sesi.'],
                         ['label' => 'Link Materi', 'route' => 'material-links.index', 'pattern' => 'material-links.*', 'description' => 'Kumpulan link materi.'],
                     ],
                 ],

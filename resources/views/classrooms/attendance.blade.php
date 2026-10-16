@@ -51,6 +51,34 @@
                 <p class="mt-1 text-sm font-medium {{ $classroom->bookTitle() ? 'text-sky-900' : 'text-slate-500' }}">{{ $classroom->bookTitle() ?: 'Belum ditentukan — set lewat Edit kelas.' }}</p>
             </div>
 
+            <div class="mt-5 rounded-2xl border border-slate-200 p-4" x-data="{ gameId: '{{ old('game_id') }}', games: @js($games->mapWithKeys(fn ($g) => [$g->id => $g->link])) }">
+                <p class="text-xs font-semibold uppercase tracking-wide text-slate-400">Checklist Sesi</p>
+
+                <div class="mt-3">
+                    <x-input-label value="Games" />
+                    <div class="mt-1 flex flex-col gap-2 sm:flex-row">
+                        <select name="game_id" x-model="gameId" class="block w-full rounded-xl border-slate-300 text-sm">
+                            <option value="">— Tanpa game —</option>
+                            @foreach ($games as $g)
+                                <option value="{{ $g->id }}">{{ $g->tema }}</option>
+                            @endforeach
+                        </select>
+                        <a x-show="gameId" :href="games[gameId]" target="_blank" rel="noopener noreferrer"
+                           class="inline-flex items-center justify-center rounded-xl bg-emerald-600 px-4 py-2 text-sm font-medium text-white">Buka Game &#8599;</a>
+                    </div>
+                    @if ($games->isEmpty())
+                        <p class="mt-1 text-xs text-slate-500">Belum ada game. Tambahkan dulu di menu <a href="{{ route('games.index') }}" class="text-emerald-700 hover:underline">Games</a>.</p>
+                    @else
+                        <p class="mt-1 text-xs text-slate-500">Setiap pertemuan sebaiknya ada game. Pilih tema, lalu klik "Buka Game" untuk main sekali klik.</p>
+                    @endif
+                </div>
+
+                <label class="mt-3 flex items-center gap-2 text-sm">
+                    <input type="checkbox" name="materi_done" value="1" @checked(old('materi_done')) class="rounded border-slate-300 text-slate-900">
+                    <span class="font-medium text-slate-700">Materi sudah diberikan</span>
+                </label>
+            </div>
+
             <div class="mt-5 rounded-2xl border border-slate-200 bg-slate-50 p-4">
                 <div class="flex items-center justify-between gap-3">
                     <p class="text-xs font-semibold uppercase tracking-wide text-slate-400">Jurnal Terakhir</p>

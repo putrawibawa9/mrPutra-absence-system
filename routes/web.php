@@ -11,6 +11,7 @@ use App\Http\Controllers\ExpenseController;
 use App\Http\Controllers\ExpenseItemController;
 use App\Http\Controllers\FeedbackController;
 use App\Http\Controllers\FollowUpController;
+use App\Http\Controllers\GameController;
 use App\Http\Controllers\LearningModuleController;
 use App\Http\Controllers\MaterialLinkController;
 use App\Http\Controllers\MenuController;
@@ -85,6 +86,7 @@ Route::middleware('auth')->group(function () {
         Route::resource('learning-modules', LearningModuleController::class)->except(['show']);
         Route::resource('material-links', MaterialLinkController::class)->except(['show']);
         Route::resource('books', BookController::class)->except(['show']);
+        Route::resource('games', GameController::class)->except(['show']);
         Route::patch('/teachers/{teacher}/toggle-status', [TeacherController::class, 'toggleStatus'])->name('teachers.toggle-status');
         Route::resource('teachers', TeacherController::class)->except(['show']);
         Route::get('/teacher-schedules/import', [TeacherScheduleController::class, 'importForm'])->name('teacher-schedules.import');
