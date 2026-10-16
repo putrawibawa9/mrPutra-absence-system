@@ -222,6 +222,55 @@ class DashboardMetricsTest extends TestCase
         Carbon::setTestNow();
     }
 
+    public function test_dashboard_lists_sessions_already_attended_today(): void
+    {
+        Carbon::setTestNow('2026-10-16 20:00:00');
+        $admin = User::factory()->create(['role' => User::ROLE_ADMIN]);
+        $teacher = User::factory()->create(['role' => User::ROLE_TEACHER, 'name' => 'Bu Ratih']);
+        $s1 = Student::query()->create(['name' => 'Grup A', 'phone' => '0811', 'is_active' => true]);
+        $s2 = Student::query()->create(['name' => 'Private B', 'phone' => '0812', 'is_active' => true]);
+
+        // Sesi grup (batch) hari ini.
+        $batch = \App\Models\AttendanceBatch::query()->create([
+            'title' => 'English Semi Teens',
+            'teacher_id' => $teacher->id,
+            'date' => now()->toDateString(),
+            'learning_journal' => 'x',
+            'materi_done' => true,
+        ]);
+        \App\Models\Attendance::query()->create([
+            'attendance_batch_id' => $batch->id,
+            'student_id' => $s1->id,
+            'teacher_id' => $teacher->id,
+            'date' => now()->toDateString(),
+            'learning_journal' => 'x',
+        ]);
+
+        // Sesi private (tanpa batch) hari ini.
+        \App\Models\Attendance::query()->create([
+            'student_id' => $s2->id,
+            'teacher_id' => $teacher->id,
+            'date' => now()->toDateString(),
+            'learning_journal' => 'x',
+        ]);
+
+        // Sesi kemarin — tidak boleh muncul.
+        \App\Models\Attendance::query()->create([
+            'student_id' => $s2->id,
+            'teacher_id' => $teacher->id,
+            'date' => now()->subDay()->toDateString(),
+            'learning_journal' => 'x',
+        ]);
+
+        $this->actingAs($admin)->get(route('dashboard'))
+            ->assertOk()
+            ->assertSee('Sudah Diabsen Hari Ini')
+            ->assertSee('English Semi Teens')
+            ->assertViewHas('attendedToday', fn ($c) => count($c) === 2);
+
+        Carbon::setTestNow();
+    }
+
     public function test_dashboard_hides_inactive_classroom_schedules(): void
     {
         Carbon::setTestNow('2026-10-08 09:00:00'); // Kamis

@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Attendance;
+use App\Models\AttendanceBatch;
 use App\Models\Registration;
 use App\Models\Student;
 use App\Models\TeacherSchedule;
@@ -123,6 +125,39 @@ class DashboardController extends Controller
             })
             ->values();
 
+        // Sesi yang SUDAH diabsen pada tanggal terpilih — untuk dibandingkan
+        // dengan jadwal. Grup = AttendanceBatch; private = Attendance tanpa batch.
+        $attendedBatches = AttendanceBatch::query()
+            ->whereDate('date', $selectedDate)
+            ->with(['teacher', 'game', 'attendances.student'])
+            ->orderBy('id')
+            ->get()
+            ->map(fn (AttendanceBatch $batch) => (object) [
+                'label' => $batch->title ?: 'Kelas',
+                'teacher' => $batch->teacher?->name,
+                'students' => $batch->attendances->pluck('student.name')->filter()->join(', '),
+                'game' => $batch->game?->label(),
+                'materi' => (bool) $batch->materi_done,
+                'is_group' => true,
+            ]);
+
+        $attendedPrivate = Attendance::query()
+            ->whereDate('date', $selectedDate)
+            ->whereNull('attendance_batch_id')
+            ->with(['teacher', 'game', 'student.classrooms'])
+            ->orderBy('id')
+            ->get()
+            ->map(fn (Attendance $attendance) => (object) [
+                'label' => $attendance->student?->classrooms->first()?->name ?? $attendance->student?->name ?? 'Kelas',
+                'teacher' => $attendance->teacher?->name,
+                'students' => $attendance->student?->name,
+                'game' => $attendance->game?->label(),
+                'materi' => (bool) $attendance->materi_done,
+                'is_group' => false,
+            ]);
+
+        $attendedToday = $attendedBatches->concat($attendedPrivate)->values();
+
         return view('dashboard', compact(
             'newRegistrationsThisMonth',
             'studentsExitedThisMonth',
@@ -136,6 +171,7 @@ class DashboardController extends Controller
             'todayLabel',
             'selectedDate',
             'habisToday',
+            'attendedToday',
         ));
     }
 }

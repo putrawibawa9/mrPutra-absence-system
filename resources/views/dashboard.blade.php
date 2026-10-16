@@ -57,8 +57,9 @@
     @endif
 
     @if (auth()->user()->isAdmin())
-        <div class="mt-6 rounded-3xl bg-white p-6 shadow-sm">
-            @php($isToday = $selectedDate->isToday())
+        @php($isToday = $selectedDate->isToday())
+        <div class="mt-6 grid gap-6 xl:grid-cols-2">
+        <div class="rounded-3xl bg-white p-6 shadow-sm">
             <div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                 <div class="flex items-start gap-3">
                     <div class="flex items-center gap-2">
@@ -99,6 +100,41 @@
                     <p class="rounded-2xl border border-slate-100 bg-slate-50 px-4 py-6 text-center text-sm text-slate-500">Tidak ada kelas terjadwal {{ $isToday ? 'hari ini' : 'pada tanggal ini' }}.</p>
                 @endforelse
             </div>
+        </div>
+
+        {{-- Kelas yang sudah diabsen pada tanggal terpilih (bandingkan dgn jadwal di kiri) --}}
+        <div class="rounded-3xl bg-white p-6 shadow-sm">
+            <div class="flex items-center justify-between gap-4">
+                <div>
+                    <h3 class="text-lg font-semibold text-slate-900">Sudah Diabsen {{ $isToday ? 'Hari Ini' : 'Tanggal Ini' }}</h3>
+                    <p class="text-sm text-slate-500">Sesi yang sudah dicatat absennya — bandingkan dengan jadwal di kiri.</p>
+                </div>
+                <span class="rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700">{{ $attendedToday->count() }} sesi</span>
+            </div>
+
+            <div class="mt-4 space-y-3">
+                @forelse ($attendedToday as $item)
+                    <div class="rounded-2xl border border-slate-100 bg-slate-50 px-4 py-3">
+                        <div class="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+                            <div class="flex flex-wrap items-center gap-2">
+                                <span class="font-semibold text-slate-900">{{ $item->label }}</span>
+                                <span class="rounded-full px-2.5 py-1 text-xs font-semibold {{ $item->is_group ? 'bg-amber-50 text-amber-700' : 'bg-indigo-50 text-indigo-700' }}">{{ $item->is_group ? 'Grup' : 'Private' }}</span>
+                            </div>
+                            <p class="text-sm text-slate-500">Guru: <span class="font-medium text-slate-700">{{ $item->teacher ?? '-' }}</span></p>
+                        </div>
+                        @if ($item->students)
+                            <p class="mt-1 truncate text-sm text-slate-600">Murid: {{ $item->students }}</p>
+                        @endif
+                        <div class="mt-2 flex flex-wrap items-center gap-2">
+                            <span class="rounded-full px-2.5 py-1 text-xs font-semibold {{ $item->game ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-500' }}">&#127918; {{ $item->game ?? 'Tanpa game' }}</span>
+                            <span class="rounded-full px-2.5 py-1 text-xs font-semibold {{ $item->materi ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-500' }}">Materi {{ $item->materi ? '✅' : '—' }}</span>
+                        </div>
+                    </div>
+                @empty
+                    <p class="rounded-2xl border border-slate-100 bg-slate-50 px-4 py-6 text-center text-sm text-slate-500">Belum ada kelas yang diabsen {{ $isToday ? 'hari ini' : 'pada tanggal ini' }}.</p>
+                @endforelse
+            </div>
+        </div>
         </div>
 
         <div class="mt-6 rounded-3xl bg-white p-6 shadow-sm">
