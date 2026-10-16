@@ -7,10 +7,16 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
-#[Fillable(['tema', 'link', 'is_active'])]
+#[Fillable(['tema', 'keterangan', 'link', 'is_active'])]
 class Game extends Model
 {
     use HasFactory;
+
+    /** Label pembeda: "Tema — Keterangan" bila keterangan diisi. */
+    public function label(): string
+    {
+        return $this->keterangan ? $this->tema.' — '.$this->keterangan : $this->tema;
+    }
 
     protected function casts(): array
     {

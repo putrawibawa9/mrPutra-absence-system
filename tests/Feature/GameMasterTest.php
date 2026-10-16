@@ -56,6 +56,23 @@ class GameMasterTest extends TestCase
         $this->assertDatabaseHas('games', ['id' => $game->id, 'is_active' => false]);
     }
 
+    public function test_keterangan_differentiates_same_theme_games(): void
+    {
+        $admin = User::factory()->create(['role' => User::ROLE_ADMIN]);
+        $kids = Game::query()->create(['tema' => 'Animal', 'keterangan' => 'Kids', 'link' => 'https://ex.com/a', 'is_active' => true]);
+        $adv = Game::query()->create(['tema' => 'Animal', 'keterangan' => 'Advanced', 'link' => 'https://ex.com/b', 'is_active' => true]);
+        $plain = Game::query()->create(['tema' => 'Colors', 'link' => 'https://ex.com/c', 'is_active' => true]);
+
+        $this->assertSame('Animal — Kids', $kids->label());
+        $this->assertSame('Animal — Advanced', $adv->label());
+        $this->assertSame('Colors', $plain->label());
+
+        $this->actingAs($admin)->get(route('games.index'))
+            ->assertOk()
+            ->assertSee('Animal — Kids')
+            ->assertSee('Animal — Advanced');
+    }
+
     public function test_games_menu_is_admin_only(): void
     {
         $teacher = User::factory()->create(['role' => User::ROLE_TEACHER]);

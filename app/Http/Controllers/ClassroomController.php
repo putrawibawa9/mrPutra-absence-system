@@ -221,7 +221,7 @@ class ClassroomController extends Controller
         ]);
         $teachers = User::teachers()->active()->orderBy('name')->get();
         $materialLinks = MaterialLink::query()->where('is_active', true)->orderBy('title')->get();
-        $games = Game::active()->orderBy('tema')->get(['id', 'tema', 'link']);
+        $games = Game::active()->orderBy('tema')->orderBy('keterangan')->get(['id', 'tema', 'keterangan', 'link']);
         $lastJournal = $this->journalEntries($classroom, 1)->first();
 
         return view('classrooms.attendance', compact('classroom', 'teachers', 'materialLinks', 'lastJournal', 'games'));

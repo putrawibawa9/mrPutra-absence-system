@@ -23,6 +23,7 @@ class GameController extends Controller
     {
         Game::create([
             'tema' => $request->string('tema')->toString(),
+            'keterangan' => $request->string('keterangan')->toString() ?: null,
             'link' => $request->string('link')->toString(),
             'is_active' => $request->boolean('is_active', true),
         ]);
@@ -39,6 +40,7 @@ class GameController extends Controller
     {
         $game->update([
             'tema' => $request->string('tema')->toString(),
+            'keterangan' => $request->string('keterangan')->toString() ?: null,
             'link' => $request->string('link')->toString(),
             'is_active' => $request->boolean('is_active', false),
         ]);

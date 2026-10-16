@@ -2,10 +2,17 @@
 @csrf
 
 <div class="grid gap-6 md:grid-cols-2">
-    <div class="md:col-span-2">
+    <div>
         <x-input-label for="tema" value="Tema Game" />
         <x-text-input id="tema" name="tema" type="text" class="mt-1 block w-full rounded-xl border-slate-300" :value="old('tema', $game->tema ?? '')" placeholder="mis. Animals Vocabulary" required />
         <x-input-error :messages="$errors->get('tema')" class="mt-2" />
+    </div>
+
+    <div>
+        <x-input-label for="keterangan" value="Keterangan (opsional)" />
+        <x-text-input id="keterangan" name="keterangan" type="text" class="mt-1 block w-full rounded-xl border-slate-300" :value="old('keterangan', $game->keterangan ?? '')" placeholder="mis. Kids / Advanced" />
+        <p class="mt-1 text-xs text-slate-500">Pembeda kalau ada tema yang sama, mis. level/kelas.</p>
+        <x-input-error :messages="$errors->get('keterangan')" class="mt-2" />
     </div>
 
     <div class="md:col-span-2">

@@ -60,7 +60,7 @@
                         <select name="game_id" x-model="gameId" class="block w-full rounded-xl border-slate-300 text-sm">
                             <option value="">— Tanpa game —</option>
                             @foreach ($games as $g)
-                                <option value="{{ $g->id }}">{{ $g->tema }}</option>
+                                <option value="{{ $g->id }}">{{ $g->label() }}</option>
                             @endforeach
                         </select>
                         <a x-show="gameId" :href="games[gameId]" target="_blank" rel="noopener noreferrer"

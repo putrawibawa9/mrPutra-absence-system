@@ -15,6 +15,7 @@ class GameRequest extends FormRequest
     {
         return [
             'tema' => ['required', 'string', 'max:255'],
+            'keterangan' => ['nullable', 'string', 'max:255'],
             'link' => ['required', 'url', 'max:2000'],
             'is_active' => ['nullable', 'boolean'],
         ];

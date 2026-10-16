@@ -14,7 +14,7 @@
             <div class="rounded-3xl bg-white p-5 shadow-sm">
                 <div class="flex items-start justify-between gap-3">
                     <div class="min-w-0">
-                        <h3 class="font-semibold text-slate-900">{{ $game->tema }}</h3>
+                        <h3 class="font-semibold text-slate-900">{{ $game->label() }}</h3>
                         <a href="{{ $game->link }}" target="_blank" rel="noopener noreferrer" class="mt-1 block truncate text-sm text-emerald-700 hover:underline">{{ $game->link }}</a>
                     </div>
                     <span class="shrink-0 rounded-full px-3 py-1 text-xs font-semibold {{ $game->is_active ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-600' }}">
@@ -49,7 +49,7 @@
             <tbody class="divide-y divide-slate-100">
                 @forelse ($games as $game)
                     <tr>
-                        <td class="px-6 py-4 font-medium text-slate-900">{{ $game->tema }}</td>
+                        <td class="px-6 py-4 font-medium text-slate-900">{{ $game->label() }}</td>
                         <td class="px-6 py-4">
                             <a href="{{ $game->link }}" target="_blank" rel="noopener noreferrer" class="text-emerald-700 hover:underline">{{ \Illuminate\Support\Str::limit($game->link, 50) }}</a>
                         </td>
