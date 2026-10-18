@@ -10,12 +10,13 @@ use App\Models\TeacherSchedule;
 use App\Http\Controllers\TeacherAvailabilityController;
 use App\Http\Controllers\TeacherScheduleController;
 use App\Support\WeeklyDay;
+use App\Services\ScheduleOccurrenceService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 
 class DashboardController extends Controller
 {
-    public function __invoke(Request $request)
+    public function __invoke(Request $request, ScheduleOccurrenceService $occurrences)
     {
         // Dashboard hanya untuk admin. Guru diarahkan ke halaman absensi.
         if (auth()->user()->isTeacher()) {
@@ -100,29 +101,28 @@ class DashboardController extends Controller
             }
         }
         $dayKey = strtolower($selectedDate->englishDayOfWeek);
-        $todaysClasses = TeacherSchedule::query()
-            ->with(['teacher', 'classroom.students'])
-            ->where('is_active', true)
-            ->where('day_of_week', $dayKey)
-            // Kelas nonaktif tidak ditampilkan (jadwal tanpa kelas tetap tampil).
-            ->where(fn ($q) => $q->whereNull('classroom_id')
-                ->orWhereHas('classroom', fn ($c) => $c->where('is_active', true)))
-            ->orderBy('start_time')
-            ->get();
+        // Occurrence tanggal terpilih — sudah memperhitungkan pengganti/pindah/batal.
+        // Kelas nonaktif tetap tak tampil; sesi yang "dipindah keluar" disembunyikan.
+        $todaysClasses = $occurrences->forDate($selectedDate)
+            ->filter(fn ($o) => $o->classroom === null || $o->classroom->is_active)
+            ->filter(fn ($o) => $o->status !== ScheduleOccurrenceService::STATUS_MOVED_OUT)
+            ->values();
         $todayLabel = WeeklyDay::label($dayKey);
 
         // Murid yang les pada tanggal terpilih tapi sisa pertemuannya sudah habis
         // (<= 0), supaya admin langsung tahu siapa yang perlu ditagih/perpanjang.
         $habisToday = $todaysClasses
-            ->flatMap(function (TeacherSchedule $schedule) {
-                if (! $schedule->classroom) {
+            ->reject(fn ($o) => $o->status === ScheduleOccurrenceService::STATUS_CANCELLED)
+            ->flatMap(function ($o) {
+                if (! $o->classroom) {
                     return collect();
                 }
 
-                return $schedule->classroom->students
+                return $o->classroom->students
                     ->filter(fn (Student $student) => $student->getNetTokenBalance() <= 0)
-                    ->map(fn (Student $student) => (object) ['schedule' => $schedule, 'student' => $student]);
+                    ->map(fn (Student $student) => (object) ['schedule' => $o->schedule, 'student' => $student]);
             })
+            ->unique(fn ($row) => $row->student->id)
             ->values();
 
         // Sesi yang SUDAH diabsen pada tanggal terpilih — untuk dibandingkan

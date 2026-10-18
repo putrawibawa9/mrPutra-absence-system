@@ -57,6 +57,11 @@ class TeacherSchedule extends Model
         return $this->belongsTo(MaterialLink::class);
     }
 
+    public function changes(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(ScheduleChange::class);
+    }
+
     public function dayLabel(): string
     {
         return WeeklyDay::label($this->day_of_week);

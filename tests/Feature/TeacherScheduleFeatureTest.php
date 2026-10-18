@@ -121,8 +121,8 @@ class TeacherScheduleFeatureTest extends TestCase
             ->assertSee('Kelas Hari Ini')
             ->assertSee('Murid Hari Ini')
             ->assertSee('Pak Guru')
-            ->assertSee('10:00 - 11:10')
-            ->assertDontSee('14:00 - 15:10');
+            ->assertSee('10:00–11:10')
+            ->assertDontSee('14:00–15:10');
 
         $this->actingAs($teacher)->get(route('classes.today'))->assertForbidden();
     }

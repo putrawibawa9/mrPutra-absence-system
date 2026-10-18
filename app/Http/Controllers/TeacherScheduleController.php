@@ -204,23 +204,19 @@ class TeacherScheduleController extends Controller
      * Kelas yang les hari ini (dari jadwal mingguan), untuk admin remind manual
      * lewat WA grup. Diurutkan dari jam paling awal.
      */
-    public function today()
+    public function today(\App\Services\ScheduleOccurrenceService $occurrences)
     {
-        $todayKey = strtolower(now()->englishDayOfWeek);
+        $date = now()->startOfDay();
 
-        $schedules = TeacherSchedule::query()
-            ->with(['teacher', 'classroom.students'])
-            ->where('is_active', true)
-            ->where('day_of_week', $todayKey)
-            // Kelas nonaktif tidak ditampilkan (jadwal tanpa kelas tetap tampil).
-            ->where(fn ($q) => $q->whereNull('classroom_id')
-                ->orWhereHas('classroom', fn ($c) => $c->where('is_active', true)))
-            ->orderBy('start_time')
-            ->get();
+        // Occurrence hari ini — sudah memperhitungkan pengganti/pindah/batal.
+        $schedules = $occurrences->forDate($date)
+            ->filter(fn ($o) => $o->classroom === null || $o->classroom->is_active)
+            ->reject(fn ($o) => $o->status === \App\Services\ScheduleOccurrenceService::STATUS_MOVED_OUT)
+            ->values();
 
         return view('teacher-schedules.today', [
             'schedules' => $schedules,
-            'dayLabel' => WeeklyDay::label($todayKey),
+            'dayLabel' => WeeklyDay::label(strtolower($date->englishDayOfWeek)),
         ]);
     }
 

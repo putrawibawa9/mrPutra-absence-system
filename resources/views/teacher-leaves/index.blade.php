@@ -64,6 +64,13 @@
                                     @foreach ($sub->slots as $slot)
                                         <span class="rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-medium text-emerald-700">{{ $slot->day_label }} {{ $slot->time_label }}</span>
                                     @endforeach
+                                    @if ($sub->teacher)
+                                        <form method="POST" action="{{ route('teacher-leaves.assign-substitute', $leave) }}" class="ml-auto" data-confirm="Tetapkan {{ $sub->teacher->name }} sebagai pengganti untuk semua sesi guru ini pada {{ $leave->date->translatedFormat('d M Y') }}?">
+                                            @csrf
+                                            <input type="hidden" name="substitute_teacher_id" value="{{ $sub->teacher->id }}">
+                                            <button type="submit" class="rounded-lg bg-slate-900 px-3 py-1.5 text-xs font-medium text-white">Tetapkan pengganti</button>
+                                        </form>
+                                    @endif
                                 </div>
                             @endforeach
                         </div>

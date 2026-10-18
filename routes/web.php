@@ -25,6 +25,8 @@ use App\Http\Controllers\StudentController;
 use App\Http\Controllers\TeacherAvailabilityController;
 use App\Http\Controllers\TeacherController;
 use App\Http\Controllers\TeacherLeaveController;
+use App\Http\Controllers\ScheduleCalendarController;
+use App\Http\Controllers\ScheduleChangeController;
 use App\Http\Controllers\TeacherScheduleController;
 use App\Models\User;
 use Illuminate\Support\Facades\Route;
@@ -91,6 +93,13 @@ Route::middleware('auth')->group(function () {
         Route::resource('teachers', TeacherController::class)->except(['show']);
         Route::get('/teacher-schedules/import', [TeacherScheduleController::class, 'importForm'])->name('teacher-schedules.import');
         Route::post('/teacher-schedules/import', [TeacherScheduleController::class, 'import'])->name('teacher-schedules.import.store');
+
+        // Kalender jadwal berbasis tanggal + pengecualian per-tanggal.
+        Route::get('/schedule-calendar', [ScheduleCalendarController::class, 'index'])->name('schedule-calendar.index');
+        Route::post('/schedule-changes/substitute', [ScheduleChangeController::class, 'substitute'])->name('schedule-changes.substitute');
+        Route::post('/schedule-changes/move', [ScheduleChangeController::class, 'move'])->name('schedule-changes.move');
+        Route::post('/schedule-changes/cancel', [ScheduleChangeController::class, 'cancel'])->name('schedule-changes.cancel');
+        Route::post('/schedule-changes/reset', [ScheduleChangeController::class, 'reset'])->name('schedule-changes.reset');
         Route::resource('teacher-schedules', TeacherScheduleController::class)->except(['show']);
         Route::resource('teacher-availabilities', TeacherAvailabilityController::class)->except(['show']);
         Route::resource('expense-categories', ExpenseCategoryController::class)->except(['show']);
@@ -107,6 +116,7 @@ Route::middleware('auth')->group(function () {
 
         Route::get('/teacher-leaves', [TeacherLeaveController::class, 'index'])->name('teacher-leaves.index');
         Route::post('/teacher-leaves/{teacher_leave}/approve', [TeacherLeaveController::class, 'approve'])->name('teacher-leaves.approve');
+        Route::post('/teacher-leaves/{teacher_leave}/assign-substitute', [TeacherLeaveController::class, 'assignSubstitute'])->name('teacher-leaves.assign-substitute');
         Route::post('/teacher-leaves/{teacher_leave}/reject', [TeacherLeaveController::class, 'reject'])->name('teacher-leaves.reject');
 
         Route::get('/follow-up/low-token', [FollowUpController::class, 'lowToken'])->name('follow-up.low-token');

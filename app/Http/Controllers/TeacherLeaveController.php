@@ -3,10 +3,14 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\TeacherLeaveRequest;
+use App\Models\ScheduleChange;
 use App\Models\TeacherLeave;
+use App\Models\TeacherSchedule;
+use App\Models\User;
 use App\Services\ScheduleMatchService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
+use Illuminate\Validation\Rule;
 
 class TeacherLeaveController extends Controller
 {
@@ -75,6 +79,41 @@ class TeacherLeaveController extends Controller
         ]);
 
         return back()->with('status', 'Pengajuan libur disetujui.');
+    }
+
+    /**
+     * Tetapkan guru pengganti untuk SEMUA sesi guru yang libur pada tanggal itu.
+     * Membuat ScheduleChange (substitute) yang langsung tampil di kalender & dashboard.
+     */
+    public function assignSubstitute(Request $request, TeacherLeave $teacher_leave)
+    {
+        $data = $request->validate([
+            'substitute_teacher_id' => ['required', Rule::exists('users', 'id')->where(fn ($q) => $q->where('role', User::ROLE_TEACHER))],
+        ]);
+
+        $schedules = TeacherSchedule::query()
+            ->where('is_active', true)
+            ->where('teacher_id', $teacher_leave->teacher_id)
+            ->where('day_of_week', $teacher_leave->weekdayKey())
+            ->get();
+
+        foreach ($schedules as $schedule) {
+            ScheduleChange::query()->updateOrCreate(
+                ['teacher_schedule_id' => $schedule->id, 'date' => $teacher_leave->date->toDateString()],
+                [
+                    'substitute_teacher_id' => (int) $data['substitute_teacher_id'],
+                    'moved_to_date' => null,
+                    'moved_start_time' => null,
+                    'moved_end_time' => null,
+                    'is_cancelled' => false,
+                    'reason' => 'Guru libur',
+                    'teacher_leave_id' => $teacher_leave->id,
+                    'created_by_user_id' => $request->user()->id,
+                ],
+            );
+        }
+
+        return back()->with('status', $schedules->count().' sesi diberi guru pengganti untuk tanggal libur. Cek di Jadwal Guru.');
     }
 
     public function reject(Request $request, TeacherLeave $teacher_leave)
