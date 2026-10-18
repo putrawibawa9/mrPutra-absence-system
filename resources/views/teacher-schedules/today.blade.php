@@ -26,6 +26,8 @@
                             @endif
                             @if ($o->status === 'moved_in')
                                 <span class="rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700">Pindahan</span>
+                            @elseif ($o->status === 'retimed')
+                                <span class="rounded-full bg-sky-50 px-2.5 py-1 text-xs font-semibold text-sky-700">Jam diubah</span>
                             @elseif ($o->status === 'cancelled')
                                 <span class="rounded-full bg-rose-50 px-2.5 py-1 text-xs font-semibold text-rose-700">Dibatalkan</span>
                             @endif

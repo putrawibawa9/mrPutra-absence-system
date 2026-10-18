@@ -14,6 +14,7 @@
             'substitute' => ['bg-amber-50', 'border-amber-200'],
             'leave_unassigned' => ['bg-rose-50', 'border-rose-200'],
             'moved_in' => ['bg-emerald-50', 'border-emerald-200'],
+            'retimed' => ['bg-sky-50', 'border-slate-200'],
             'moved_out' => ['bg-slate-50', 'border-slate-200'],
             'cancelled' => ['bg-slate-50', 'border-slate-200'],
             'normal' => ['bg-white', 'border-slate-200'],
@@ -105,6 +106,17 @@
                                                 <input type="hidden" name="date" value="{{ $anchorDate }}">
                                                 <input type="date" name="moved_to_date" required class="block w-full rounded-lg border-slate-300 text-xs">
                                                 <button class="w-full rounded-lg bg-slate-900 px-2 py-1 text-xs font-medium text-white">Pindah ke tgl lain</button>
+                                            </form>
+
+                                            <form method="POST" action="{{ route('schedule-changes.retime') }}" class="space-y-1" data-confirm="Ubah jam sesi ini untuk tanggal ini?">
+                                                @csrf
+                                                <input type="hidden" name="teacher_schedule_id" value="{{ $o->schedule->id }}">
+                                                <input type="hidden" name="date" value="{{ $anchorDate }}">
+                                                <div class="flex items-center gap-1">
+                                                    <input type="time" name="moved_start_time" required value="{{ $o->start }}" class="w-full rounded-lg border-slate-300 text-xs">
+                                                    <input type="time" name="moved_end_time" required value="{{ $o->end }}" class="w-full rounded-lg border-slate-300 text-xs">
+                                                </div>
+                                                <button class="w-full rounded-lg border border-slate-300 px-2 py-1 text-xs font-medium text-sky-700">Ganti jam (tgl ini)</button>
                                             </form>
 
                                             <form method="POST" action="{{ route('schedule-changes.cancel') }}" data-confirm="Batalkan sesi pada tanggal ini?">

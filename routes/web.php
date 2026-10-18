@@ -98,6 +98,7 @@ Route::middleware('auth')->group(function () {
         Route::get('/schedule-calendar', [ScheduleCalendarController::class, 'index'])->name('schedule-calendar.index');
         Route::post('/schedule-changes/substitute', [ScheduleChangeController::class, 'substitute'])->name('schedule-changes.substitute');
         Route::post('/schedule-changes/move', [ScheduleChangeController::class, 'move'])->name('schedule-changes.move');
+        Route::post('/schedule-changes/retime', [ScheduleChangeController::class, 'retime'])->name('schedule-changes.retime');
         Route::post('/schedule-changes/cancel', [ScheduleChangeController::class, 'cancel'])->name('schedule-changes.cancel');
         Route::post('/schedule-changes/reset', [ScheduleChangeController::class, 'reset'])->name('schedule-changes.reset');
         Route::resource('teacher-schedules', TeacherScheduleController::class)->except(['show']);

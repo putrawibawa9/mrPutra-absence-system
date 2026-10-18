@@ -54,6 +54,8 @@
 
                                 @if ($o->status === 'moved_in')
                                     <span class="mt-1 inline-block rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-medium text-emerald-700" style="padding:2px 8px;">Pindahan</span>
+                                @elseif ($o->status === 'retimed')
+                                    <p class="mt-1 text-[11px] font-medium text-sky-700">{{ $o->note }}</p>
                                 @elseif ($o->status === 'moved_out')
                                     <p class="mt-1 text-[11px] font-medium text-slate-500">{{ $o->note }}</p>
                                 @elseif ($o->status === 'cancelled')

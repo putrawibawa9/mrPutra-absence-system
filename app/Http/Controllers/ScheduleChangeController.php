@@ -51,6 +51,27 @@ class ScheduleChangeController extends Controller
         return back()->with('status', 'Sesi dipindah ke tanggal baru untuk sekali ini.');
     }
 
+    /** Ganti jam sesi untuk tanggal tertentu (tanggal tetap). */
+    public function retime(Request $request)
+    {
+        $data = $this->validateAnchor($request, [
+            'moved_start_time' => ['required', 'date_format:H:i'],
+            'moved_end_time' => ['required', 'date_format:H:i', 'after:moved_start_time'],
+            'reason' => ['nullable', 'string', 'max:255'],
+        ]);
+
+        $this->upsert($request, [
+            'substitute_teacher_id' => null,
+            'moved_to_date' => null,
+            'moved_start_time' => $data['moved_start_time'],
+            'moved_end_time' => $data['moved_end_time'],
+            'is_cancelled' => false,
+            'reason' => $data['reason'] ?? null,
+        ]);
+
+        return back()->with('status', 'Jam sesi diubah untuk tanggal itu.');
+    }
+
     /** Batalkan sesi di tanggal tertentu. */
     public function cancel(Request $request)
     {

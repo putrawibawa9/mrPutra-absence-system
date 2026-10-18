@@ -78,6 +78,27 @@ class ScheduleCalendarTest extends TestCase
         $this->assertSame(ScheduleOccurrenceService::STATUS_MOVED_IN, $tue->status);
     }
 
+    public function test_retime_changes_time_on_same_date(): void
+    {
+        $admin = User::factory()->create(['role' => User::ROLE_ADMIN]);
+        $t1 = User::factory()->create(['role' => User::ROLE_TEACHER]);
+        $schedule = $this->makeSchedule($t1); // 10:00–11:00
+
+        $this->actingAs($admin)->post(route('schedule-changes.retime'), [
+            'teacher_schedule_id' => $schedule->id,
+            'date' => $this->monday,
+            'moved_start_time' => '13:00',
+            'moved_end_time' => '14:00',
+        ])->assertRedirect();
+
+        $occurrences = app(ScheduleOccurrenceService::class)->forDate(Carbon::parse($this->monday));
+        $this->assertCount(1, $occurrences); // tetap 1 sesi di tanggal itu (bukan pindah)
+        $occ = $occurrences->first();
+        $this->assertSame(ScheduleOccurrenceService::STATUS_RETIMED, $occ->status);
+        $this->assertSame('13:00', $occ->start);
+        $this->assertSame('14:00', $occ->end);
+    }
+
     public function test_cancelled_session_marked(): void
     {
         $t1 = User::factory()->create(['role' => User::ROLE_TEACHER]);

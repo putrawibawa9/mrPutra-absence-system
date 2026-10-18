@@ -20,6 +20,7 @@ class ScheduleOccurrenceService
     public const STATUS_SUBSTITUTE = 'substitute';
     public const STATUS_MOVED_OUT = 'moved_out';
     public const STATUS_MOVED_IN = 'moved_in';
+    public const STATUS_RETIMED = 'retimed';
     public const STATUS_CANCELLED = 'cancelled';
     public const STATUS_LEAVE_UNASSIGNED = 'leave_unassigned';
 
@@ -145,6 +146,18 @@ class ScheduleOccurrenceService
                 $base->effective_teacher = $change->substituteTeacher;
                 $base->original_teacher = $schedule->teacher;
                 $base->note = $change->reason ?: 'Guru pengganti';
+
+                return $base;
+            }
+
+            // Ganti jam saja, tanggal tetap.
+            if ($change->moved_start_time || $change->moved_end_time) {
+                $origStart = substr((string) $schedule->start_time, 0, 5);
+                $origEnd = substr((string) $schedule->end_time, 0, 5);
+                $base->status = self::STATUS_RETIMED;
+                $base->start = substr((string) ($change->moved_start_time ?? $schedule->start_time), 0, 5);
+                $base->end = substr((string) ($change->moved_end_time ?? $schedule->end_time), 0, 5);
+                $base->note = 'Jam diubah (dari '.$origStart.'–'.$origEnd.')';
 
                 return $base;
             }
