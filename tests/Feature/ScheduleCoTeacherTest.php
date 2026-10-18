@@ -81,17 +81,17 @@ class ScheduleCoTeacherTest extends TestCase
             'is_active' => true,
         ]);
 
-        // Co-teacher melihatnya dengan peran Co-teacher.
+        // Co-teacher melihatnya dengan peran Co-teacher (menyebut guru utama).
         $this->actingAs($coTeacher)->get(route('my-schedule.index'))
             ->assertOk()
-            ->assertSee('17:00 - 18:10')
+            ->assertSee('17:00–18:10')
             ->assertSee('Co-teacher')
-            ->assertSee('Guru utama: Guru Utama');
+            ->assertSee('Guru Utama');
 
-        // Guru utama melihatnya dengan peran Guru utama.
+        // Guru utama melihat sesinya (tanpa label co-teacher).
         $this->actingAs($teacher)->get(route('my-schedule.index'))
             ->assertOk()
-            ->assertSee('17:00 - 18:10')
-            ->assertSee('Guru utama');
+            ->assertSee('17:00–18:10')
+            ->assertDontSee('Co-teacher');
     }
 }

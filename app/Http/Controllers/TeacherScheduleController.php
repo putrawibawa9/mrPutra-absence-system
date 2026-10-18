@@ -6,8 +6,10 @@ use App\Http\Requests\TeacherScheduleRequest;
 use App\Models\Classroom;
 use App\Models\TeacherSchedule;
 use App\Models\User;
+use App\Services\ScheduleOccurrenceService;
 use App\Support\WeeklyDay;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
@@ -423,36 +425,51 @@ class TeacherScheduleController extends Controller
         return redirect()->route('teacher-schedules.index')->with('status', 'Jadwal guru berhasil dihapus.');
     }
 
-    public function mySchedule()
+    public function mySchedule(Request $request, ScheduleOccurrenceService $occurrences)
     {
         $teacher = auth()->user();
 
-        // Jadwal di mana guru ini berperan sebagai guru utama ATAU co-teacher.
-        $schedules = TeacherSchedule::query()
-            ->with(['classroom.students', 'teacher:id,name'])
-            ->where('is_active', true)
-            ->where(fn ($query) => $query->where('teacher_id', $teacher->id)->orWhere('co_teacher_id', $teacher->id))
-            ->orderByRaw($this->dayOrderSql())
-            ->orderBy('start_time')
-            ->get();
-
-        // Tandai peran guru pada tiap slot untuk ditampilkan.
-        $schedules->each(fn (TeacherSchedule $schedule) => $schedule->setAttribute(
-            'my_role',
-            (int) $schedule->teacher_id === (int) $teacher->id ? 'teacher' : 'co_teacher',
-        ));
-
-        $groupedSchedules = $this->groupByDay($schedules);
-        $calendar = $this->buildCalendar($schedules, 'classroom_id');
-
-        $legend = [];
-        foreach ($schedules as $schedule) {
-            if ($schedule->classroom && ! isset($legend[$schedule->classroom_id])) {
-                $legend[$schedule->classroom_id] = $schedule->classroom->nameWithStudentHint();
+        // Minggu yang ditampilkan (Senin–Minggu); ?week=YYYY-MM-DD = anchor.
+        $anchor = Carbon::today();
+        if ($request->filled('week')) {
+            try {
+                $anchor = Carbon::parse((string) $request->input('week'));
+            } catch (\Exception) {
+                $anchor = Carbon::today();
             }
         }
+        $weekStart = $anchor->copy()->startOfWeek(Carbon::MONDAY);
+        $weekEnd = $weekStart->copy()->endOfWeek(Carbon::SUNDAY);
 
-        return view('teacher-schedules.my', compact('groupedSchedules', 'calendar', 'legend'));
+        // Occurrence minggu ini yang MENYANGKUT guru ini: sebagai pengajar efektif
+        // (termasuk saat dia jadi pengganti) atau co-teacher.
+        $mine = $occurrences->forRange($weekStart, $weekEnd)
+            ->filter(fn ($o) => optional($o->effective_teacher)->id === $teacher->id
+                || optional($o->co_teacher)->id === $teacher->id)
+            ->each(function ($o) use ($teacher) {
+                $o->my_role = optional($o->effective_teacher)->id === $teacher->id
+                    ? ($o->status === ScheduleOccurrenceService::STATUS_SUBSTITUTE ? 'substitute' : 'teacher')
+                    : 'co_teacher';
+            })
+            ->groupBy(fn ($o) => $o->date->toDateString());
+
+        $days = [];
+        for ($date = $weekStart->copy(); $date->lte($weekEnd); $date->addDay()) {
+            $days[] = (object) [
+                'date' => $date->copy(),
+                'label' => WeeklyDay::label(strtolower($date->englishDayOfWeek)),
+                'is_today' => $date->isToday(),
+                'occurrences' => $mine->get($date->toDateString(), collect())->values(),
+            ];
+        }
+
+        return view('teacher-schedules.my', [
+            'days' => $days,
+            'weekStart' => $weekStart,
+            'weekEnd' => $weekEnd,
+            'prevWeek' => $weekStart->copy()->subWeek()->toDateString(),
+            'nextWeek' => $weekStart->copy()->addWeek()->toDateString(),
+        ]);
     }
 
     protected function formData(): array

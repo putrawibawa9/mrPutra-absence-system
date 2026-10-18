@@ -166,6 +166,29 @@ class ScheduleCalendarTest extends TestCase
         ]);
     }
 
+    public function test_substitute_teacher_sees_covered_session_in_my_schedule(): void
+    {
+        $t1 = User::factory()->create(['role' => User::ROLE_TEACHER, 'name' => 'Guru Asli']);
+        $t2 = User::factory()->create(['role' => User::ROLE_TEACHER, 'name' => 'Guru Pengganti']);
+        $schedule = $this->makeSchedule($t1);
+        ScheduleChange::query()->create([
+            'teacher_schedule_id' => $schedule->id,
+            'date' => $this->monday,
+            'substitute_teacher_id' => $t2->id,
+        ]);
+
+        // Pengganti melihat sesi itu di jadwalnya pada minggu tsb.
+        $this->actingAs($t2)->get(route('my-schedule.index', ['week' => $this->monday]))
+            ->assertOk()
+            ->assertSee('English Private')
+            ->assertSee('Menggantikan Guru Asli');
+
+        // Guru asli tidak lagi melihat sesi itu (digantikan) pada tanggal tsb.
+        $this->actingAs($t1)->get(route('my-schedule.index', ['week' => $this->monday]))
+            ->assertOk()
+            ->assertDontSee('English Private');
+    }
+
     public function test_calendar_is_admin_only(): void
     {
         $teacher = User::factory()->create(['role' => User::ROLE_TEACHER]);

@@ -96,9 +96,9 @@ class TeacherScheduleFeatureTest extends TestCase
         $this->actingAs($teacher)
             ->get(route('my-schedule.index'))
             ->assertOk()
-            ->assertSee('Jadwal Mingguan Saya')
+            ->assertSee('Jadwal Saya')
             ->assertSee('Senin')
-            ->assertSee('17:00 - 18:10')
+            ->assertSee('17:00–18:10')
             ->assertSee('English · Semi · Kids', false);
     }
 
