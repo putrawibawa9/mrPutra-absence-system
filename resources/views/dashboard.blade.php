@@ -175,7 +175,9 @@
                             <span class="font-semibold text-rose-700">{{ $item->student->name }}</span>
                             @php($waUrl = $item->student->lowSessionReminderWhatsAppUrl())
                             @if ($waUrl)
-                                <a href="{{ $waUrl }}" target="_blank" rel="noopener noreferrer" class="inline-flex items-center rounded-xl border border-emerald-200 bg-white px-3 py-1.5 text-xs font-medium text-emerald-700">Ingatkan WA</a>
+                                <a href="{{ $waUrl }}" target="_blank" rel="noopener noreferrer" class="inline-flex items-center rounded-xl bg-emerald-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-emerald-700">Tagih via WA</a>
+                            @else
+                                <span class="inline-flex items-center rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-400" title="Tambahkan nomor WA murid di menu Murid">No. WA belum ada</span>
                             @endif
                         </div>
                     </div>

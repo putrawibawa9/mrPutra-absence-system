@@ -37,14 +37,14 @@ class ScheduleOccurrenceService
 
         $schedules = TeacherSchedule::query()
             ->where('is_active', true)
-            ->with(['teacher:id,name', 'coTeacher:id,name', 'classroom.students:id,name'])
+            ->with(['teacher:id,name', 'coTeacher:id,name', 'classroom.students:id,name,phone'])
             ->get()
             ->groupBy('day_of_week');
 
         // Pengecualian yang menyentuh rentang ini (lewat tanggal asli / tanggal pindahan).
         $changes = ScheduleChange::query()
             ->where(fn ($q) => $q->whereBetween('date', [$lo, $hi])->orWhereBetween('moved_to_date', [$lo, $hi]))
-            ->with(['substituteTeacher:id,name', 'schedule.teacher:id,name', 'schedule.coTeacher:id,name', 'schedule.classroom.students:id,name'])
+            ->with(['substituteTeacher:id,name', 'schedule.teacher:id,name', 'schedule.coTeacher:id,name', 'schedule.classroom.students:id,name,phone'])
             ->get();
 
         $changeByScheduleDate = [];

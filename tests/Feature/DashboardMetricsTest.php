@@ -213,11 +213,37 @@ class DashboardMetricsTest extends TestCase
         $this->actingAs($admin)->get(route('dashboard'))
             ->assertOk()
             ->assertSee('Pertemuan Habis Hari Ini')
+            ->assertSee('Tagih via WA') // murid "Murid Habis" punya nomor → tombol tagih WA
+            ->assertSee('wa.me/62811', false)
             ->assertViewHas('habisToday', function ($habisToday) use ($habis, $aman) {
                 $names = collect($habisToday)->map(fn ($i) => $i->student->id);
 
                 return $names->contains($habis->id) && ! $names->contains($aman->id);
             });
+
+        Carbon::setTestNow();
+    }
+
+    public function test_habis_card_shows_no_wa_hint_when_student_has_no_number(): void
+    {
+        Carbon::setTestNow('2026-10-15 09:00:00'); // Kamis
+        $admin = User::factory()->create(['role' => User::ROLE_ADMIN]);
+        $teacher = User::factory()->create(['role' => User::ROLE_TEACHER]);
+        $noPhone = Student::query()->create(['name' => 'Tanpa Nomor', 'phone' => '', 'registration_date' => now()->toDateString(), 'is_active' => true]);
+
+        $classroom = Classroom::query()->create([
+            'name' => 'Kelas Kamis', 'division' => Classroom::DIVISION_ENGLISH,
+            'format' => Classroom::FORMAT_SEMI, 'age_group' => Classroom::AGE_TEENS_ADULT, 'is_active' => true,
+        ]);
+        $classroom->students()->attach($noPhone->id);
+        TeacherSchedule::query()->create([
+            'teacher_id' => $teacher->id, 'classroom_id' => $classroom->id,
+            'day_of_week' => 'thursday', 'start_time' => '10:00', 'end_time' => '11:10', 'is_active' => true,
+        ]);
+
+        $this->actingAs($admin)->get(route('dashboard'))
+            ->assertOk()
+            ->assertSee('No. WA belum ada');
 
         Carbon::setTestNow();
     }
