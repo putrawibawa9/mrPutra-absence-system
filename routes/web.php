@@ -19,6 +19,7 @@ use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\PaymentInfoController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\RegistrationController;
+use App\Http\Controllers\MessageTemplateController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\ScheduleMatchController;
 use App\Http\Controllers\StudentController;
@@ -128,6 +129,9 @@ Route::middleware('auth')->group(function () {
         Route::get('/cash-flow', CashFlowController::class)->name('cash-flow.index');
         Route::get('/reports/ltv', [ReportController::class, 'ltv'])->name('reports.ltv');
         Route::get('/reports/churn', [ReportController::class, 'churn'])->name('reports.churn');
+        Route::get('/message-templates', [MessageTemplateController::class, 'index'])->name('message-templates.index');
+        Route::put('/message-templates/{key}', [MessageTemplateController::class, 'update'])->name('message-templates.update');
+        Route::post('/message-templates/{key}/reset', [MessageTemplateController::class, 'reset'])->name('message-templates.reset');
         Route::get('/reports/opex', [ReportController::class, 'opex'])->name('reports.opex');
         Route::get('/reports/teacher-salary', [ReportController::class, 'teacherSalary'])->name('reports.teacher-salary');
         Route::get('/reports/review', [ReportController::class, 'review'])->name('reports.review');

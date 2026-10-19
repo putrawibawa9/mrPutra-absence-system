@@ -90,6 +90,7 @@ class Navigation
                         ['label' => 'Review Bulanan', 'route' => 'reports.review', 'pattern' => 'reports.review', 'description' => 'Ringkasan laba/rugi bulanan.'],
                         ['label' => 'LTV Murid', 'route' => 'reports.ltv', 'pattern' => 'reports.ltv', 'description' => 'Nilai seumur hidup murid.'],
                         ['label' => 'Churn Murid', 'route' => 'reports.churn', 'pattern' => 'reports.churn', 'description' => 'Laju murid berhenti per bulan.'],
+                        ['label' => 'Template Pesan', 'route' => 'message-templates.index', 'pattern' => 'message-templates.*', 'description' => 'Edit teks pesan WA (tagih, follow-up, selesai).'],
                     ],
                 ],
                 [

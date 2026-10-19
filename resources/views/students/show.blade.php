@@ -31,6 +31,16 @@
                         Kirim Pengingat Sisa Pertemuan
                     </a>
                 @endif
+                @if (auth()->user()->isAdmin() && $student->completedWhatsAppUrl())
+                    <a
+                        href="{{ $student->completedWhatsAppUrl() }}"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        class="rounded-full bg-sky-100 px-3 py-1 text-xs font-semibold text-sky-700"
+                    >
+                        Kirim Pesan Selesai (WA)
+                    </a>
+                @endif
             </div>
         </div>
     </x-slot>

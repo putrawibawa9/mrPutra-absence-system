@@ -212,18 +212,23 @@ class Student extends Model
                 .'.';
         }
 
-        $paymentInfo = "Pembayaran dapat ditransfer ke salah satu rekening berikut (a.n. I Gede Putra Wibawa):\n"
-            ."• Bank Jago — 10180276877\n"
-            ."• BRI — 081501035456538";
+        $jumlah = '';
+        $biaya = '';
+        if ($this->latestSessionPayment && $this->latestSessionPayment->price_amount > 0 && $this->latestSessionPayment->total_sessions > 0) {
+            $jumlah = (string) $this->latestSessionPayment->total_sessions;
+            $biaya = number_format($this->latestSessionPayment->price_amount, 0, ',', '.');
+        }
 
-        $payLink = "Untuk bayar via QRIS & rincian pembayaran, buka:\n".$this->caraBayarUrl();
-
-        return "Halo Bapak/Ibu / Ananda, semoga sehat selalu.\n\n"
-            ."Kami ingin menyampaikan bahwa sisa pertemuan untuk Ananda {$this->name} {$remainingLabel}.\n\n"
-            .$continuationMessage."\n\n"
-            .$paymentInfo."\n\n"
-            .$payLink."\n\n"
-            ."Mohon konfirmasi bukti transfernya setelah pembayaran ya. Terima kasih banyak. 🙏";
+        return MessageTemplate::render('billing', [
+            'nama' => $this->name,
+            'kalimat_sisa' => $remainingLabel,
+            'kalimat_lanjut' => $continuationMessage,
+            'sisa_pertemuan' => (string) max(0, $remainingSessions),
+            'jumlah_pertemuan' => $jumlah,
+            'biaya' => $biaya,
+            'info_rekening' => MessageTemplate::REKENING_BLOCK,
+            'link_bayar' => $this->caraBayarUrl(),
+        ]);
     }
 
     /** Halaman publik "Cara Bayar" (QRIS + rekening + nominal), diamankan signed URL. */
@@ -247,10 +252,7 @@ class Student extends Model
 
     public function buildAttendanceCheckInMessage(): string
     {
-        return "Halo Bapak/Ibu / Ananda {$this->name}, semoga sehat selalu.\n\n"
-            ."Kami dari Mr. Putra memperhatikan Ananda belum hadir di beberapa pertemuan les terakhir. "
-            ."Apakah ada kendala atau ada yang bisa kami bantu, misalnya terkait jadwal les?\n\n"
-            ."Kami harap Ananda bisa melanjutkan belajarnya bersama kami. Terima kasih banyak.";
+        return MessageTemplate::render('inactive_followup', ['nama' => $this->name]);
     }
 
     public function attendanceCheckInWhatsAppUrl(): ?string
@@ -273,11 +275,29 @@ class Student extends Model
 
     public function buildFeedbackRequestMessage(): string
     {
-        return "Halo Kak {$this->name}, terima kasih ya sudah menjadi bagian dari Mr. Putra Speak.\n\n"
-            ."Boleh minta waktunya sebentar untuk berbagi pesan, kesan, dan saran lewat form singkat ini? "
-            ."Masukan Kakak sangat membantu kami untuk terus berkembang.\n\n"
-            .$this->feedbackFormUrl()."\n\n"
-            ."Terima kasih banyak!";
+        return MessageTemplate::render('feedback', [
+            'nama' => $this->name,
+            'link_feedback' => $this->feedbackFormUrl(),
+        ]);
+    }
+
+    public function buildCompletedMessage(): string
+    {
+        return MessageTemplate::render('completed', [
+            'nama' => $this->name,
+            'link_feedback' => $this->feedbackFormUrl(),
+        ]);
+    }
+
+    public function completedWhatsAppUrl(): ?string
+    {
+        $whatsAppNumber = $this->whatsappNumber();
+
+        if (! $whatsAppNumber) {
+            return null;
+        }
+
+        return 'https://wa.me/'.$whatsAppNumber.'?text='.rawurlencode($this->buildCompletedMessage());
     }
 
     public function feedbackRequestWhatsAppUrl(): ?string
