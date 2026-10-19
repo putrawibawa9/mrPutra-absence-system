@@ -95,6 +95,7 @@ class ScheduleOccurrenceService
                 'status' => self::STATUS_MOVED_IN,
                 'note' => 'Pindahan dari '.$change->date->translatedFormat('d M'),
                 'change' => $change,
+                'conflict' => false,
             ]);
         }
 
@@ -107,6 +108,53 @@ class ScheduleOccurrenceService
     public function forDate(Carbon $date): Collection
     {
         return $this->forRange($date, $date);
+    }
+
+    /**
+     * Tandai occurrence yang BENTROK pada satu hari: guru yang sama (sebagai
+     * pengajar efektif atau co-teacher) terjadwal di dua sesi yang jamnya
+     * tumpang tindih. Men-set $o->conflict = true pada keduanya.
+     *
+     * @param  Collection<int, object>  $occurrences  occurrence pada 1 hari.
+     */
+    public static function markConflicts(Collection $occurrences): Collection
+    {
+        foreach ($occurrences as $o) {
+            $o->conflict = false;
+        }
+
+        // Hanya sesi nyata (abaikan yang dipindah keluar / dibatalkan).
+        $active = $occurrences
+            ->reject(fn ($o) => in_array($o->status, [self::STATUS_MOVED_OUT, self::STATUS_CANCELLED], true))
+            ->values()
+            ->all();
+
+        $toMin = static function ($time): int {
+            [$h, $m] = array_pad(explode(':', substr((string) $time, 0, 5)), 2, '0');
+
+            return ((int) $h) * 60 + (int) $m;
+        };
+        $teachersOf = static fn ($o) => array_values(array_filter([
+            optional($o->effective_teacher)->id,
+            optional($o->co_teacher)->id,
+        ]));
+
+        $count = count($active);
+        for ($i = 0; $i < $count; $i++) {
+            for ($j = $i + 1; $j < $count; $j++) {
+                $a = $active[$i];
+                $b = $active[$j];
+                if (array_intersect($teachersOf($a), $teachersOf($b)) === []) {
+                    continue;
+                }
+                if ($toMin($a->start) < $toMin($b->end) && $toMin($b->start) < $toMin($a->end)) {
+                    $a->conflict = true;
+                    $b->conflict = true;
+                }
+            }
+        }
+
+        return $occurrences;
     }
 
     private function buildOccurrence(TeacherSchedule $schedule, Carbon $date, ?ScheduleChange $change, array $teachersOnLeave): object
@@ -124,6 +172,7 @@ class ScheduleOccurrenceService
             'status' => self::STATUS_NORMAL,
             'note' => null,
             'change' => $change,
+            'conflict' => false,
         ];
 
         if ($change) {

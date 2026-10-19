@@ -78,16 +78,19 @@
 
             <div class="mt-4 space-y-3">
                 @forelse ($todaysClasses as $o)
-                    <div class="flex flex-col gap-2 rounded-2xl border border-slate-100 bg-slate-50 px-4 py-3 sm:flex-row sm:items-center sm:justify-between {{ $o->status === 'cancelled' ? 'opacity-60' : '' }}">
+                    <div class="flex flex-col gap-2 rounded-2xl border px-4 py-3 sm:flex-row sm:items-center sm:justify-between {{ $o->conflict ? 'border-rose-200 bg-rose-50' : 'border-slate-100 bg-slate-50' }} {{ $o->status === 'cancelled' ? 'opacity-60' : '' }}">
                         <div class="min-w-0">
                             <div class="flex flex-wrap items-center gap-2">
                                 <span class="rounded-lg bg-slate-900 px-2.5 py-1 text-sm font-bold tracking-wide text-white">{{ $o->start }}–{{ $o->end }}</span>
                                 @if ($o->classroom?->code)
                                     <span class="rounded-lg bg-slate-100 px-2 py-1 text-xs font-bold tracking-wide text-slate-700">{{ $o->classroom->code }}</span>
                                 @endif
-                                <span class="font-semibold text-slate-900">{{ $o->classroom?->name ?? ($o->schedule->title ?: 'Kelas') }}</span>
+                                <span class="font-semibold {{ $o->conflict ? 'text-rose-700' : 'text-slate-900' }}">{{ $o->classroom?->name ?? ($o->schedule->title ?: 'Kelas') }}</span>
                                 @if ($o->classroom)
                                     <span class="rounded-full px-2.5 py-1 text-xs font-semibold {{ $o->classroom->isPrivate() ? 'bg-indigo-50 text-indigo-700' : 'bg-amber-50 text-amber-700' }}">{{ $o->classroom->isPrivate() ? 'Private' : 'Grup' }}</span>
+                                @endif
+                                @if ($o->conflict)
+                                    <span class="rounded-full bg-rose-100 px-2.5 py-1 text-xs font-semibold text-rose-700">⚠ Bentrok guru</span>
                                 @endif
                                 @if ($o->status === 'moved_in')
                                     <span class="rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700">Pindahan</span>
@@ -102,7 +105,9 @@
                             @endif
                         </div>
                         <div class="text-sm sm:text-right">
-                            @if ($o->status === 'substitute')
+                            @if ($o->conflict)
+                                <p class="font-semibold text-rose-700">Guru: {{ $o->effective_teacher?->name ?? '-' }}{{ $o->status === 'substitute' ? ' (gantikan '.($o->original_teacher?->name ?? '-').')' : '' }} — bentrok jadwal</p>
+                            @elseif ($o->status === 'substitute')
                                 <p class="text-amber-700">Guru: <span class="font-medium">{{ $o->effective_teacher?->name ?? '-' }}</span> <span class="text-xs text-slate-500">(gantikan {{ $o->original_teacher?->name ?? '-' }})</span></p>
                             @elseif ($o->status === 'leave_unassigned')
                                 <p class="text-rose-700">{{ $o->effective_teacher?->name ?? '-' }} — guru libur, belum ada pengganti</p>

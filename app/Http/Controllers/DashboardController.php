@@ -107,6 +107,8 @@ class DashboardController extends Controller
             ->filter(fn ($o) => $o->classroom === null || $o->classroom->is_active)
             ->filter(fn ($o) => $o->status !== ScheduleOccurrenceService::STATUS_MOVED_OUT)
             ->values();
+        // Tandai sesi yang bentrok (guru sama, jam tumpang tindih) agar terlihat merah.
+        ScheduleOccurrenceService::markConflicts($todaysClasses);
         $todayLabel = WeeklyDay::label($dayKey);
 
         // Murid yang les pada tanggal terpilih tapi sisa pertemuannya sudah habis

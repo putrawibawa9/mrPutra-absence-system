@@ -33,13 +33,16 @@
                     <div class="space-y-2">
                         @forelse ($day->occurrences as $o)
                             @php($faded = in_array($o->status, ['moved_out', 'cancelled']))
-                            <div class="rounded-xl border border-slate-200 bg-slate-50 p-3 text-sm {{ $faded ? 'opacity-60' : '' }}">
+                            <div class="rounded-xl border p-3 text-sm {{ $o->conflict ? 'border-rose-200 bg-rose-50' : 'border-slate-200 bg-slate-50' }} {{ $faded ? 'opacity-60' : '' }}">
                                 <div class="flex items-center justify-between gap-2">
-                                    <span class="font-semibold text-slate-900">{{ $o->start }}–{{ $o->end }}</span>
+                                    <span class="font-semibold {{ $o->conflict ? 'text-rose-700' : 'text-slate-900' }}">{{ $o->start }}–{{ $o->end }}</span>
                                     @if ($o->classroom?->code)
                                         <span class="rounded bg-slate-100 text-[11px] font-bold tracking-wide text-slate-700" style="padding:2px 6px;">{{ $o->classroom->code }}</span>
                                     @endif
                                 </div>
+                                @if ($o->conflict)
+                                    <p class="mt-1 text-[11px] font-semibold text-rose-700">⚠ Bentrok jadwal</p>
+                                @endif
                                 <p class="mt-1 font-medium text-slate-800">{{ $o->classroom?->name ?? ($o->schedule->title ?: 'Kelas') }}</p>
                                 @if ($o->students)
                                     <p class="mt-0.5 text-xs text-slate-500">{{ $o->students }}</p>

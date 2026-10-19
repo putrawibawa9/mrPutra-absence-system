@@ -210,6 +210,63 @@ class ScheduleCalendarTest extends TestCase
             ->assertDontSee('English Private');
     }
 
+    public function test_overlapping_same_teacher_sessions_are_flagged_as_conflict(): void
+    {
+        $t1 = User::factory()->create(['role' => User::ROLE_TEACHER]);
+        $t2 = User::factory()->create(['role' => User::ROLE_TEACHER]);
+
+        $makeOn = function (User $teacher, string $start, string $end): TeacherSchedule {
+            $classroom = Classroom::query()->create([
+                'name' => 'Kelas '.$start, 'division' => Classroom::DIVISION_ENGLISH,
+                'format' => Classroom::FORMAT_SEMI, 'age_group' => Classroom::AGE_TEENS_ADULT, 'is_active' => true,
+            ]);
+
+            return TeacherSchedule::query()->create([
+                'teacher_id' => $teacher->id, 'classroom_id' => $classroom->id,
+                'day_of_week' => 'monday', 'start_time' => $start, 'end_time' => $end, 'is_active' => true,
+            ]);
+        };
+
+        $a = $makeOn($t1, '10:00', '11:00'); // bentrok dgn b (guru sama, overlap)
+        $b = $makeOn($t1, '10:30', '11:30');
+        $c = $makeOn($t2, '10:30', '11:30'); // overlap tapi guru beda → tidak bentrok
+        $d = $makeOn($t1, '12:00', '13:00'); // guru sama tapi tidak overlap
+
+        $occ = ScheduleOccurrenceService::markConflicts(
+            app(ScheduleOccurrenceService::class)->forDate(Carbon::parse($this->monday))
+        );
+        $byId = fn ($sid) => $occ->first(fn ($o) => $o->schedule->id === $sid);
+
+        $this->assertTrue($byId($a->id)->conflict);
+        $this->assertTrue($byId($b->id)->conflict);
+        $this->assertFalse($byId($c->id)->conflict);
+        $this->assertFalse($byId($d->id)->conflict);
+    }
+
+    public function test_dashboard_shows_conflict_warning_in_red(): void
+    {
+        Carbon::setTestNow('2026-10-19 09:00:00'); // Senin
+        $admin = User::factory()->create(['role' => User::ROLE_ADMIN]);
+        $t1 = User::factory()->create(['role' => User::ROLE_TEACHER]);
+
+        foreach ([['10:00', '11:00'], ['10:30', '11:30']] as [$s, $e]) {
+            $classroom = Classroom::query()->create([
+                'name' => 'Kelas '.$s, 'division' => Classroom::DIVISION_ENGLISH,
+                'format' => Classroom::FORMAT_SEMI, 'age_group' => Classroom::AGE_TEENS_ADULT, 'is_active' => true,
+            ]);
+            TeacherSchedule::query()->create([
+                'teacher_id' => $t1->id, 'classroom_id' => $classroom->id,
+                'day_of_week' => 'monday', 'start_time' => $s, 'end_time' => $e, 'is_active' => true,
+            ]);
+        }
+
+        $this->actingAs($admin)->get(route('dashboard'))
+            ->assertOk()
+            ->assertSee('Bentrok guru');
+
+        Carbon::setTestNow();
+    }
+
     public function test_calendar_is_admin_only(): void
     {
         $teacher = User::factory()->create(['role' => User::ROLE_TEACHER]);

@@ -37,7 +37,9 @@ class ScheduleCalendarController extends Controller
                 'date' => $date->copy(),
                 'label' => WeeklyDay::label(strtolower($date->englishDayOfWeek)),
                 'is_today' => $date->isToday(),
-                'occurrences' => $occurrences->get($date->toDateString(), collect())->values(),
+                'occurrences' => ScheduleOccurrenceService::markConflicts(
+                    $occurrences->get($date->toDateString(), collect())->values()
+                ),
             ];
         }
 

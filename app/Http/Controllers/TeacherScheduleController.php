@@ -215,6 +215,7 @@ class TeacherScheduleController extends Controller
             ->filter(fn ($o) => $o->classroom === null || $o->classroom->is_active)
             ->reject(fn ($o) => $o->status === \App\Services\ScheduleOccurrenceService::STATUS_MOVED_OUT)
             ->values();
+        \App\Services\ScheduleOccurrenceService::markConflicts($schedules);
 
         return view('teacher-schedules.today', [
             'schedules' => $schedules,
@@ -459,7 +460,9 @@ class TeacherScheduleController extends Controller
                 'date' => $date->copy(),
                 'label' => WeeklyDay::label(strtolower($date->englishDayOfWeek)),
                 'is_today' => $date->isToday(),
-                'occurrences' => $mine->get($date->toDateString(), collect())->values(),
+                'occurrences' => ScheduleOccurrenceService::markConflicts(
+                    $mine->get($date->toDateString(), collect())->values()
+                ),
             ];
         }
 
